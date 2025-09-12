@@ -1,21 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
-import { CovidDataPoint, ProcessedCovidData, MountainPoint } from '../types/covid';
+import axios from 'axios';
+import { ProcessedCovidData, MountainPoint } from '../types/covid';
 import { useCovidStore } from '../stores/covidStore';
 import { useEffect } from 'react';
 
 const parseCSVData = async (): Promise<ProcessedCovidData[]> => {
   try {
     // Import the CSV file from public folder
-    const response = await fetch('/brazil_daily_covid_data.csv');
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSV data: ${response.status}`);
-    }
-    
-    const csvText = await response.text();
-    
+    const response = await axios.get('/brazil_daily_covid_data.csv', {
+      responseType: 'text'
+    });
+
+    const csvText = response.data;
+
     const lines = csvText.trim().split('\n');
-    const headers = lines[0].split(',');
     
     const data: ProcessedCovidData[] = [];
     
