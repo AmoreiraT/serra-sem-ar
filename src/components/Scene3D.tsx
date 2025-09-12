@@ -1,9 +1,11 @@
 import { Environment, Grid, OrbitControls, Stats } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import { useCovidStore } from '../stores/covidStore';
 import { Mountain3D } from './Mountain3D';
-import * as THREE from 'three';
+
+
 
 function TerrainWalker({ meshRef, enabled = true, eyeHeight = 2 }: { meshRef: React.RefObject<THREE.Mesh>, enabled?: boolean, eyeHeight?: number }) {
   const { camera } = useThree();
@@ -37,7 +39,7 @@ interface Scene3DProps {
 
 export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DProps) => {
   const { cameraPosition, cameraTarget, setCameraPosition, setCameraTarget } = useCovidStore();
-  const mountainRef = useRef<THREE.Mesh>(null);
+  const mountainRef = useRef<THREE.Mesh>(null) as React.RefObject<THREE.Mesh>;
 
   return (
     <div className="w-full h-full">
