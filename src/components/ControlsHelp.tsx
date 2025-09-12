@@ -16,6 +16,7 @@ export const ControlsHelp = () => {
     { key: 'E', action: 'Rotacionar direita' },
     { key: 'R', action: 'Resetar câmera' },
     { key: 'Scroll', action: 'Zoom in/out' },
+    { key: 'Shift + Scroll', action: 'Andar frente/trás' },
     { key: ', / <', action: 'Dia anterior' },
     { key: '. / >', action: 'Próximo dia' },
   ];
@@ -102,4 +103,3 @@ export const ControlsHelp = () => {
     </>
   );
 };
-

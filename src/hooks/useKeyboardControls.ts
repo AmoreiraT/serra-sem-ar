@@ -159,25 +159,38 @@ export const useKeyboardControls = ({
     const length = Math.sqrt(direction[0] ** 2 + direction[1] ** 2 + direction[2] ** 2);
     
     if (length > 0) {
-      const normalized = [direction[0] / length, direction[1] / length, direction[2] / length];
-      const newPosition = [
-        x + normalized[0] * zoomDirection * zoomSpeed * 5,
-        y + normalized[1] * zoomDirection * zoomSpeed * 5,
-        z + normalized[2] * zoomDirection * zoomSpeed * 5
-      ];
-      
-      // Prevent getting too close or too far
-      const newDistance = Math.sqrt(
-        (newPosition[0] - tx) ** 2 + 
-        (newPosition[1] - ty) ** 2 + 
-        (newPosition[2] - tz) ** 2
-      );
-      
-      if (newDistance > 5 && newDistance < 200) {
-        setCameraPosition(newPosition as [number, number, number]);
+      // Shift + scroll: walk forward/back instead of zoom
+      if (event.shiftKey) {
+        const horizontal = [tx - x, 0, tz - z];
+        const hlen = Math.sqrt(horizontal[0] ** 2 + horizontal[2] ** 2) || 1;
+        const nx = horizontal[0] / hlen;
+        const nz = horizontal[2] / hlen;
+        const step = zoomDirection * 1.5; // walking step
+        const newPos: [number, number, number] = [x + nx * step, y, z + nz * step];
+        const newTgt: [number, number, number] = [tx + nx * step, ty, tz + nz * step];
+        setCameraPosition(newPos);
+        setCameraTarget(newTgt);
+      } else {
+        const normalized = [direction[0] / length, direction[1] / length, direction[2] / length];
+        const newPosition = [
+          x + normalized[0] * zoomDirection * zoomSpeed * 5,
+          y + normalized[1] * zoomDirection * zoomSpeed * 5,
+          z + normalized[2] * zoomDirection * zoomSpeed * 5
+        ];
+        
+        // Prevent getting too close or too far
+        const newDistance = Math.sqrt(
+          (newPosition[0] - tx) ** 2 + 
+          (newPosition[1] - ty) ** 2 + 
+          (newPosition[2] - tz) ** 2
+        );
+        
+        if (newDistance > 5 && newDistance < 200) {
+          setCameraPosition(newPosition as [number, number, number]);
+        }
       }
     }
-  }, [enabled, cameraPosition, cameraTarget, setCameraPosition]);
+  }, [enabled, cameraPosition, cameraTarget, setCameraPosition, setCameraTarget]);
   
   useEffect(() => {
     if (!enabled) return;
@@ -197,4 +210,3 @@ export const useKeyboardControls = ({
     enabled
   };
 };
-

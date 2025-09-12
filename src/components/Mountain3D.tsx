@@ -2,7 +2,7 @@ import rockAOTexture from '@/assets/textures/rock_ao.jpg';
 import rockDiffuseTexture from '@assets/textures/rock_diffuse.jpg';
 import rockNormalTexture from '@assets/textures/rock_normal.jpg';
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { forwardRef, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { BufferGeometry, Float32BufferAttribute, Mesh } from 'three';
 import useTextureLoader from '../hooks/useTextureLoader';
@@ -11,124 +11,79 @@ import { useCovidStore } from '../stores/covidStore';
 interface Mountain3DProps {
   animated?: boolean;
 }
-
-const generateHeightMap = (
-  width: number,
-  depth: number,
-  apiData: { day: number; deaths: number; cases: number }[]
-): number[] => {
-  const heightMap: number[] = [];
-
-  const apiDataMap = new Map<number, { deaths: number; cases: number }>();
-  apiData.forEach((data) => {
-    apiDataMap.set(data.day, { deaths: data.deaths, cases: data.cases });
-  });
-
-  for (let z = 0; z < depth; z++) {
-    for (let x = 0; x < width; x++) {
-      const currentData = apiDataMap.get(Math.round(z));
-      // const noise = simplex.noise2D(x / 10, z / 10);
-
-      let height = 0;
-      if (currentData) {
-        height =
-          (currentData.deaths * 0.01 + currentData.cases * 0.005) *
-          (1 * 0.5);
-      }
-
-      heightMap.push(height);
-    }
-  }
-
-  return heightMap;
-};
-
-
-export const Mountain3D = ({ animated = false }: Mountain3DProps) => {
-  const meshRef = useRef<Mesh>(null);
+export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ animated = false }: Mountain3DProps, ref) => {
+  const meshRef = (ref as React.RefObject<Mesh>) || useRef<Mesh>(null);
   const { mountainPoints, currentDateIndex } = useCovidStore();
-  const width = 100;
-  const depth = 100;
-  const heightMap = useMemo(
-    () => generateHeightMap(
-      width,
-      depth,
-      mountainPoints.map(point => ({
-        day: typeof point.date === 'number' ? point.date : (point.date instanceof Date ? point.date.getTime() : Number(point.date)),
-        deaths: point.deaths,
-        cases: point.cases
-      }))
-    ),
-    [mountainPoints, width, depth]
-  );
-
+  // Parameters
+  const timeSegments = useMemo(() => Math.min(mountainPoints.length, 200), [mountainPoints.length]);
+  const zSegments = 64; // lateral detail across mountain width
+  const maxHalfWidth = 40; // maximum half-width of the mountain in Z
+  const maxPeakHeight = 40; // maximum contribution from deaths
 
   // Generate the mountain geometry based on COVID data
   const geometry = useMemo(() => {
     if (mountainPoints.length === 0) return null;
-
     const geometry = new BufferGeometry();
+
     const vertices: number[] = [];
     const indices: number[] = [];
-    const colors: number[] = [];
+    const uvs: number[] = [];
 
-    // Create vertices for the mountain surface
-    const segments = Math.min(mountainPoints.length, 100); // Limit segments for performance
+    // Compute normalization factors
+    const maxCases = Math.max(...mountainPoints.map(p => p.cases));
+    const maxDeaths = Math.max(...mountainPoints.map(p => p.deaths));
 
-    for (let i = 0; i < segments; i++) {
-      const point = mountainPoints[Math.floor((i / segments) * mountainPoints.length)];
+    for (let i = 0; i < timeSegments; i++) {
+      const point = mountainPoints[Math.floor((i / (timeSegments - 1)) * (mountainPoints.length - 1))];
 
-      // Create a cross-section of the mountain at this time point
-      for (let j = 0; j <= 20; j++) {
+      // Cases control width
+      const casesNorm = maxCases > 0 ? point.cases / maxCases : 0;
+      const halfWidth = Math.max(4, casesNorm * maxHalfWidth);
+
+      for (let j = 0; j <= zSegments; j++) {
+        const t = j / zSegments; // 0..1 across width
+        const z = THREE.MathUtils.lerp(-maxHalfWidth, maxHalfWidth, t);
+
+        // Cross-section falloff shaped by current halfWidth
+        const dist = Math.abs(z);
+        const falloff = dist <= halfWidth ? 1 - (dist / halfWidth) ** 2 : 0; // parabolic cap
+
+        // Deaths control peak height
+        const deathsNorm = maxDeaths > 0 ? point.deaths / maxDeaths : 0;
+        const peak = deathsNorm * maxPeakHeight;
+
+        const y = falloff * peak;
+
         const x = point.x;
-        const z = (j / 20) * depth - depth / 2;
-
-
-        // Height based on distance from center (mountain shape)
-        const distanceFromCenter = Math.abs(z) / (depth * 20);
-        const heightMultiplier = Math.max(0, 1 - distanceFromCenter * distanceFromCenter);
-
-        // Base height from cases (width of mountain)
-        const caseHeight = (point.cases / 100000) * 105 * heightMultiplier;
-
-        // Peak height from deaths
-        const deathHeight = (point.deaths / 3000) * 200 * heightMultiplier;
-
-        const y = caseHeight + deathHeight * heightMap[i];
-
         vertices.push(x, y, z);
 
-        // Color based on death rate (red = more deaths, green = fewer deaths)
-        const deathRate = point.deaths / Math.max(point.cases, 1);
-        const red = Math.min(1, deathRate * 100);
-        const green = Math.max(0, 1 - red);
-        const blue = 0.2;
-
-        colors.push(red, green, blue);
+        // UV mapping across grid
+        const u = i / (timeSegments - 1);
+        const v = j / zSegments;
+        uvs.push(u, v);
       }
     }
 
-    // Create indices for triangles
-    for (let i = 0; i < segments - 1; i++) {
-      for (let j = 0; j < 20; j++) {
-        const a = i * 21 + j;
-        const b = i * 21 + j + 1;
-        const c = (i + 1) * 21 + j;
-        const d = (i + 1) * 21 + j + 1;
-
-        // Two triangles per quad
-        indices.push(a, b, c);
-        indices.push(b, d, c);
+    // Indices for triangle grid
+    for (let i = 0; i < timeSegments - 1; i++) {
+      for (let j = 0; j < zSegments; j++) {
+        const a = i * (zSegments + 1) + j;
+        const b = a + 1;
+        const c = (i + 1) * (zSegments + 1) + j;
+        const d = c + 1;
+        indices.push(a, c, b);
+        indices.push(b, c, d);
       }
     }
 
     geometry.setIndex(indices);
     geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
-    geometry.setAttribute('color', new Float32BufferAttribute(colors, 3));
+    geometry.setAttribute('uv', new Float32BufferAttribute(uvs, 2));
+    // duplicate uv for aoMap
+    geometry.setAttribute('uv2', new Float32BufferAttribute(uvs.slice(), 2));
     geometry.computeVertexNormals();
-
     return geometry;
-  }, [mountainPoints, heightMap]);
+  }, [mountainPoints, timeSegments]);
 
   // Animation frame
   useFrame((state) => {
@@ -147,18 +102,24 @@ export const Mountain3D = ({ animated = false }: Mountain3DProps) => {
 
 
   diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
-  diffuseMap.repeat.set(10, 10);
+  diffuseMap.repeat.set(8, 3);
+  normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+  normalMap.repeat.set(8, 3);
+  aoMap.wrapS = aoMap.wrapT = THREE.RepeatWrapping;
+  aoMap.repeat.set(8, 3);
   if (!geometry) return null;
 
   return (
-    <mesh geometry={geometry} name="mountain">
+    <mesh ref={meshRef} geometry={geometry} name="mountain" castShadow receiveShadow>
       <meshStandardMaterial
         map={diffuseMap}
-        bumpMap={normalMap}
         normalMap={normalMap}
         aoMap={aoMap}
+        roughness={0.95}
+        metalness={0.05}
       />
     </mesh>
   );
-};
+});
 
+Mountain3D.displayName = 'Mountain3D';
