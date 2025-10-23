@@ -5,11 +5,9 @@ import { useCovidStore } from '../stores/covidStore';
 import { Button } from './ui/button';
 
 export const TimelineControls = () => {
-  const {
-    data,
-    currentDateIndex,
-    setCurrentDateIndex
-  } = useCovidStore();
+  const data = useCovidStore((state) => state.data);
+  const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
+  const setCurrentDateIndex = useCovidStore((state) => state.setCurrentDateIndex);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(100); // milliseconds per day
@@ -154,4 +152,3 @@ export const TimelineControls = () => {
     </div>
   );
 };
-

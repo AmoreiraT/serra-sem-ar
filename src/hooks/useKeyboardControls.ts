@@ -12,15 +12,13 @@ export const useKeyboardControls = ({
   rotateSpeed = 0.05,
   enabled = true
 }: KeyboardControlsOptions = {}) => {
-  const { 
-    cameraPosition, 
-    cameraTarget, 
-    setCameraPosition, 
-    setCameraTarget,
-    currentDateIndex,
-    setCurrentDateIndex,
-    data
-  } = useCovidStore();
+  const cameraPosition = useCovidStore((state) => state.cameraPosition);
+  const cameraTarget = useCovidStore((state) => state.cameraTarget);
+  const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
+  const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
+  const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
+  const setCurrentDateIndex = useCovidStore((state) => state.setCurrentDateIndex);
+  const data = useCovidStore((state) => state.data);
   
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
     if (!enabled) return;

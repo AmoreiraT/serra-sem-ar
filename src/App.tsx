@@ -7,18 +7,17 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { Scene3D } from './components/Scene3D';
 import { TimelineControls } from './components/TimelineControls';
 import { useCovidData } from './hooks/useCovidData';
-import { useKeyboardControls } from './hooks/useKeyboardControls';
+// import { useKeyboardControls } from './hooks/useKeyboardControls';
+import { useTemporalNavigation } from './hooks/useTemporalNavigation';
 import { QueryProvider } from './providers/QueryProvider';
+import { ActiveDayHUD } from './components/ActiveDayHUD';
 
 function AppContent() {
   const { isLoading, error } = useCovidData();
 
-  // Enable keyboard controls
-  useKeyboardControls({
-    moveSpeed: 3,
-    rotateSpeed: 0.05,
-    enabled: !isLoading && !error
-  });
+  // Movement now handled by Player (PointerLockControls)
+  // Temporal navigation via keyboard (comma/period or [ / ])
+  useTemporalNavigation();
 
   if (isLoading) {
     return <LoadingScreen message="Carregando dados da COVID-19 no Brasil..." />;
@@ -51,6 +50,9 @@ function AppContent() {
       {/* Information Panel */}
       <InfoPanel />
 
+      {/* Timeline HUD */}
+      <ActiveDayHUD />
+
       {/* Controls Help */}
       <ControlsHelp />
 
@@ -64,10 +66,10 @@ function AppContent() {
           Uma representação artística dos dados da COVID-19 no Brasil como uma montanha 3D navegável.
         </p>
         <div className="text-xs space-y-1 opacity-70">
-          <p>• Use WASD ou setas para navegar</p>
-          <p>• Scroll para zoom in/out</p>
-          <p>• Mouse para rotacionar a câmera</p>
-          <p>• Timeline para navegar no tempo</p>
+          <p>• Clique na cena para capturar o cursor (ESC libera)</p>
+          <p>• W/D avançam • S/A retornam • Mouse para olhar • Shift para correr</p>
+          <p>• , / . ou [ / ] para navegar no tempo</p>
+          <p>• Use a Timeline para reprodução automática</p>
         </div>
       </div>
 
@@ -90,4 +92,3 @@ function App() {
 }
 
 export default App;
-

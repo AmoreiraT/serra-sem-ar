@@ -86,7 +86,11 @@ const generateMountainPoints = (data: ProcessedCovidData[]): MountainPoint[] => 
 };
 
 export const useCovidData = () => {
-  const { setData, setMountainPoints, setLoading, setError } = useCovidStore();
+  const setData = useCovidStore((state) => state.setData);
+  const setMountainPoints = useCovidStore((state) => state.setMountainPoints);
+  const setLoading = useCovidStore((state) => state.setLoading);
+  const setError = useCovidStore((state) => state.setError);
+  const setRevealedX = useCovidStore((state) => state.setRevealedX);
   
   const query = useQuery({
     queryKey: ['covid-data'],
@@ -103,8 +107,11 @@ export const useCovidData = () => {
       setData(query.data);
       const mountainPoints = generateMountainPoints(query.data);
       setMountainPoints(mountainPoints);
+      if (mountainPoints.length > 0) {
+        setRevealedX(mountainPoints[0].x);
+      }
     }
-  }, [query.data, query.isLoading, query.error, setData, setMountainPoints, setLoading, setError]);
+  }, [query.data, query.isLoading, query.error, setData, setMountainPoints, setLoading, setError, setRevealedX]);
   
   return {
     data: query.data,
@@ -113,4 +120,3 @@ export const useCovidData = () => {
     refetch: query.refetch,
   };
 };
-

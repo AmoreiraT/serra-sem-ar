@@ -3,7 +3,8 @@ import { useMemo } from 'react';
 import { useCovidStore } from '../stores/covidStore';
 
 export const InfoPanel = () => {
-  const { data, currentDateIndex, mountainPoints } = useCovidStore();
+  const data = useCovidStore((state) => state.data);
+  const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
 
   const currentData = useMemo(() => {
     if (data.length === 0 || currentDateIndex >= data.length) return null;
@@ -91,4 +92,3 @@ export const InfoPanel = () => {
     </div>
   );
 };
-

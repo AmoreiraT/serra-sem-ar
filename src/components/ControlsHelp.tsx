@@ -5,20 +5,14 @@ import { Button } from './ui/button';
 export const ControlsHelp = () => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const controls = [
-    { key: '↑ / W', action: 'Mover para frente' },
-    { key: '↓ / S', action: 'Mover para trás' },
-    { key: '← / A', action: 'Mover para esquerda' },
-    { key: '→ / D', action: 'Mover para direita' },
-    { key: 'Espaço', action: 'Mover para cima' },
-    { key: 'Shift', action: 'Mover para baixo' },
-    { key: 'Q', action: 'Rotacionar esquerda' },
-    { key: 'E', action: 'Rotacionar direita' },
-    { key: 'R', action: 'Resetar câmera' },
-    { key: 'Scroll', action: 'Zoom in/out' },
-    { key: 'Shift + Scroll', action: 'Andar frente/trás' },
-    { key: ', / <', action: 'Dia anterior' },
-    { key: '. / >', action: 'Próximo dia' },
+  const movement = [
+    { key: 'W / D', action: 'Seguir pela linha do tempo' },
+    { key: 'S / A', action: 'Retornar no tempo' },
+    { key: 'Shift', action: 'Correr' },
+  ];
+  const temporal = [
+    { key: ', / < / [', action: 'Dia anterior' },
+    { key: '. / > / ]', action: 'Próximo dia' },
   ];
 
   return (
@@ -52,9 +46,9 @@ export const ControlsHelp = () => {
 
             <div className="space-y-3">
               <div>
-                <h4 className="font-semibold mb-2 text-blue-400">Movimento da Câmera</h4>
+                <h4 className="font-semibold mb-2 text-blue-400">Movimento (1ª pessoa)</h4>
                 <div className="grid grid-cols-1 gap-2 text-sm">
-                  {controls.slice(0, 8).map((control, index) => (
+                  {movement.map((control, index) => (
                     <div key={index} className="flex justify-between">
                       <span className="font-mono bg-white/10 px-2 py-1 rounded text-xs">
                         {control.key}
@@ -68,7 +62,7 @@ export const ControlsHelp = () => {
               <div>
                 <h4 className="font-semibold mb-2 text-green-400">Navegação Temporal</h4>
                 <div className="grid grid-cols-1 gap-2 text-sm">
-                  {controls.slice(8).map((control, index) => (
+                  {temporal.map((control, index) => (
                     <div key={index} className="flex justify-between">
                       <span className="font-mono bg-white/10 px-2 py-1 rounded text-xs">
                         {control.key}
@@ -82,9 +76,9 @@ export const ControlsHelp = () => {
               <div className="border-t border-white/20 pt-3 mt-4">
                 <h4 className="font-semibold mb-2 text-orange-400">Mouse</h4>
                 <div className="text-sm space-y-1">
-                  <p>• <strong>Arrastar:</strong> Rotacionar câmera</p>
-                  <p>• <strong>Scroll:</strong> Zoom in/out</p>
-                  <p>• <strong>Botão direito + arrastar:</strong> Pan</p>
+                  <p>• <strong>Clique na cena:</strong> Capturar cursor (Pointer Lock)</p>
+                  <p>• <strong>ESC:</strong> Liberar cursor</p>
+                  <p>• <strong>Mouse:</strong> Olhar ao redor</p>
                 </div>
               </div>
             </div>

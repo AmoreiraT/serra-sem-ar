@@ -1,16 +1,17 @@
-import { Environment, Grid, OrbitControls, Stats } from '@react-three/drei';
+import { Environment, Grid, Stats } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useCovidStore } from '../stores/covidStore';
 import { Mountain3D } from './Mountain3D';
+import { Player } from './Player';
 
 
 
 function TerrainWalker({ meshRef, enabled = true, eyeHeight = 2 }: { meshRef: React.RefObject<THREE.Mesh>, enabled?: boolean, eyeHeight?: number }) {
   const { camera } = useThree();
   const raycaster = useRef(new THREE.Raycaster()).current;
-  const { setCameraPosition } = useCovidStore();
+  const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
 
   useFrame(() => {
     if (!enabled || !meshRef.current) return;
@@ -38,7 +39,10 @@ interface Scene3DProps {
 }
 
 export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DProps) => {
-  const { cameraPosition, cameraTarget, setCameraPosition, setCameraTarget } = useCovidStore();
+  const cameraPosition = useCovidStore((state) => state.cameraPosition);
+  const cameraTarget = useCovidStore((state) => state.cameraTarget);
+  const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
+  const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
   const mountainRef = useRef<THREE.Mesh>(null) as React.RefObject<THREE.Mesh>;
 
   return (
@@ -51,8 +55,12 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           far: 1000,
         }}
         shadows
-        className="bg-gradient-to-b from-blue-900 to-blue-600"
+        dpr={[1, 1.5]}
+        className="bg-gradient-to-b from-orange-900 to-amber-700"
       >
+        {/* Orange sky and fog */}
+        <color attach="background" args={["#1e0f05"]} />
+        <fog attach="fog" args={["#ff9d4d", 40, 220]} />
         {/* Sync store updates into the actual three.js camera */}
         <CameraSync cameraPosition={cameraPosition} cameraTarget={cameraTarget} onSync={(pos, tgt) => {
           // make sure store and controls target stay coherent if needed
@@ -60,20 +68,21 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           setCameraTarget(tgt);
         }} />
         {/* Lighting */}
-        <ambientLight intensity={0.4} />
+        <hemisphereLight color={"#ffae42"} groundColor={"#2b1a0b"} intensity={0.6} />
         <directionalLight
-          position={[50, 50, 25]}
-          intensity={1}
+          position={[80, 100, 50]}
+          intensity={1.1}
+          color="#ffd6a3"
           castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-camera-far={200}
-          shadow-camera-left={-50}
-          shadow-camera-right={50}
-          shadow-camera-top={50}
-          shadow-camera-bottom={-50}
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+          shadow-camera-far={240}
+          shadow-camera-left={-110}
+          shadow-camera-right={110}
+          shadow-camera-top={110}
+          shadow-camera-bottom={-110}
         />
-        <pointLight position={[-50, 30, -25]} intensity={0.5} color="#ff6b6b" />
+        <pointLight position={[-60, 40, -40]} intensity={0.6} color="#ff7a59" />
 
         {/* Environment */}
         <Environment preset="sunset" />
@@ -95,25 +104,11 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
 
         {/* Main mountain */}
         <Suspense fallback={null}>
-          <Mountain3D ref={mountainRef} animated />
+          <Mountain3D ref={mountainRef} />
         </Suspense>
 
-        {/* Stick camera to terrain height for a walking feel */}
-        <TerrainWalker meshRef={mountainRef} enabled={enableControls} eyeHeight={2.2} />
-
-        {/* Camera controls */}
-        {enableControls && (
-          <OrbitControls
-            target={cameraTarget}
-            enablePan={true}
-            enableZoom={true}
-            enableRotate={true}
-            minDistance={10}
-            maxDistance={200}
-            minPolarAngle={0}
-            maxPolarAngle={Math.PI / 2}
-          />
-        )}
+        {/* First-person player with pointer lock and flashlight */}
+        <Player terrainRef={mountainRef} eyeHeight={2.2} speed={6} />
 
         {/* Performance stats */}
         {showStats && <Stats />}

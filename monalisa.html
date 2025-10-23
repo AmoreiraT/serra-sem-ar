@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Monalisa em JavaScript (Canvas)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #0f0f10;
+            color: #eee;
+            display: grid;
+            gap: 16px;
+            place-items: start;
+        }
+
+        .panel {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .panel label {
+            font-size: 14px;
+            opacity: .9;
+        }
+
+        .panel input[type="range"] {
+            width: 220px;
+        }
+
+        .btn {
+            background: #2a2a30;
+            border: 1px solid #3a3a44;
+            color: #eee;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            filter: brightness(1.1);
+        }
+
+        canvas {
+            display: block;
+            background: #111;
+            border-radius: 12px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, .5), inset 0 0 0 1px #2a2a30;
+        }
+
+        figure {
+            margin: 0;
+        }
+
+        figcaption {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 6px;
+        }
+
+        .sp {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 style="margin:0">Monalisa em JavaScript (Canvas)</h1>
+
+    <div class="panel">
+        <label>Resolução (tamanho da célula):
+            <input id="cellSize" type="range" min="2" max="40" step="1" value="14">
+            <span id="cellVal">14</span> px
+        </label>
+
+        <label>Forma:
+            <select id="shape" class="btn">
+                <option value="square">Quadrado</option>
+                <option value="circle">Círculo</option>
+            </select>
+        </label>
+
+        <label>Estilo:
+            <select id="style" class="btn">
+                <option value="sketch" selected>Sketch vetorial</option>
+                <option value="mosaic">Mosaico</option>
+            </select>
+        </label>
+
+        <label>Densidade:
+            <input id="density" type="range" min="0.5" max="3" step="0.1" value="1.5">
+            <span id="densityVal">1.5</span>
+        </label>
+
+        <label>Comprimento:
+            <input id="strokeLen" type="range" min="6" max="80" step="1" value="28">
+            <span id="lenVal">28</span> px
+        </label>
+
+        <label>Espessura:
+            <input id="thickness" type="range" min="0.3" max="4" step="0.1" value="1.2">
+            <span id="thickVal">1.2</span> px
+        </label>
+
+        <label class="btn" style="display:inline-flex; align-items:center; gap:8px;">
+            <input id="colored" type="checkbox" checked> Colorido
+        </label>
+
+        <button id="toggleAnim" class="btn">▶️ Animar refinamento</button>
+        <button id="redraw" class="btn">Redesenhar</button>
+        <button id="save" class="btn">Baixar PNG</button>
+
+        <label class="btn" style="display:inline-flex; align-items:center; gap:8px;">
+            📁 Usar imagem local
+            <input id="fileInput" type="file" accept="image/*" style="display:none;">
+        </label>
+    </div>
+
+    <figure>
+        <canvas id="canvas" width="600" height="840"></canvas>
+        <figcaption>
+            Fonte: <span class="sp" style="background:#6c6;"></span> Mona Lisa (Leonardo da Vinci, séc. XVI) —
+            reprodução em domínio público via Wikimedia.
+        </figcaption>
+    </figure>
+
+    <script>
+        // URL de imagem (domínio público) com CORS liberado pelo Wikimedia
+        // Obs: Se preferir 100% offline, clique em "Usar imagem local".
+        const DEFAULT_SRC = "https://upload.wikimedia.org/wikipedia/commons/6/6a/Mona_Lisa.jpg";
+
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+        // Offscreen para amostragem de pixels
+        const buffer = document.createElement("canvas");
+        const bctx = buffer.getContext("2d");
+
+        const cellSizeInput = document.getElementById("cellSize");
+        const cellVal = document.getElementById("cellVal");
+        const shapeSel = document.getElementById("shape");
+        const toggleAnimBtn = document.getElementById("toggleAnim");
+        const redrawBtn = document.getElementById("redraw");
+        const saveBtn = document.getElementById("save");
+        const fileInput = document.getElementById("fileInput");
+
+        const styleSel = document.getElementById("style");
+        const densityInput = document.getElementById("density");
+        const densityVal = document.getElementById("densityVal");
+        const strokeLenInput = document.getElementById("strokeLen");
+        const lenVal = document.getElementById("lenVal");
+        const thicknessInput = document.getElementById("thickness");
+        const thickVal = document.getElementById("thickVal");
+        const coloredChk = document.getElementById("colored");
+
+        let img = new Image();
+        img.crossOrigin = "anonymous"; // necessário para ler pixels
+        img.decoding = "async";
+        img.loading = "eager";
+
+        // Estado de animação
+        let animating = false;
+        let animCell = parseInt(cellSizeInput.value, 10);
+
+        // Buffers do campo vetorial (para o modo "sketch")
+        let luma, tx, ty, gmag;
+
+        function fitCanvasForImage(img) {
+            // Mantém largura padrão 600 px e ajusta altura proporcional
+            const targetWidth = 600;
+            const ratio = img.height / img.width;
+            const targetHeight = Math.round(targetWidth * ratio);
+
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+
+            buffer.width = targetWidth;
+            buffer.height = targetHeight;
+
+            // Desenha a imagem nítida no buffer para amostragem
+            bctx.clearRect(0, 0, buffer.width, buffer.height);
+            bctx.drawImage(img, 0, 0, buffer.width, buffer.height);
+
+            // Constrói campo vetorial (luminância + gradiente + tangente)
+            buildVectorField();
+        }
+
+        function buildVectorField() {
+            const w = buffer.width, h = buffer.height;
+            const id = bctx.getImageData(0, 0, w, h);
+            const d = id.data;
+
+            luma = new Float32Array(w * h);
+            tx = new Float32Array(w * h);
+            ty = new Float32Array(w * h);
+            gmag = new Float32Array(w * h);
+
+            // Luminância (perceptual)
+            for (let i = 0, j = 0; i < w * h; i++, j += 4) {
+                const r = d[j], g = d[j + 1], b = d[j + 2];
+                luma[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            }
+
+            // Sobel
+            const idx = (x, y) => y * w + x;
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    const tl = luma[idx(x - 1, y - 1)], t = luma[idx(x, y - 1)], tr = luma[idx(x + 1, y - 1)];
+                    const l = luma[idx(x - 1, y)], r = luma[idx(x + 1, y)];
+                    const bl = luma[idx(x - 1, y + 1)], b = luma[idx(x, y + 1)], br = luma[idx(x + 1, y + 1)];
+
+                    const gx = -tl + tr - 2 * l + 2 * r - bl + br;
+                    const gy = -tl - 2 * t - tr + bl + 2 * b + br;
+
+                    const mag = Math.hypot(gx, gy) + 1e-6;
+                    // Vetor tangente = perpendicular às isolinhas (isophotes): (-gy, gx)
+                    const ux = -gy / mag;
+                    const uy = gx / mag;
+
+                    const i = idx(x, y);
+                    tx[i] = ux;
+                    ty[i] = uy;
+                    gmag[i] = mag;
+                }
+            }
+
+            // Bordas: copia vizinhos simples
+            for (let x = 0; x < w; x++) {
+                const top = idx(x, 1), bot = idx(x, h - 2);
+                tx[idx(x, 0)] = tx[top]; ty[idx(x, 0)] = ty[top]; gmag[idx(x, 0)] = gmag[top];
+                tx[idx(x, h - 1)] = tx[bot]; ty[idx(x, h - 1)] = ty[bot]; gmag[idx(x, h - 1)] = gmag[bot];
+            }
+            for (let y = 0; y < h; y++) {
+                const left = idx(1, y), right = idx(w - 2, y);
+                tx[idx(0, y)] = tx[left]; ty[idx(0, y)] = ty[left]; gmag[idx(0, y)] = gmag[left];
+                tx[idx(w - 1, y)] = tx[right]; ty[idx(w - 1, y)] = ty[right]; gmag[idx(w - 1, y)] = gmag[right];
+            }
+        }
+
+        // Amostra direção tangente do campo em (x, y) usando vizinho mais próximo
+        function dirAt(x, y) {
+            const w = buffer.width, h = buffer.height;
+            const xi = Math.max(1, Math.min(w - 2, x | 0));
+            const yi = Math.max(1, Math.min(h - 2, y | 0));
+            const i = yi * w + xi;
+            return [tx[i], ty[i]];
+        }
+
+        function getPixel(x, y) {
+            // Lê um único pixel do buffer
+            const data = bctx.getImageData(x, y, 1, 1).data;
+            return { r: data[0], g: data[1], b: data[2], a: data[3] / 255 };
+        }
+
+        function drawSketch() {
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+
+            // Controles
+            const baseCell = parseInt(cellSizeInput.value, 10); // usado como espaçamento base
+            const density = parseFloat(densityInput.value);     // multiplica os seeds
+            densityVal.textContent = density.toFixed(1);
+
+            const len = parseInt(strokeLenInput.value, 10);
+            lenVal.textContent = len;
+
+            const thickness = parseFloat(thicknessInput.value);
+            thickVal.textContent = thickness.toFixed(1);
+
+            const colored = coloredChk.checked;
+
+            // Espaçamento entre sementes; menor -> mais linhas
+            const spacing = Math.max(3, Math.round(baseCell / Math.max(0.5, density)));
+            const hstep = 1.6; // passo de integração em px
+            const steps = Math.max(4, Math.floor(len / hstep));
+
+            // Probabilidade guiada pela escuridão (mais escuro -> mais linhas)
+            const probScale = Math.min(1.0, 0.55 * density);
+
+            const wbuf = buffer.width, hbuf = buffer.height;
+            const idx = (x, y) => y * wbuf + x;
+
+            for (let y = spacing / 2; y < h; y += spacing) {
+                for (let x = spacing / 2; x < w; x += spacing) {
+                    const xi = Math.max(1, Math.min(wbuf - 2, x | 0));
+                    const yi = Math.max(1, Math.min(hbuf - 2, y | 0));
+                    const L = luma[idx(xi, yi)] / 255;        // 0 (preto) .. 1 (branco)
+                    const darkness = 1 - L;
+
+                    // Aleatório ponderado pela escuridão e densidade
+                    if (Math.random() > darkness * (0.5 + probScale)) continue;
+
+                    // Integra streamline para frente e para trás (seguindo o campo tangente)
+                    const path = integrateStreamline(x, y, steps, hstep);
+                    if (path.length < 2) continue;
+
+                    // Estilo do traço: cor amostrada no seed ou grafite
+                    if (colored) {
+                        const { r, g, b } = getPixel(xi, yi);
+                        const alpha = 0.25 + 0.55 * darkness; // mais escuro -> mais opaco
+                        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
+                    } else {
+                        const shade = Math.round(40 + 160 * (1 - L)); // “grafite”
+                        const alpha = 0.75;
+                        ctx.strokeStyle = `rgba(${shade}, ${shade}, ${shade}, ${alpha})`;
+                    }
+
+                    // Espessura responde à “massa” local (escuridão)
+                    ctx.lineWidth = Math.max(0.2, thickness * (0.7 + darkness * 0.6));
+
+                    ctx.beginPath();
+                    ctx.moveTo(path[0].x, path[0].y);
+                    for (let i = 1; i < path.length; i++) {
+                        ctx.lineTo(path[i].x, path[i].y);
+                    }
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function integrateStreamline(x0, y0, steps, hstep) {
+            const w = buffer.width, h = buffer.height;
+
+            const forward = [];
+            let x = x0, y = y0;
+            for (let s = 0; s < (steps >> 1); s++) {
+                const [ux, uy] = dirAt(x, y);
+                x += ux * hstep;
+                y += uy * hstep;
+                if (x <= 1 || y <= 1 || x >= w - 1 || y >= h - 1) break;
+                forward.push({ x, y });
+            }
+
+            const backward = [];
+            x = x0; y = y0;
+            for (let s = 0; s < (steps >> 1); s++) {
+                const [ux, uy] = dirAt(x, y);
+                x -= ux * hstep;
+                y -= uy * hstep;
+                if (x <= 1 || y <= 1 || x >= w - 1 || y >= h - 1) break;
+                backward.push({ x, y });
+            }
+
+            backward.reverse();
+            backward.push({ x: x0, y: y0 });
+            return backward.concat(forward);
+        }
+
+        function drawMosaic(cell, shape) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Pequeno jitter para "textura" artística
+            const jitter = Math.max(0, Math.floor(cell / 8));
+
+            for (let y = 0; y < canvas.height; y += cell) {
+                for (let x = 0; x < canvas.width; x += cell) {
+                    const sx = Math.min(canvas.width - 1, x + Math.floor(cell / 2));
+                    const sy = Math.min(canvas.height - 1, y + Math.floor(cell / 2));
+                    const { r, g, b, a } = getPixel(sx, sy);
+
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+
+                    // "pincelada" com leve jitter
+                    const jx = x + (jitter ? (Math.random() * jitter - jitter / 2) : 0);
+                    const jy = y + (jitter ? (Math.random() * jitter - jitter / 2) : 0);
+
+                    if (shape === "circle") {
+                        const rad = cell * 0.6 * 0.5; // diâmetro ~60% da célula
+                        ctx.beginPath();
+                        ctx.arc(jx + cell / 2, jy + cell / 2, rad, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        // quadrado levemente menor que a célula para sugerir "trama"
+                        const pad = Math.floor(cell * 0.2);
+                        ctx.fillRect(jx + pad / 2, jy + pad / 2, cell - pad, cell - pad);
+                    }
+                }
+            }
+        }
+
+        function drawOnce() {
+            const style = styleSel ? styleSel.value : "sketch";
+            if (style === "mosaic") {
+                const cell = parseInt(cellSizeInput.value, 10);
+                const shape = shapeSel.value;
+                cellVal.textContent = cell;
+                drawMosaic(cell, shape);
+            } else {
+                drawSketch();
+            }
+        }
+
+        function animateRefinement() {
+            if (!animating) return;
+
+            const shape = shapeSel.value;
+            drawMosaic(animCell, shape);
+
+            // Refina gradualmente até o valor do slider
+            const target = parseInt(cellSizeInput.value, 10);
+            if (animCell > target) {
+                animCell = Math.max(target, Math.floor(animCell * 0.92)); // easing
+                requestAnimationFrame(animateRefinement);
+            } else {
+                animating = false;
+                toggleAnimBtn.textContent = "▶️ Animar refinamento";
+            }
+        }
+
+        function startAnimation() {
+            animating = true;
+            animCell = Math.max(parseInt(cellSizeInput.value, 10) * 3, 40);
+            toggleAnimBtn.textContent = "⏸️ Pausar animação";
+            requestAnimationFrame(animateRefinement);
+        }
+
+        function pauseAnimation() {
+            animating = false;
+            toggleAnimBtn.textContent = "▶️ Animar refinamento";
+        }
+
+        // Eventos de UI
+        cellSizeInput.addEventListener("input", () => {
+            cellVal.textContent = cellSizeInput.value;
+            if (!animating) drawOnce();
+        });
+
+        shapeSel.addEventListener("change", () => {
+            if (!animating) drawOnce();
+        });
+
+        redrawBtn.addEventListener("click", () => {
+            if (!animating) drawOnce();
+        });
+
+        toggleAnimBtn.addEventListener("click", () => {
+            if (styleSel && styleSel.value !== "mosaic") {
+                // No sketch, apenas redesenha (sem animação de refinamento)
+                drawOnce();
+                return;
+            }
+            if (animating) pauseAnimation();
+            else startAnimation();
+        });
+
+        saveBtn.addEventListener("click", () => {
+            const link = document.createElement("a");
+            link.download = "monalisa-canvas.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        });
+
+        fileInput.addEventListener("change", (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            loadImage(url, true);
+        });
+
+        styleSel.addEventListener("change", () => {
+            drawOnce();
+        });
+        densityInput.addEventListener("input", () => {
+            densityVal.textContent = densityInput.value;
+            if (!animating) drawOnce();
+        });
+        strokeLenInput.addEventListener("input", () => {
+            lenVal.textContent = strokeLenInput.value;
+            if (!animating) drawOnce();
+        });
+        thicknessInput.addEventListener("input", () => {
+            thickVal.textContent = thicknessInput.value;
+            if (!animating) drawOnce();
+        });
+        coloredChk.addEventListener("change", () => {
+            if (!animating) drawOnce();
+        });
+
+        function loadImage(src, revokeAfter = false) {
+            const newImg = new Image();
+            newImg.crossOrigin = "anonymous";
+            newImg.onload = () => {
+                img = newImg;
+                fitCanvasForImage(img);
+                drawOnce();
+                if (revokeAfter) URL.revokeObjectURL(src);
+            };
+            newImg.onerror = () => {
+                alert("Não foi possível carregar a imagem. Tente outra fonte/arquivo.");
+            };
+            newImg.src = src;
+        }
+
+        // Carrega a Monalisa padrão e desenha
+        loadImage(DEFAULT_SRC);
+    </script>
+</body>
+
+</html>

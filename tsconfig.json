@@ -17,6 +17,7 @@
     "jsx": "react-jsx",
 
     "forceConsistentCasingInFileNames": true,
+    "ignoreDeprecations": "6.0",
 
     /* Linting */
     "strict": true,
