@@ -1,8 +1,6 @@
 import { Slider } from '@/components/ui/slider';
-import { Pause, Play, RotateCcw, SkipBack, SkipForward } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCovidStore } from '../stores/covidStore';
-import { Button } from './ui/button';
 
 export const TimelineControls = () => {
   const data = useCovidStore((state) => state.data);
@@ -89,7 +87,7 @@ export const TimelineControls = () => {
         </div>
 
         {/* Control Buttons */}
-        <div className="flex items-center justify-center space-x-2">
+        {/* <div className="flex items-center justify-center space-x-2">
           <Button
             variant="outline"
             size="sm"
@@ -131,10 +129,10 @@ export const TimelineControls = () => {
           >
             <SkipForward className="w-4 h-4" />
           </Button>
-        </div>
+        </div> */}
 
         {/* Playback Speed Control */}
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <p className="text-xs opacity-80 text-center">Velocidade de Reprodução</p>
           <Slider
             value={[500 - playbackSpeed]}
@@ -147,7 +145,7 @@ export const TimelineControls = () => {
             <span>Lento</span>
             <span>Rápido</span>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

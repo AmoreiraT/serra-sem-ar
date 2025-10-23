@@ -60,7 +60,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
       >
         {/* Orange sky and fog */}
         <color attach="background" args={["#1e0f05"]} />
-        <fog attach="fog" args={["#ff9d4d", 40, 220]} />
+        <fog attach="fog" args={["#FF714DFF", 40, 220]} />
         {/* Sync store updates into the actual three.js camera */}
         <CameraSync cameraPosition={cameraPosition} cameraTarget={cameraTarget} onSync={(pos, tgt) => {
           // make sure store and controls target stay coherent if needed
@@ -68,7 +68,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           setCameraTarget(tgt);
         }} />
         {/* Lighting */}
-        <hemisphereLight color={"#ffae42"} groundColor={"#2b1a0b"} intensity={0.6} />
+        <hemisphereLight color={"#FCC884FF"} groundColor={"#4C331EFF"} intensity={0.6} />
         <directionalLight
           position={[80, 100, 50]}
           intensity={1.1}

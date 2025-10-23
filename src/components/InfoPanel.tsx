@@ -23,10 +23,12 @@ export const InfoPanel = () => {
   if (!currentData) return null;
 
   return (
-    <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm text-white p-6 rounded-lg max-w-sm">
+    <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm text-white p-6 rounded-lg max-w-sm w-55">
       <h3 className="text-xl font-bold mb-4 text-center">SERRA SEM AR</h3>
-
       <div className="space-y-4">
+        <p className="text-sm opacity-80 mb-4">
+          Uma representação artística dos dados da COVID-19 no Brasil como uma montanha 3D navegável.
+        </p>
         {/* Current Date */}
         <div className="flex items-center space-x-3">
           <Calendar className="w-5 h-5 text-blue-400" />

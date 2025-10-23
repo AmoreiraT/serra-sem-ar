@@ -9,7 +9,7 @@ import useTextureLoader from '../hooks/useTextureLoader';
 import { useCovidStore } from '../stores/covidStore';
 import { MountainPoint } from '../types/covid';
 
-interface Mountain3DProps {}
+interface Mountain3DProps { }
 export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DProps, ref) => {
   const meshRef = (ref as React.RefObject<Mesh>) || useRef<Mesh>(null);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
@@ -81,7 +81,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const smoothedHeights = ridgeHeights.map((height, idx) => {
       const sample = (offset: number) => ridgeHeights[Math.min(Math.max(idx + offset, 0), ridgeHeights.length - 1)];
       const kernel = sample(-2) + sample(-1) + height + sample(1) + sample(2);
-      return kernel / 5;
+      return kernel / 3;
     });
 
     profiles.forEach((profile, idx) => {
@@ -95,9 +95,9 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
 
     // Build walkway height that always climbs forward in time
     const walkwayHeights: number[] = new Array(timeSegments);
-    const climbScale = maxPeakHeight * 0.55 + 12;
+    const climbScale = maxPeakHeight * 2.55 + 12;
     const maxRisePerStep = 4.5;
-    const maxDropPerStep = 3.0;
+    const maxDropPerStep = 4.0;
     for (let i = 0; i < timeSegments; i++) {
       const progress = timeSegments <= 1 ? 0 : i / (timeSegments - 1);
       const profile = profiles[i];

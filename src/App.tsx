@@ -10,7 +10,6 @@ import { useCovidData } from './hooks/useCovidData';
 // import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useTemporalNavigation } from './hooks/useTemporalNavigation';
 import { QueryProvider } from './providers/QueryProvider';
-import { ActiveDayHUD } from './components/ActiveDayHUD';
 
 function AppContent() {
   const { isLoading, error } = useCovidData();
@@ -51,7 +50,7 @@ function AppContent() {
       <InfoPanel />
 
       {/* Timeline HUD */}
-      <ActiveDayHUD />
+      {/* <ActiveDayHUD /> */}
 
       {/* Controls Help */}
       <ControlsHelp />
@@ -60,7 +59,7 @@ function AppContent() {
       <TimelineControls />
 
       {/* Title and Description */}
-      <div className="absolute top-4 right-20 bg-black/70 backdrop-blur-sm text-white p-6 rounded-lg max-w-md">
+      {/* <div className="absolute top-4 right-20 bg-black/70 backdrop-blur-sm text-white p-6 rounded-lg max-w-md">
         <h1 className="text-2xl font-bold mb-2">SERRA SEM AR</h1>
         <p className="text-sm opacity-80 mb-4">
           Uma representação artística dos dados da COVID-19 no Brasil como uma montanha 3D navegável.
@@ -71,12 +70,12 @@ function AppContent() {
           <p>• , / . ou [ / ] para navegar no tempo</p>
           <p>• Use a Timeline para reprodução automática</p>
         </div>
-      </div>
+      </div> */}
 
       {/* Footer */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-lg">
         <p className="text-sm text-center">
-          Web Art • Dados: Our World in Data • Tecnologia: React + Three.js
+          Web Art • AmoreiraT • Three.js - disease.sh/v3/covid-19
         </p>
       </div>
     </div>
