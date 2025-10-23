@@ -42,6 +42,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       plateauRange: number;
       ridgeHeight: number;
       smoothedHeight: number;
+      walkwayHeight: number;
     };
 
     const profiles: SegmentProfile[] = new Array(timeSegments);
@@ -55,9 +56,9 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       const casesNorm = maxCases > 0 ? point.cases / maxCases : 0;
       const deathsNorm = maxDeaths > 0 ? point.deaths / maxDeaths : 0;
 
-      const halfWidth = Math.max(12, Math.pow(casesNorm, 0.6) * maxHalfWidth);
-      const walkwayHalf = Math.max(3.5, halfWidth * 0.14);
-      const plateauHalf = Math.max(walkwayHalf + 4, halfWidth * 0.36);
+      const halfWidth = Math.max(14, Math.pow(casesNorm, 0.62) * maxHalfWidth);
+      const walkwayHalf = Math.max(4.5, halfWidth * 0.18);
+      const plateauHalf = Math.max(walkwayHalf + 4, halfWidth * 0.34);
       const rampRange = Math.max(halfWidth - plateauHalf, 0.001);
       const plateauRange = Math.max(plateauHalf - walkwayHalf, 0.001);
       const ridgeHeight = deathsNorm * maxPeakHeight + casesNorm * baseRidgeHeight;
@@ -71,6 +72,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         plateauRange,
         ridgeHeight,
         smoothedHeight: ridgeHeight,
+        walkwayHeight: ridgeHeight,
       };
     }
 
@@ -91,11 +93,40 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       profile.smoothedHeight = (smoothedHeights[idx] + secondary) * 0.5;
     });
 
+    // Build walkway height that always climbs forward in time
+    const walkwayHeights: number[] = new Array(timeSegments);
+    const climbScale = maxPeakHeight * 0.55 + 12;
+    const maxRisePerStep = 4.5;
+    const maxDropPerStep = 3.0;
+    for (let i = 0; i < timeSegments; i++) {
+      const progress = timeSegments <= 1 ? 0 : i / (timeSegments - 1);
+      const profile = profiles[i];
+      const trend = progress * climbScale;
+      let height = THREE.MathUtils.lerp(profile.smoothedHeight, trend, 0.35);
+
+      if (i > 0) {
+        const prev = walkwayHeights[i - 1];
+        const upper = prev + maxRisePerStep;
+        const lower = prev - maxDropPerStep;
+        height = THREE.MathUtils.clamp(height, lower, upper);
+      }
+
+      height = Math.max(height, 0.5);
+      walkwayHeights[i] = height;
+      profile.walkwayHeight = height;
+    }
+
+    // Nudge ridge heights so they never fall below the walkway
+    profiles.forEach((profile) => {
+      profile.smoothedHeight = Math.max(profile.smoothedHeight, profile.walkwayHeight + 0.5);
+      profile.ridgeHeight = Math.max(profile.ridgeHeight, profile.walkwayHeight + 0.25);
+    });
+
     for (let i = 0; i < timeSegments; i++) {
       const profile = profiles[i];
       const point = profile.point;
-      const walkwayHeight = profile.smoothedHeight;
-      const ridgeBlend = THREE.MathUtils.lerp(profile.ridgeHeight, profile.smoothedHeight, 0.5);
+      const walkwayHeight = profile.walkwayHeight;
+      const ridgeBlend = THREE.MathUtils.lerp(profile.ridgeHeight, profile.smoothedHeight, 0.45);
 
       for (let j = 0; j <= zSegments; j++) {
         const t = j / zSegments;
@@ -110,11 +141,12 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
           y = walkwayHeight;
         } else if (dist <= profile.plateauHalf) {
           const centerT = (dist - profile.walkwayHalf) / profile.plateauRange;
-          const plateauEase = 1 - centerT * centerT * 0.25;
+          const plateauEase = 1 - centerT * centerT * 0.28;
           const undulation =
-            (Math.sin(point.x * 0.35 + z * 0.08) * 0.4 + Math.cos(point.x * 0.18 + z * 0.22) * 0.25) *
+            (Math.sin(point.x * 0.28 + z * 0.07) * 0.35 + Math.cos(point.x * 0.16 + z * 0.2) * 0.22) *
             (1 - centerT);
-          y = THREE.MathUtils.lerp(walkwayHeight, ridgeBlend, plateauEase) + undulation;
+          const blend = THREE.MathUtils.lerp(walkwayHeight, ridgeBlend, plateauEase);
+          y = blend + undulation;
         } else {
           const shoulder = 1 - THREE.MathUtils.clamp(dist / profile.halfWidth, 0, 1);
           const brokenEdge =

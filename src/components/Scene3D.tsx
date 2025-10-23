@@ -1,4 +1,4 @@
-import { Environment, Grid, Stats } from '@react-three/drei';
+import { Grid, Stats } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useRef } from 'react';
 import * as THREE from 'three';
@@ -83,9 +83,6 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           shadow-camera-bottom={-110}
         />
         <pointLight position={[-60, 40, -40]} intensity={0.6} color="#ff7a59" />
-
-        {/* Environment */}
-        <Environment preset="sunset" />
 
         {/* Grid for reference */}
         <Grid

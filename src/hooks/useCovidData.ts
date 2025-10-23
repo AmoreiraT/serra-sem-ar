@@ -1,55 +1,80 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import { ProcessedCovidData, MountainPoint } from '../types/covid';
 import { useCovidStore } from '../stores/covidStore';
-import { useEffect } from 'react';
 
-const parseCSVData = async (): Promise<ProcessedCovidData[]> => {
+const DISEASE_SH_API =
+  'https://disease.sh/v3/covid-19/historical/brazil?lastdays=all';
+
+const parseTimelineDate = (key: string): Date | null => {
+  const parts = key.split('/');
+  if (parts.length !== 3) return null;
+  const [monthStr, dayStr, yearStr] = parts;
+  const month = parseInt(monthStr, 10) - 1;
+  const day = parseInt(dayStr, 10);
+  const year = parseInt(yearStr, 10);
+  if (Number.isNaN(month) || Number.isNaN(day) || Number.isNaN(year)) return null;
+  const fullYear = year < 100 ? 2000 + year : year;
+  const date = new Date(Date.UTC(fullYear, month, day));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const fetchApiData = async (): Promise<ProcessedCovidData[]> => {
   try {
-    // Import the CSV file from public folder
-    const response = await axios.get('/brazil_daily_covid_data.csv', {
-      responseType: 'text'
+    const response = await axios.get(DISEASE_SH_API, {
+      headers: { Accept: 'application/json' },
     });
 
-    const csvText = response.data;
-
-    const lines = csvText.trim().split('\n');
-    
-    const data: ProcessedCovidData[] = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',');
-      
-      if (values.length >= 3) {
-        const dateStr = values[0];
-        const casesStr = values[1];
-        const deathsStr = values[2];
-        
-        // Skip rows with empty or invalid data
-        if (!dateStr || casesStr === '' || deathsStr === '') {
-          continue;
-        }
-        
-        const date = new Date(dateStr);
-        const cases = parseInt(casesStr) || 0;
-        const deaths = parseInt(deathsStr) || 0;
-        
-        // Only include valid dates
-        if (!isNaN(date.getTime())) {
-          data.push({
-            date,
-            cases,
-            deaths,
-            dayIndex: i - 1
-          });
-        }
-      }
+    const timeline = response.data?.timeline;
+    if (!timeline || !timeline.cases || !timeline.deaths) {
+      throw new Error('Formato de dados inesperado da API');
     }
-    
-    return data.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const entries = Object.keys(timeline.cases).map((key) => {
+      const date = parseTimelineDate(key);
+      const casesTotal = Number(timeline.cases[key]) || 0;
+      const deathsTotal = Number(timeline.deaths[key]) || 0;
+      return { key, date, casesTotal, deathsTotal };
+    });
+
+    const validEntries = entries
+      .filter((entry) => entry.date !== null)
+      .sort(
+        (a, b) =>
+          (a.date as Date).getTime() - (b.date as Date).getTime()
+      );
+
+    const processed: ProcessedCovidData[] = [];
+    let previousCases = 0;
+    let previousDeaths = 0;
+
+    validEntries.forEach((entry, index) => {
+      const date = entry.date as Date;
+      const dailyCases =
+        index === 0
+          ? entry.casesTotal
+          : Math.max(0, entry.casesTotal - previousCases);
+      const dailyDeaths =
+        index === 0
+          ? entry.deathsTotal
+          : Math.max(0, entry.deathsTotal - previousDeaths);
+
+      processed.push({
+        date,
+        cases: dailyCases,
+        deaths: dailyDeaths,
+        dayIndex: index,
+      });
+
+      previousCases = entry.casesTotal;
+      previousDeaths = entry.deathsTotal;
+    });
+
+    return processed;
   } catch (error) {
-    console.error('Error parsing CSV data:', error);
-    throw new Error('Failed to load COVID-19 data');
+    console.error('Erro ao buscar dados da API:', error);
+    throw new Error('Não foi possível carregar os dados da COVID-19');
   }
 };
 
@@ -93,9 +118,9 @@ export const useCovidData = () => {
   const setRevealedX = useCovidStore((state) => state.setRevealedX);
   
   const query = useQuery({
-    queryKey: ['covid-data'],
-    queryFn: parseCSVData,
-    staleTime: Infinity, // Data won't change, so cache indefinitely
+    queryKey: ['covid-data', 'disease-sh'],
+    queryFn: fetchApiData,
+    staleTime: Infinity, // Dados históricos não mudam com frequência
     retry: 3,
   });
   
