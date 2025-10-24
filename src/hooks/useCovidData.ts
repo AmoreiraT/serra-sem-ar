@@ -4,97 +4,60 @@ import { useEffect } from 'react';
 import { useCovidStore } from '../stores/covidStore';
 import { MountainPoint, ProcessedCovidData } from '../types/covid';
 
-const DISEASE_SH_API =
-  'https://disease.sh/v3/covid-19/historical/brazil?lastdays=all';
+const DATASET_PATH = '/data/brasil-covid-daily.json';
+const START_DATE_UTC = Date.UTC(2020, 1, 25); // 21/10/2020
 
-const START_DATE_UTC = Date.UTC(2020, 9, 21); // 21/10/2020
+interface DatasetRecord {
+  date: string;
+  cases: number;
+  deaths: number;
+  casesAcc?: number;
+  deathsAcc?: number;
+}
 
-const parseTimelineDate = (key: string): Date | null => {
-  const parts = key.split('/');
-  if (parts.length !== 3) return null;
-  const [monthStr, dayStr, yearStr] = parts;
-  const month = parseInt(monthStr, 10) - 1;
-  const day = parseInt(dayStr, 10);
-  const year = parseInt(yearStr, 10);
-  if (Number.isNaN(month) || Number.isNaN(day) || Number.isNaN(year)) return null;
-  const fullYear = year < 100 ? 2000 + year : year;
-  const date = new Date(Date.UTC(fullYear, month, day, 10)); // noon UTC avoids TZ shift
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const fetchApiData = async (): Promise<ProcessedCovidData[]> => {
+const fetchOfficialDataset = async (): Promise<ProcessedCovidData[]> => {
   try {
-    const response = await axios.get(DISEASE_SH_API, {
-      headers: { Accept: 'application/json' },
+    const response = await axios.get<{ records: DatasetRecord[] }>(DATASET_PATH, {
+      responseType: 'json',
     });
 
-    const timeline = response.data?.timeline;
-    if (!timeline || !timeline.cases || !timeline.deaths) {
-      throw new Error('Formato de dados inesperado da API');
+    const records = response.data?.records;
+    if (!Array.isArray(records)) {
+      throw new Error('Formato de dados oficiais inválido');
     }
 
-    const entries = Object.keys(timeline.cases).map((key) => {
-      const date = parseTimelineDate(key);
-      const casesTotal = Number(timeline.cases[key]) || 0;
-      const deathsTotal = Number(timeline.deaths[key]) || 0;
-      return { key, date, casesTotal, deathsTotal };
-    });
-
-    const validEntries = entries
-      .filter((entry) => entry.date !== null)
-      .sort(
-        (a, b) =>
-          (a.date as Date).getTime() - (b.date as Date).getTime()
-      );
-
-    const processed: ProcessedCovidData[] = [];
-    let previousCases = 0;
-    let previousDeaths = 0;
-
-    validEntries.forEach((entry, index) => {
-      const date = entry.date as Date;
-      const dailyCases =
-        index === 0
-          ? entry.casesTotal
-          : Math.max(0, entry.casesTotal - previousCases);
-      const dailyDeaths =
-        index === 0
-          ? entry.deathsTotal
-          : Math.max(0, entry.deathsTotal - previousDeaths);
-
-      processed.push({
-        date,
-        cases: dailyCases,
-        deaths: dailyDeaths,
-        dayIndex: index,
-      });
-
-      previousCases = entry.casesTotal;
-      previousDeaths = entry.deathsTotal;
-    });
-
-    const filtered = processed
-      .filter((entry) => entry.date.getTime() >= START_DATE_UTC)
-      .map((entry, index) => ({
-        date: entry.date,
-        cases: entry.cases,
-        deaths: entry.deaths,
-        dayIndex: index,
+    const filtered = records
+      .filter((record) => {
+        if (!record?.date) return false;
+        const timestamp = Date.parse(record.date);
+        return !Number.isNaN(timestamp) && timestamp >= START_DATE_UTC;
+      })
+      .map((record) => ({
+        date: new Date(record.date),
+        cases: Number(record.cases ?? 0),
+        deaths: Number(record.deaths ?? 0),
+        casesAcc: record.casesAcc,
+        deathsAcc: record.deathsAcc,
+        dayIndex: 0,
       }));
 
-    return filtered;
+    return filtered.map((item, index) => ({
+      ...item,
+      dayIndex: index,
+    }));
   } catch (error) {
-    console.error('Erro ao buscar dados da API:', error);
-    throw new Error('Não foi possível carregar os dados da COVID-19');
+    console.error('Erro ao carregar a série oficial do Ministério da Saúde:', error);
+    throw new Error('Não foi possível carregar os dados oficiais da COVID-19');
   }
 };
 
 const generateMountainPoints = (data: ProcessedCovidData[]): MountainPoint[] => {
-  const points: MountainPoint[] = [];
-  const maxCases = Math.max(...data.map(d => d.cases));
-  const maxDeaths = Math.max(...data.map(d => d.deaths));
+  if (data.length === 0) return [];
 
-  data.forEach((item, index) => {
+  const maxCases = Math.max(...data.map((d) => d.cases), 1);
+  const maxDeaths = Math.max(...data.map((d) => d.deaths), 1);
+
+  return data.map((item, index) => {
     // Normalize the data for 3D positioning
     const x = (index / Math.max(1, data.length - 1)) * 260 - 130; // Stretch timeline path
     const z = 0; // Keep Z at 0 for now, can be used for other dimensions
@@ -108,17 +71,15 @@ const generateMountainPoints = (data: ProcessedCovidData[]): MountainPoint[] => 
     // Combine both for total height
     const y = caseHeight + deathHeight;
 
-    points.push({
+    return {
       x,
       y,
       z,
       cases: item.cases,
       deaths: item.deaths,
       date: item.date
-    });
+    };
   });
-
-  return points;
 };
 
 export const useCovidData = () => {
@@ -129,8 +90,8 @@ export const useCovidData = () => {
   const setRevealedX = useCovidStore((state) => state.setRevealedX);
 
   const query = useQuery({
-    queryKey: ['covid-data', 'disease-sh'],
-    queryFn: fetchApiData,
+    queryKey: ['covid-data', 'official-ms'],
+    queryFn: fetchOfficialDataset,
     staleTime: Infinity, // Dados históricos não mudam com frequência
     retry: 3,
   });

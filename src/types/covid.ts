@@ -9,6 +9,8 @@ export interface ProcessedCovidData {
   cases: number;
   deaths: number;
   dayIndex: number;
+  casesAcc?: number;
+  deathsAcc?: number;
 }
 
 export interface MountainPoint {
@@ -19,4 +21,3 @@ export interface MountainPoint {
   deaths: number;
   date: Date;
 }
-

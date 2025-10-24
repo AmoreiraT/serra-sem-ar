@@ -5,7 +5,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { InfoPanel } from './components/InfoPanel';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Scene3D } from './components/Scene3D';
-import { TimelineControls } from './components/TimelineControls';
 import { useCovidData } from './hooks/useCovidData';
 // import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useTemporalNavigation } from './hooks/useTemporalNavigation';
@@ -56,7 +55,7 @@ function AppContent() {
       <ControlsHelp />
 
       {/* Timeline Controls */}
-      <TimelineControls />
+      {/* <TimelineControls /> */}
 
       {/* Title and Description */}
       {/* <div className="absolute top-4 right-20 bg-black/70 backdrop-blur-sm text-white p-6 rounded-lg max-w-md">
@@ -75,7 +74,7 @@ function AppContent() {
       {/* Footer */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-lg">
         <p className="text-sm text-center">
-          Web Art • AmoreiraT • Three.js - disease.sh/v3/covid-19
+          Web Art • AmoreiraT • Three.js - saude.gov.br
         </p>
       </div>
     </div>
