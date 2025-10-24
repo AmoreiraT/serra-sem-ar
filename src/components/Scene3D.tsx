@@ -105,7 +105,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
         </Suspense>
 
         {/* First-person player with pointer lock and flashlight */}
-        <Player terrainRef={mountainRef} eyeHeight={2.2} speed={6} />
+        <Player terrainRef={mountainRef} eyeHeight={2.2} />
 
         {/* Performance stats */}
         {showStats && <Stats />}

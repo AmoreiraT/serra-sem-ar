@@ -29,8 +29,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const indices: number[] = [];
     const uvs: number[] = [];
 
-    const maxCases = Math.max(...mountainPoints.map((p) => p.cases));
-    const maxDeaths = Math.max(...mountainPoints.map((p) => p.deaths));
+    const maxCases = Math.max(1, ...mountainPoints.map((p) => p.cases));
+    const maxDeaths = Math.max(1, ...mountainPoints.map((p) => p.deaths));
     const segmentXs: number[] = new Array(timeSegments);
 
     type SegmentProfile = {
@@ -43,6 +43,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       ridgeHeight: number;
       smoothedHeight: number;
       walkwayHeight: number;
+      casesNorm: number;
+      deathsNorm: number;
     };
 
     const profiles: SegmentProfile[] = new Array(timeSegments);
@@ -72,7 +74,9 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         plateauRange,
         ridgeHeight,
         smoothedHeight: ridgeHeight,
-        walkwayHeight: ridgeHeight,
+        walkwayHeight: 0,
+        casesNorm,
+        deathsNorm,
       };
     }
 
@@ -81,7 +85,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const smoothedHeights = ridgeHeights.map((height, idx) => {
       const sample = (offset: number) => ridgeHeights[Math.min(Math.max(idx + offset, 0), ridgeHeights.length - 1)];
       const kernel = sample(-2) + sample(-1) + height + sample(1) + sample(2);
-      return kernel / 3;
+      return kernel / 5;
     });
 
     profiles.forEach((profile, idx) => {
@@ -93,28 +97,27 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       profile.smoothedHeight = (smoothedHeights[idx] + secondary) * 0.5;
     });
 
-    // Build walkway height that always climbs forward in time
-    const walkwayHeights: number[] = new Array(timeSegments);
-    const climbScale = maxPeakHeight * 2.55 + 12;
-    const maxRisePerStep = 4.5;
-    const maxDropPerStep = 4.0;
-    for (let i = 0; i < timeSegments; i++) {
-      const progress = timeSegments <= 1 ? 0 : i / (timeSegments - 1);
-      const profile = profiles[i];
-      const trend = progress * climbScale;
-      let height = THREE.MathUtils.lerp(profile.smoothedHeight, trend, 0.35);
+    const walkwayScale = maxPeakHeight * 0.9 + baseRidgeHeight * 0.25;
+    const maxAscent = 6;
+    const maxDescent = 5;
+    let previousHeight = 0;
 
-      if (i > 0) {
-        const prev = walkwayHeights[i - 1];
-        const upper = prev + maxRisePerStep;
-        const lower = prev - maxDropPerStep;
-        height = THREE.MathUtils.clamp(height, lower, upper);
+    profiles.forEach((profile, index) => {
+      const target =
+        profile.deathsNorm * walkwayScale +
+        profile.casesNorm * (baseRidgeHeight * 0.2);
+
+      if (index === 0) {
+        previousHeight = target;
+      } else {
+        const diff = target - previousHeight;
+        const limited = THREE.MathUtils.clamp(diff, -maxDescent, maxAscent);
+        previousHeight += limited;
+        previousHeight = THREE.MathUtils.lerp(previousHeight, target, 0.3);
       }
 
-      height = Math.max(height, 0.5);
-      walkwayHeights[i] = height;
-      profile.walkwayHeight = height;
-    }
+      profile.walkwayHeight = Math.max(previousHeight, 0);
+    });
 
     // Nudge ridge heights so they never fall below the walkway
     profiles.forEach((profile) => {
