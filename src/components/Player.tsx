@@ -119,7 +119,7 @@ export const Player = ({ terrainRef, eyeHeight = 2.2 }: PlayerProps) => {
       <primitive object={targetRef.current} />
       <spotLight
         ref={spotRef}
-        color="#261D0AFF"
+        color="#261d0a"
         intensity={2.2}
         distance={40}
         angle={Math.PI / 8}

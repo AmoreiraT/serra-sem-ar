@@ -39,44 +39,24 @@ function AppContent() {
   }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div className="relative flex h-screen w-full flex-col overflow-hidden">
+      <header className="z-10 flex flex-wrap items-center justify-between gap-4 bg-black/70 px-6 py-3 text-white backdrop-blur-md">
+        <InfoPanel variant="compact" />
+        <ControlsHelp variant="header" />
+      </header>
       {/* 3D Scene with Error Boundary */}
       <ErrorBoundary>
-        <Scene3D enableControls showStats={false} />
+        <div className="relative flex-1">
+          <Scene3D enableControls showStats={false} />
+          {/* Footer */}
+          <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 transform rounded-lg bg-black/70 px-4 py-2 text-white backdrop-blur-sm">
+            <p className="text-sm text-center">
+              Web Art • AmoreiraT • Three.js - saude.gov.br
+            </p>
+          </div>
+        </div>
       </ErrorBoundary>
 
-      {/* Information Panel */}
-      <InfoPanel />
-
-      {/* Timeline HUD */}
-      {/* <ActiveDayHUD /> */}
-
-      {/* Controls Help */}
-      <ControlsHelp />
-
-      {/* Timeline Controls */}
-      {/* <TimelineControls /> */}
-
-      {/* Title and Description */}
-      {/* <div className="absolute top-4 right-20 bg-black/70 backdrop-blur-sm text-white p-6 rounded-lg max-w-md">
-        <h1 className="text-2xl font-bold mb-2">SERRA SEM AR</h1>
-        <p className="text-sm opacity-80 mb-4">
-          Uma representação artística dos dados da COVID-19 no Brasil como uma montanha 3D navegável.
-        </p>
-        <div className="text-xs space-y-1 opacity-70">
-          <p>• Clique na cena para capturar o cursor (ESC libera)</p>
-          <p>• W/D avançam • S/A retornam • Mouse para olhar • Shift para correr</p>
-          <p>• , / . ou [ / ] para navegar no tempo</p>
-          <p>• Use a Timeline para reprodução automática</p>
-        </div>
-      </div> */}
-
-      {/* Footer */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-lg">
-        <p className="text-sm text-center">
-          Web Art • AmoreiraT • Three.js - saude.gov.br
-        </p>
-      </div>
     </div>
   );
 }
