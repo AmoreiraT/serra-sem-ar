@@ -4,9 +4,9 @@ import * as THREE from 'three';
 import { covidEvents } from '../data/covidEvents';
 import { useCovidStore } from '../stores/covidStore';
 
-const BOARD_WIDTH = 4.6;
-const BOARD_HEIGHT = 2.8;
-const POLE_HEIGHT = 2.8;
+const BOARD_WIDTH = 12.4;
+const BOARD_HEIGHT = 2.5;
+const POLE_HEIGHT = 10.6;
 
 const formatDate = (date: Date) =>
   date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -37,8 +37,8 @@ export const EventMarkers3D = () => {
           tangent.normalize();
         }
 
-        const offsetDistance = index === 0 ? 10 : 6;
-        const position = new THREE.Vector3(current.x, Math.max(current.y + 2.6, 4), current.z)
+        const offsetDistance = index === 0 ? 16 : 14;
+        const position = new THREE.Vector3(current.x, Math.max(current.y + 1.5, 3.2), current.z)
           .add(tangent.clone().multiplyScalar(offsetDistance));
 
         const facing = tangent.clone().multiplyScalar(-1);
@@ -62,16 +62,16 @@ export const EventMarkers3D = () => {
     <group>
       <group position={point.toArray()} rotation={[0, rotationY, 0]}>
         <mesh position={[0, POLE_HEIGHT / 2, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.18, 0.25, POLE_HEIGHT, 12]} />
+          <cylinderGeometry args={[0.10, 0.02, POLE_HEIGHT, 12]} />
           <meshStandardMaterial color="#3a271a" roughness={0.92} metalness={0.08} />
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0, 0.65, 1.4, 14]} />
+          <cylinderGeometry args={[0, 0.85, 1.6, 14]} />
           <meshStandardMaterial color="#28170f" roughness={0.95} metalness={0.04} />
         </mesh>
         <group position={[0, POLE_HEIGHT, 0]}>
           <mesh castShadow receiveShadow>
-            <planeGeometry args={[BOARD_WIDTH + 0.6, BOARD_HEIGHT + 0.4]} />
+            <planeGeometry args={[BOARD_WIDTH + 0.6, BOARD_HEIGHT + 0.24]} />
             <meshStandardMaterial color="#1a100a" roughness={0.9} metalness={0.05} />
           </mesh>
           <mesh position={[0, 0, 0.02]} castShadow receiveShadow>
@@ -81,15 +81,15 @@ export const EventMarkers3D = () => {
           <Html
             transform
             position={[0, 0, 0.03]}
-            distanceFactor={22}
-            style={{ width: `${BOARD_WIDTH * 38}px`, height: `${BOARD_HEIGHT * 38}px`, pointerEvents: 'auto' }}
+            distanceFactor={35}
+            style={{ width: `${BOARD_WIDTH * 35}px`, height: `${BOARD_HEIGHT * 35}px`, pointerEvents: 'auto' }}
           >
-            <div className="flex h-full w-full flex-col gap-3 rounded-xl border border-white/15 bg-black/85 p-4 text-white shadow-xl">
-              <div className="text-xs uppercase tracking-[0.35em] text-amber-200">
+            <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-white/15 bg-black/85 px-2.5 py-2 text-white shadow-xl">
+              <div className="text-[9px] uppercase tracking-[0.45em] text-amber-200">
                 {formatDate(data[targetIndex]?.date ?? new Date(event.date))}
               </div>
-              <h3 className="text-lg font-semibold leading-tight">{event.title}</h3>
-              <p className="text-sm leading-relaxed text-white/80">{event.description}</p>
+              <h3 className="text-xs font-semibold leading-tight">{event.title}</h3>
+              <p className="text-[8px] leading-relaxed text-white/80">{event.description}</p>
 
               {event.attachments && event.attachments.length > 0 && (
                 <div className="space-y-2">
@@ -99,7 +99,7 @@ export const EventMarkers3D = () => {
                       return (
                         <blockquote
                           key={key}
-                          className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white/80"
+                          className="rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-[10px] text-white/80"
                         >
                           “{attachment.content}”
                         </blockquote>
@@ -111,11 +111,11 @@ export const EventMarkers3D = () => {
                           <img
                             src={attachment.url}
                             alt={attachment.label ?? event.title}
-                            className="h-24 w-full object-cover"
+                            className="h-16 w-full object-cover"
                             loading="lazy"
                           />
                           {attachment.label && (
-                            <figcaption className="px-2 py-1 text-[10px] uppercase tracking-[0.35em] text-white/60">
+                            <figcaption className="px-2 py-1 text-[8px] uppercase tracking-[0.35em] text-white/60">
                               {attachment.label}
                             </figcaption>
                           )}
@@ -135,7 +135,7 @@ export const EventMarkers3D = () => {
                             />
                           </div>
                           {attachment.label && (
-                            <p className="px-2 py-1 text-[10px] uppercase tracking-[0.35em] text-white/60">
+                            <p className="px-2 py-1 text-[8px] uppercase tracking-[0.35em] text-white/60">
                               {attachment.label}
                             </p>
                           )}
@@ -149,7 +149,7 @@ export const EventMarkers3D = () => {
                           href={attachment.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-2 rounded-lg border border-amber-200/40 bg-amber-200/10 px-2 py-1 text-[11px] uppercase tracking-[0.35em] text-amber-200 hover:bg-amber-200/20"
+                          className="inline-flex items-center gap-1 rounded-lg border border-amber-200/40 bg-amber-200/10 px-2 py-1 text-[9px] uppercase tracking-[0.35em] text-amber-200 hover:bg-amber-200/20"
                         >
                           {attachment.label ?? 'Abrir referência'}
                           <span aria-hidden>↗</span>
@@ -166,7 +166,7 @@ export const EventMarkers3D = () => {
                   href={event.source}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-auto inline-flex items-center gap-2 text-xs uppercase tracking-[0.35em] text-amber-300 hover:text-amber-100"
+                  className="mt-auto inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.35em] text-amber-300 hover:text-amber-100"
                 >
                   Fonte oficial
                   <span aria-hidden>↗</span>
