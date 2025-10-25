@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { useCovidStore } from '../stores/covidStore';
 import { Mountain3D } from './Mountain3D';
 import { Player } from './Player';
+import { EventMarkers3D } from './EventMarkers3D';
 
 
 
@@ -118,6 +119,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
         <Suspense fallback={null}>
           <Mountain3D ref={mountainRef} />
         </Suspense>
+        <EventMarkers3D />
 
         {/* First-person player with pointer lock and flashlight */}
         <Player terrainRef={mountainRef} eyeHeight={2.2} />
