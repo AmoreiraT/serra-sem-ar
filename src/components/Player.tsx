@@ -1,6 +1,6 @@
 import { PointerLockControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useCovidStore } from '../stores/covidStore';
 
@@ -11,6 +11,9 @@ interface PlayerProps {
 
 const FORWARD_KEYS = new Set(['w', 'W', 'ArrowUp', 'd', 'D', 'ArrowRight']);
 const BACKWARD_KEYS = new Set(['s', 'S', 'ArrowDown', 'a', 'A', 'ArrowLeft']);
+const WHEEL_SENSITIVITY_STEP = 1;
+const TOUCH_SCROLL_THRESHOLD = 45;
+const TOUCH_YAW_SENSITIVITY = 0.003;
 
 export const Player = ({ terrainRef, eyeHeight = 2.2 }: PlayerProps) => {
   const { camera } = useThree();
@@ -23,6 +26,11 @@ export const Player = ({ terrainRef, eyeHeight = 2.2 }: PlayerProps) => {
   const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
   const exactIndexRef = useRef(0);
   const targetIndexRef = useRef(0);
+  const touchScrollAccumulatorRef = useRef(0);
+  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+  const touchActiveRef = useRef(false);
+  const yawRef = useRef(0);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   const spawn = useMemo(() => {
     if (!mountainPoints.length) return new THREE.Vector3(0, 10, 0);
@@ -35,9 +43,20 @@ export const Player = ({ terrainRef, eyeHeight = 2.2 }: PlayerProps) => {
     [mountainPoints.length]
   );
 
+  const updateTimeline = useCallback(
+    (delta: number) => {
+      if (!mountainPoints.length || delta === 0) return;
+      const next = clampLinearIndex(targetIndexRef.current + delta);
+      targetIndexRef.current = next;
+      setCurrentDateIndex(Math.round(next));
+    },
+    [clampLinearIndex, mountainPoints.length, setCurrentDateIndex]
+  );
+
   useEffect(() => {
     camera.position.copy(spawn);
     camera.lookAt(spawn.x + 1, spawn.y, spawn.z);
+    yawRef.current = camera.rotation.y;
     setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
     if (mountainPoints.length) {
       setCurrentDateIndex(0);
@@ -56,24 +75,110 @@ export const Player = ({ terrainRef, eyeHeight = 2.2 }: PlayerProps) => {
   }, [clampLinearIndex, currentDateIndex, mountainPoints.length]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const detectTouch = () =>
+      typeof navigator !== 'undefined' &&
+      (navigator.maxTouchPoints > 0 ||
+        // @ts-expect-error older Safari
+        navigator.msMaxTouchPoints > 0 ||
+        'ontouchstart' in window ||
+        (window.matchMedia && window.matchMedia('(pointer: coarse)').matches));
+    const isTouch = detectTouch();
+    setIsTouchDevice(isTouch);
+    yawRef.current = camera.rotation.y;
+  }, [camera]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!mountainPoints.length) return;
       const step = event.shiftKey ? 10 : 1;
       if (FORWARD_KEYS.has(event.key)) {
         event.preventDefault();
-        const next = clampLinearIndex(targetIndexRef.current + step);
-        targetIndexRef.current = next;
-        setCurrentDateIndex(Math.round(next));
+        updateTimeline(step);
       }
       if (BACKWARD_KEYS.has(event.key)) {
         event.preventDefault();
-        const next = clampLinearIndex(targetIndexRef.current - step);
-        targetIndexRef.current = next;
-        setCurrentDateIndex(Math.round(next));
+        updateTimeline(-step);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [clampLinearIndex, setCurrentDateIndex]);
+  }, [mountainPoints.length, updateTimeline]);
+
+  useEffect(() => {
+    const onWheel = (event: WheelEvent) => {
+      if (!mountainPoints.length) return;
+      event.preventDefault();
+      const direction = event.deltaY === 0 ? 0 : event.deltaY < 0 ? 1 : -1;
+      if (direction === 0) return;
+
+      const stepMultiplier = event.shiftKey ? 10 : WHEEL_SENSITIVITY_STEP;
+      const delta = direction * stepMultiplier;
+      updateTimeline(delta);
+    };
+
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [mountainPoints.length, updateTimeline]);
+
+  useEffect(() => {
+    if (!isTouchDevice) return;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      touchActiveRef.current = true;
+      const touch = event.touches[0];
+      lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+      touchScrollAccumulatorRef.current = 0;
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!touchActiveRef.current || event.touches.length !== 1) return;
+      event.preventDefault();
+      const touch = event.touches[0];
+      const last = lastTouchRef.current;
+      if (!last) {
+        lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+        return;
+      }
+
+      const dx = touch.clientX - last.x;
+      const dy = touch.clientY - last.y;
+      lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+
+      yawRef.current -= dx * TOUCH_YAW_SENSITIVITY;
+      camera.rotation.order = 'YXZ';
+      camera.rotation.y = yawRef.current;
+
+      touchScrollAccumulatorRef.current += dy;
+      while (touchScrollAccumulatorRef.current <= -TOUCH_SCROLL_THRESHOLD) {
+        updateTimeline(1);
+        touchScrollAccumulatorRef.current += TOUCH_SCROLL_THRESHOLD;
+      }
+      while (touchScrollAccumulatorRef.current >= TOUCH_SCROLL_THRESHOLD) {
+        updateTimeline(-1);
+        touchScrollAccumulatorRef.current -= TOUCH_SCROLL_THRESHOLD;
+      }
+    };
+
+    const handleTouchEnd = () => {
+      touchActiveRef.current = false;
+      lastTouchRef.current = null;
+      touchScrollAccumulatorRef.current = 0;
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [camera, isTouchDevice, updateTimeline]);
 
   useFrame((_, delta) => {
     if (!mountainPoints.length) return;
@@ -115,7 +220,7 @@ export const Player = ({ terrainRef, eyeHeight = 2.2 }: PlayerProps) => {
 
   return (
     <>
-      <PointerLockControls />
+      {!isTouchDevice && <PointerLockControls />}
       <primitive object={targetRef.current} />
       <spotLight
         ref={spotRef}
