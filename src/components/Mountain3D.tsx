@@ -5,9 +5,44 @@ import { useFrame } from '@react-three/fiber';
 import { forwardRef, useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { BufferGeometry, Float32BufferAttribute, Mesh } from 'three';
+import { createNoise2D, createNoise3D } from 'simplex-noise';
 import useTextureLoader from '../hooks/useTextureLoader';
 import { useCovidStore } from '../stores/covidStore';
 import { MountainPoint } from '../types/covid';
+
+const cyrb128 = (str: string) => {
+  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+  for (let i = 0, k: number; i < str.length; i++) {
+    k = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ k, 597399067);
+    h2 = Math.imul(h2 ^ k, 2869860233);
+    h3 = Math.imul(h3 ^ k, 951274213);
+    h4 = Math.imul(h4 ^ k, 2716044179);
+  }
+  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+  return [(h1 ^ h2 ^ h3 ^ h4) >>> 0, (h2 ^ h1) >>> 0, (h3 ^ h1) >>> 0, (h4 ^ h1) >>> 0];
+};
+
+const sfc32 = (a: number, b: number, c: number, d: number) => {
+  return () => {
+    a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+    const t = (a + b) | 0;
+    a = b ^ (b >>> 9);
+    b = (c + (c << 3)) | 0;
+    c = (c << 21) | (c >>> 11);
+    d = (d + 1) | 0;
+    const result = (t + d) | 0;
+    return (result >>> 0) / 4294967296;
+  };
+};
+
+const makeRng = (seed: string) => {
+  const state = cyrb128(seed);
+  return sfc32(state[0], state[1], state[2], state[3]);
+};
 
 interface Mountain3DProps { }
 export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DProps, ref) => {
@@ -16,11 +51,14 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
   const setRevealedX = useCovidStore((state) => state.setRevealedX);
   const cameraX = useCovidStore((state) => state.cameraPosition[0]);
   // Parameters
-  const timeSegments = useMemo(() => Math.min(mountainPoints.length, 160), [mountainPoints.length]);
-  const zSegments = 64; // lateral detail across mountain width
-  const maxHalfWidth = 64; // maximum half-width of the mountain in Z
-  const maxPeakHeight = 42; // maximum contribution from deaths
+  const timeSegments = useMemo(() => Math.min(mountainPoints.length * 2, 360), [mountainPoints.length]);
+  const zSegments = 160; // lateral detail across mountain width
+  const maxHalfWidth = 70; // maximum half-width of the mountain in Z
+  const maxPeakHeight = 48; // maximum contribution from deaths
   const baseRidgeHeight = 6; // contribution from cases gives baseline rise without flattening valleys
+
+  const noise2D = useMemo(() => createNoise2D(makeRng('serra-sem-ar-2d')), []);
+  const noise3D = useMemo(() => createNoise3D(makeRng('serra-sem-ar-3d')), []);
 
   const mountainData = useMemo(() => {
     if (mountainPoints.length === 0) return null;
@@ -112,11 +150,14 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       } else {
         const diff = target - previousHeight;
         const limited = THREE.MathUtils.clamp(diff, -maxDescent, maxAscent);
-        previousHeight += limited;
-        previousHeight = THREE.MathUtils.lerp(previousHeight, target, 0.3);
+        const blended = previousHeight + limited;
+        previousHeight = THREE.MathUtils.lerp(blended, target, 0.45);
       }
 
-      profile.walkwayHeight = Math.max(previousHeight, 0);
+      const pathWiggle = noise2D(profile.point.x * 0.08 + 10, index * 0.02) * 0.6;
+      const finalHeight = Math.max(previousHeight + pathWiggle, 0);
+      profile.walkwayHeight = finalHeight;
+      previousHeight = finalHeight;
     });
 
     // Nudge ridge heights so they never fall below the walkway
@@ -137,11 +178,14 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         const dist = Math.abs(z);
         const outerT = THREE.MathUtils.clamp((dist - profile.plateauHalf) / profile.rampRange, 0, 1);
         const smoothFalloff = 1 - (outerT * outerT * (3 - 2 * outerT));
+        const primaryFold = noise3D(point.x * 0.035, z * 0.045, i * 0.02);
+        const secondaryFold = noise3D(point.x * 0.12 + 50, z * 0.12, i * 0.05);
 
         let y = smoothFalloff * ridgeBlend;
 
         if (dist <= profile.walkwayHalf) {
-          y = walkwayHeight;
+          const ripple = noise2D(point.x * 0.12, i * 0.03) * 0.35;
+          y = walkwayHeight + ripple;
         } else if (dist <= profile.plateauHalf) {
           const centerT = (dist - profile.walkwayHalf) / profile.plateauRange;
           const plateauEase = 1 - centerT * centerT * 0.28;
@@ -149,7 +193,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
             (Math.sin(point.x * 0.28 + z * 0.07) * 0.35 + Math.cos(point.x * 0.16 + z * 0.2) * 0.22) *
             (1 - centerT);
           const blend = THREE.MathUtils.lerp(walkwayHeight, ridgeBlend, plateauEase);
-          y = blend + undulation;
+          const folds = (primaryFold * 4 + secondaryFold * 1.6) * (1 - centerT);
+          y = blend + undulation + folds;
         } else {
           const shoulder = 1 - THREE.MathUtils.clamp(dist / profile.halfWidth, 0, 1);
           const brokenEdge =
@@ -157,7 +202,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
             0.35 *
             shoulder *
             (1 - smoothFalloff);
-          y += brokenEdge;
+          const folds = (primaryFold * 6 + secondaryFold * 2.5) * shoulder * (1 - smoothFalloff);
+          y += brokenEdge + folds;
         }
 
         vertices.push(point.x, y, z);

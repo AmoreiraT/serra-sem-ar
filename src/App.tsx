@@ -2,6 +2,7 @@ import { AlertCircle } from 'lucide-react';
 import './App.css';
 import { ControlsHelp } from './components/ControlsHelp';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { EventCard } from './components/EventCard';
 import { InfoPanel } from './components/InfoPanel';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Scene3D } from './components/Scene3D';
@@ -47,6 +48,9 @@ function AppContent() {
 
       {/* Information Panel */}
       <InfoPanel />
+
+      {/* Event Card */}
+      <EventCard />
 
       {/* Timeline HUD */}
       {/* <ActiveDayHUD /> */}

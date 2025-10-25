@@ -1,4 +1,4 @@
-import { Grid, Stats } from '@react-three/drei';
+import { Grid, Sky, Stats } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useRef } from 'react';
 import * as THREE from 'three';
@@ -58,9 +58,18 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
         dpr={[1, 1.5]}
         className="bg-gradient-to-b from-orange-900 to-amber-700"
       >
-        {/* Orange sky and fog */}
-        <color attach="background" args={["#1e0f05"]} />
-        <fog attach="fog" args={["#FF714DFF", 40, 220]} />
+        {/* Sky and atmosphere */}
+        <color attach="background" args={['#130a05']} />
+        <Sky
+          distance={450000}
+          inclination={0.47}
+          azimuth={0.25}
+          turbidity={12}
+          rayleigh={1.8}
+          mieCoefficient={0.015}
+          mieDirectionalG={0.85}
+        />
+        <fog attach="fog" args={['#5f3c26', 60, 320]} />
         {/* Sync store updates into the actual three.js camera */}
         <CameraSync cameraPosition={cameraPosition} cameraTarget={cameraTarget} onSync={(pos, tgt) => {
           // make sure store and controls target stay coherent if needed
@@ -84,10 +93,16 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
         />
         <pointLight position={[-60, 40, -40]} intensity={0.6} color="#ff7a59" />
 
+        {/* Ground plane */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.2, 0]} receiveShadow>
+          <planeGeometry args={[1600, 1600, 1, 1]} />
+          <meshStandardMaterial color="#27170d" roughness={0.95} metalness={0.02} />
+        </mesh>
+
         {/* Grid for reference */}
         <Grid
-          position={[0, -1, 0]}
-          args={[200, 200]}
+          position={[0, -2.19, 0]}
+          args={[400, 400]}
           cellSize={5}
           cellThickness={0.5}
           cellColor="#ffffff"

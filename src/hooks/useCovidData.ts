@@ -57,9 +57,12 @@ const generateMountainPoints = (data: ProcessedCovidData[]): MountainPoint[] => 
   const maxCases = Math.max(...data.map((d) => d.cases), 1);
   const maxDeaths = Math.max(...data.map((d) => d.deaths), 1);
 
+  const daySpacing = 0.55;
+  const centerOffset = (data.length > 1 ? daySpacing * (data.length - 1) : 0) * 0.5;
+
   return data.map((item, index) => {
     // Normalize the data for 3D positioning
-    const x = (index / Math.max(1, data.length - 1)) * 260 - 130; // Stretch timeline path
+    const x = index * daySpacing - centerOffset;
     const z = 0; // Keep Z at 0 for now, can be used for other dimensions
 
     // Height based on cases (width of mountain base)
