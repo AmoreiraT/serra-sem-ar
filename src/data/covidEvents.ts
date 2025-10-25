@@ -31,60 +31,21 @@ export const covidEvents: CovidEvent[] = [
     ],
   },
   {
-    date: '2020-03-24',
-    title: 'Pronunciamento sobre "gripezinha"',
-    description:
-      'Em cadeia nacional, o presidente Jair Bolsonaro minimiza a gravidade da COVID-19 e critica medidas de isolamento, chamando a doença de "resfriadinho".',
-    source: 'https://www.gov.br/planalto/pt-br/acompanhe-o-planalto/noticias/2020/03/pronunciamento-em-cadeia-de-radio-e-tv-sobre-o-coronavirus',
-    attachments: [
-      {
-        type: 'text',
-        content: '“No meu caso particular, pelo meu histórico de atleta, caso fosse contaminado, não precisaria me preocupar, nada sentiria ou seria quando muito acometido de uma gripezinha.”',
-      },
-    ],
-  },
-  {
-    date: '2020-04-16',
-    title: 'Demissão de Luiz Henrique Mandetta',
-    description:
-      'O ministro da Saúde Luiz Henrique Mandetta é exonerado após divergências com o Palácio do Planalto sobre medidas de distanciamento social.',
-    attachments: [
-      {
-        type: 'link',
-        url: 'https://agenciabrasil.ebc.com.br/politica/noticia/2020-04/mandetta-anuncia-que-foi-demisssionado-do-ministerio-da-saude',
-        label: 'Matéria da Agência Brasil',
-      },
-    ],
-  },
-  {
-    date: '2020-06-19',
-    title: 'Brasil ultrapassa 1 milhão de casos',
-    description:
-      'O país atinge a marca de 1 milhão de casos confirmados de COVID-19, com mais de 48 mil mortes registradas.',
-    attachments: [
-      {
-        type: 'link',
-        url: 'https://covid.saude.gov.br/',
-        label: 'Painel COVID-19 (Ministério da Saúde)',
-      },
-    ],
-  },
-  {
     date: '2020-02-26',
     title: 'Primeiro caso confirmado no Brasil',
     description:
-      'O Ministério da Saúde confirma o primeiro caso de COVID-19 no Brasil, um paciente em São Paulo recém-chegado da Itália.',
+      'O Ministério da Saúde confirma o primeiro caso de COVID-19 no país, um paciente de São Paulo recém-chegado da Itália.',
     source: 'https://www.gov.br/saude/pt-br/assuntos/noticias/ministerio-da-saude-confirma-primeiro-caso-de-coronavirus-no-brasil',
     attachments: [
       {
         type: 'image',
         url: 'https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/coronavirus_1_0.jpg',
-        label: 'Imagem de divulgação do MS',
+        label: 'Imagem de divulgação do Ministério da Saúde',
       },
       {
         type: 'link',
         url: 'https://www.youtube.com/watch?v=BtJx11yTPOs',
-        label: 'Coletiva de imprensa (YouTube)',
+        label: 'Coletiva de imprensa do MS',
       },
     ],
   },
@@ -97,7 +58,7 @@ export const covidEvents: CovidEvent[] = [
       {
         type: 'text',
         content:
-          '“A COVID-19 pode ser caracterizada como uma pandemia” — Dr. Tedros Adhanom Ghebreyesus, diretor-geral da OMS.',
+          '“A COVID-19 pode ser caracterizada como uma pandemia.” — Dr. Tedros Adhanom Ghebreyesus, diretor-geral da OMS.',
       },
       {
         type: 'link',
@@ -110,7 +71,7 @@ export const covidEvents: CovidEvent[] = [
     date: '2020-03-20',
     title: 'Calamidade pública',
     description:
-      'O Senado aprova decreto de calamidade pública em todo o território nacional, permitindo medidas extraordinárias de combate à pandemia.',
+      'O Senado Federal reconhece estado de calamidade pública em todo o território nacional, viabilizando medidas extraordinárias de resposta.',
     attachments: [
       {
         type: 'link',
@@ -120,16 +81,101 @@ export const covidEvents: CovidEvent[] = [
     ],
   },
   {
-    date: '2020-04-24',
-    title: 'Uso de máscaras obrigatório',
+    date: '2020-03-24',
+    title: 'Pronunciamento sobre “gripezinha”',
     description:
-      'Primeiras capitais brasileiras tornam obrigatório o uso de máscaras em espaços públicos e transportes coletivos.',
+      'Em cadeia nacional, o presidente Jair Bolsonaro minimiza a gravidade da COVID-19 e critica medidas de isolamento, chamando a doença de “resfriadinho”.',
+    source: 'https://www.gov.br/planalto/pt-br/acompanhe-o-planalto/noticias/2020/03/pronunciamento-em-cadeia-de-radio-e-tv-sobre-o-coronavirus',
+    attachments: [
+      {
+        type: 'text',
+        content:
+          '“Pelo meu histórico de atleta, caso fosse contaminado, não precisaria me preocupar, nada sentiria ou seria, quando muito, acometido de uma gripezinha.”',
+      },
+    ],
+  },
+  {
+    date: '2020-04-16',
+    title: 'Mandetta deixa o Ministério da Saúde',
+    description:
+      'Após divergências sobre isolamento social, Luiz Henrique Mandetta é exonerado do Ministério da Saúde.',
+    attachments: [
+      {
+        type: 'link',
+        url: 'https://agenciabrasil.ebc.com.br/politica/noticia/2020-04/mandetta-anuncia-que-foi-demisssionado-do-ministerio-da-saude',
+        label: 'Matéria da Agência Brasil',
+      },
+    ],
+  },
+  {
+    date: '2020-04-24',
+    title: 'Uso de máscaras se espalha',
+    description:
+      'Capitais brasileiras começam a tornar obrigatório o uso de máscaras em espaços públicos e transportes coletivos.',
+  },
+  {
+    date: '2020-05-15',
+    title: 'Nelson Teich pede demissão',
+    description:
+      'Com pouco mais de um mês no cargo, Nelson Teich deixa o Ministério da Saúde citando discordâncias sobre o uso da cloroquina.',
+    attachments: [
+      {
+        type: 'link',
+        url: 'https://agenciabrasil.ebc.com.br/politica/noticia/2020-05/nelson-teich-pede-demissao-do-ministerio-da-saude',
+        label: 'Agência Brasil',
+      },
+    ],
+  },
+  {
+    date: '2020-05-22',
+    title: 'General Pazuello assume interinamente',
+    description:
+      'Eduardo Pazuello, então secretário executivo, assume o Ministério da Saúde de forma interina após a saída de Nelson Teich.',
+  },
+  {
+    date: '2020-06-19',
+    title: 'Brasil ultrapassa 1 milhão de casos',
+    description:
+      'O país atinge a marca de um milhão de casos confirmados de COVID-19 e ultrapassa 48 mil mortes registradas.',
+    attachments: [
+      {
+        type: 'link',
+        url: 'https://covid.saude.gov.br/',
+        label: 'Painel COVID-19 (Ministério da Saúde)',
+      },
+    ],
+  },
+  {
+    date: '2020-07-07',
+    title: 'Presidente testa positivo',
+    description:
+      'Jair Bolsonaro anuncia ter testado positivo para COVID-19, reforçando debates sobre protocolos no Palácio do Planalto.',
+    attachments: [
+      {
+        type: 'link',
+        url: 'https://agenciabrasil.ebc.com.br/politica/noticia/2020-07/presidente-jair-bolsonaro-testa-positivo-para-covid-19',
+        label: 'Agência Brasil',
+      },
+    ],
+  },
+  {
+    date: '2020-09-09',
+    title: 'STF garante transparência dos dados',
+    description:
+      'O Supremo Tribunal Federal determina que o Ministério da Saúde mantenha a divulgação diária e integral dos dados de COVID-19.',
+    attachments: [
+      {
+        type: 'link',
+        url: 'https://portal.stf.jus.br/noticias/verNoticiaDetalhe.asp?idConteudo=447107',
+        label: 'Comunicado do STF',
+      },
+    ],
   },
   {
     date: '2020-12-17',
-    title: 'CoronaVac apresenta eficácia elevada',
+    title: 'CoronaVac apresenta eficácia',
     description:
-      'O Instituto Butantan anuncia que a CoronaVac apresentou segurança e eficácia na fase 3 de testes no Brasil.',
+      'O Instituto Butantan anuncia que a CoronaVac apresentou segurança e eficácia na fase 3 de testes realizada no Brasil.',
     attachments: [
       {
         type: 'link',
@@ -142,7 +188,7 @@ export const covidEvents: CovidEvent[] = [
     date: '2021-01-17',
     title: 'Início da vacinação',
     description:
-      'A Anvisa autoriza o uso emergencial das vacinas CoronaVac e Oxford/AstraZeneca; a vacinação nacional começa nesta data.',
+      'A Anvisa libera o uso emergencial das vacinas CoronaVac e Oxford/AstraZeneca; a campanha nacional começa no mesmo dia.',
     attachments: [
       {
         type: 'image',
@@ -152,7 +198,7 @@ export const covidEvents: CovidEvent[] = [
       {
         type: 'video',
         url: 'https://www.youtube.com/embed/lp2Sleqrs_g',
-        label: 'Transmissão da primeira vacinação',
+        label: 'Transmissão oficial',
       },
     ],
   },
@@ -160,13 +206,13 @@ export const covidEvents: CovidEvent[] = [
     date: '2021-03-13',
     title: 'Colapso hospitalar',
     description:
-      'Hospitais em diversas capitais registram ocupação máxima de UTI na segunda onda, motivando medidas mais rígidas de distanciamento.',
+      'Hospitais em várias capitais registram ocupação máxima de UTIs na segunda onda, levando governos locais a adotarem medidas emergenciais.',
   },
   {
     date: '2021-04-13',
     title: 'Instalação da CPI da COVID',
     description:
-      'O Senado instala a Comissão Parlamentar de Inquérito para apurar ações e omissões do governo federal na pandemia.',
+      'O Senado instala a CPI para apurar ações e omissões da União e o uso de recursos federais durante a pandemia.',
     attachments: [
       {
         type: 'link',
@@ -176,16 +222,35 @@ export const covidEvents: CovidEvent[] = [
     ],
   },
   {
-    date: '2021-08-21',
-    title: '50% com primeira dose',
+    date: '2021-06-10',
+    title: 'Produção nacional da AstraZeneca',
     description:
-      'Mais da metade da população brasileira recebe ao menos uma dose da vacina contra a COVID-19.',
+      'A Fiocruz anuncia a entrega das primeiras doses da AstraZeneca fabricadas integralmente no Brasil, reforçando a autonomia do PNI.',
+    attachments: [
+      {
+        type: 'link',
+        url: 'https://portal.fiocruz.br/noticia/fiocruz-entrega-primeiras-dose-de-ifa-nacional-da-vacina-covid-19',
+        label: 'Portal Fiocruz',
+      },
+    ],
+  },
+  {
+    date: '2021-07-08',
+    title: 'CPI expõe caso Covaxin',
+    description:
+      'Depoimentos à CPI revelam suspeitas de irregularidades na negociação da vacina Covaxin, aumentando a pressão política por transparência.',
+  },
+  {
+    date: '2021-08-21',
+    title: '50% dos brasileiros com primeira dose',
+    description:
+      'Metade da população recebe ao menos uma dose contra a COVID-19, marco relevante para a imunidade coletiva.',
   },
   {
     date: '2021-12-16',
     title: 'Vacinação infantil autorizada',
     description:
-      'A Anvisa aprova o uso da vacina Pfizer para crianças de 5 a 11 anos, marcando nova fase da campanha.',
+      'A Anvisa aprova o uso da vacina Pfizer para crianças de 5 a 11 anos, marcando nova etapa da campanha.',
     attachments: [
       {
         type: 'link',
@@ -195,10 +260,16 @@ export const covidEvents: CovidEvent[] = [
     ],
   },
   {
-    date: '2022-03-21',
-    title: 'Flexibilização das máscaras',
+    date: '2022-01-10',
+    title: 'Explosão de casos com a Ômicron',
     description:
-      'Após queda sustentada nos casos, diversos estados suspendem a obrigatoriedade do uso de máscaras em ambientes abertos.',
+      'Primeiras semanas de 2022 registram recordes de notificações com a variante Ômicron, pressionando municípios e laboratórios.',
+  },
+  {
+    date: '2022-03-21',
+    title: 'Estados flexibilizam máscaras',
+    description:
+      'Após queda sustentada nos indicadores, diversos estados suspendem o uso obrigatório de máscaras em ambientes abertos.',
   },
   {
     date: '2022-07-18',
@@ -217,18 +288,31 @@ export const covidEvents: CovidEvent[] = [
     date: '2022-12-22',
     title: 'Campanha 2023 anunciada',
     description:
-      'O Ministério da Saúde apresenta o plano nacional de vacinação contra a COVID-19 para 2023, com reforço anual.',
+      'O Ministério da Saúde divulga o plano nacional de vacinação contra a COVID-19 para 2023, com reforço anual para grupos vulneráveis.',
+  },
+  {
+    date: '2023-02-27',
+    title: 'Início da vacinação bivalente',
+    description:
+      'Campanha nacional aplica doses bivalentes em idosos e imunocomprometidos, atualizando a proteção contra variantes.',
+      attachments: [
+        {
+          type: 'link',
+          url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/fevereiro/brasil-inicia-vacinacao-bivalente-contra-a-covid-19',
+          label: 'Notícia do Ministério da Saúde',
+        },
+      ],
   },
   {
     date: '2023-03-27',
     title: 'Vacinação bivalente é ampliada',
     description:
-      'Vacinas bivalentes passam a ser ofertadas para novos grupos prioritários em todo o país.',
+      'Novos grupos prioritários passam a receber as doses bivalentes em todo o país.',
     attachments: [
       {
         type: 'link',
         url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/marco/ministerio-da-saude-amplia-publico-alvo-para-vacinacao-bivalente-contra-a-covid-19',
-        label: 'Ampliação da campanha bivalente',
+        label: 'Ampliação oficial',
       },
     ],
   },
@@ -236,14 +320,52 @@ export const covidEvents: CovidEvent[] = [
     date: '2023-05-05',
     title: 'Fim da Emergência Internacional',
     description:
-      'A OMS declara o fim da Emergência de Saúde Pública de Importância Internacional, mantendo monitoramento e recomendações.',
+      'A OMS declara o fim da ESPIN para COVID-19, mantendo monitoramento e recomendações permanentes.',
     attachments: [
       {
         type: 'link',
         url: 'https://www.who.int/news/item/05-05-2023-statement-on-the-15th-meeting-of-the-ihr-(2005)-emergency-committee-on-the-covid-19-pandemic',
-        label: 'Comunicado oficial da OMS',
+        label: 'Comunicado da OMS',
       },
     ],
+  },
+  {
+    date: '2023-07-11',
+    title: 'Plano para recuperar cobertura vacinal',
+    description:
+      'O Ministério da Saúde lança o Movimento Nacional pela Vacinação para recuperar a cobertura do PNI, impactada durante a pandemia.',
+    attachments: [
+      {
+        type: 'link',
+        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/julho/ministerio-da-saude-lanca-movimento-nacional-pela-vacinacao',
+        label: 'Movimento Nacional pela Vacinação',
+      },
+    ],
+  },
+  {
+    date: '2024-02-27',
+    title: 'Campanha 2024 prioriza grupos de risco',
+    description:
+      'O Ministério da Saúde inicia a vacinação de reforço 2024 para idosos e imunossuprimidos com doses atualizadas.',
+    attachments: [
+      {
+        type: 'link',
+        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2024/fevereiro/ministerio-da-saude-inicia-vacinacao-de-reforco-contra-a-covid-19',
+        label: 'Plano 2024',
+      },
+    ],
+  },
+  {
+    date: '2024-07-03',
+    title: 'Fiocruz anuncia vacina em dose única',
+    description:
+      'Pesquisadores da Fiocruz iniciam estudos clínicos com uma vacina nacional em dose única adaptada a variantes.',
+  },
+  {
+    date: '2025-05-05',
+    title: 'Dois anos do fim da ESPIN',
+    description:
+      'O Brasil mantém vigilância e reforços anuais, celebrando avanços da ciência e lembrando as mais de 700 mil vidas perdidas.',
   },
 ];
 
