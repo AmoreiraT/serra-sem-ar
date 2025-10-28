@@ -21,9 +21,9 @@ export const Player = ({ terrainRef, eyeHeight = 2.2 }: PlayerProps) => {
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const setCurrentDateIndex = useCovidStore((state) => state.setCurrentDateIndex);
   const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
-  const raycaster = useRef(new THREE.Raycaster()).current;
   const spotRef = useRef<THREE.SpotLight>(null);
   const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
+  const raycaster = useRef(new THREE.Raycaster()).current;
   const exactIndexRef = useRef(0);
   const targetIndexRef = useRef(0);
   const touchScrollAccumulatorRef = useRef(0);
@@ -195,17 +195,18 @@ export const Player = ({ terrainRef, eyeHeight = 2.2 }: PlayerProps) => {
     camera.position.x = targetX;
     camera.position.z = 0;
 
+    let groundY = THREE.MathUtils.lerp(pointA.y, pointB.y, t);
+
     if (terrainRef.current) {
-      const origin = new THREE.Vector3(camera.position.x, 250, camera.position.z);
+      const origin = new THREE.Vector3(targetX, groundY + 150, 0);
       raycaster.set(origin, new THREE.Vector3(0, -1, 0));
       const hits = raycaster.intersectObject(terrainRef.current, true);
       if (hits.length > 0) {
-        const groundY = hits[0].point.y;
-        camera.position.y = groundY + eyeHeight;
+        groundY = hits[0].point.y;
       }
     }
 
-    camera.position.z = THREE.MathUtils.damp(camera.position.z, 0, 12, delta);
+    camera.position.y = THREE.MathUtils.damp(camera.position.y, groundY + eyeHeight, 14, delta);
     setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
 
     if (spotRef.current) {

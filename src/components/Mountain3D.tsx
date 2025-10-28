@@ -2,7 +2,7 @@ import rockAOTexture from '@/assets/textures/rock_ao.jpg';
 import rockDiffuseTexture from '@assets/textures/rock_diffuse.jpg';
 import rockNormalTexture from '@assets/textures/rock_normal.jpg';
 import { useFrame } from '@react-three/fiber';
-import { forwardRef, useCallback, useEffect, useMemo, useRef } from 'react';
+import { forwardRef, useEffect, useMemo, useRef } from 'react';
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import * as THREE from 'three';
 import { BufferGeometry, Float32BufferAttribute, Mesh } from 'three';
@@ -44,6 +44,21 @@ const makeRng = (seed: string) => {
   return sfc32(state[0], state[1], state[2], state[3]);
 };
 
+const TIME_SEGMENT_MULTIPLIER = 3;
+const MIN_TIME_SEGMENTS = 90;
+const MAX_TIME_SEGMENTS = 540;
+const LATERAL_SEGMENTS = 220;
+const ACTIVE_RADIUS = 55;
+const FALLOFF_RADIUS = 35;
+const MIN_WALKWAY_BASE = -3.2;
+const SEGMENT_APPROACH = 6;
+const PROGRESS_EPSILON = 1e-3;
+const TARGET_EPSILON = 5e-3;
+const easeHeight = (t: number) => {
+  const clamped = THREE.MathUtils.clamp(t, 0, 1);
+  return clamped * clamped * (3 - 2 * clamped);
+};
+
 interface Mountain3DProps { }
 export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DProps, ref) => {
   const meshRef = (ref as React.RefObject<Mesh>) || useRef<Mesh>(null);
@@ -51,8 +66,12 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
   const setRevealedX = useCovidStore((state) => state.setRevealedX);
   const cameraX = useCovidStore((state) => state.cameraPosition[0]);
   // Parameters
-  const timeSegments = useMemo(() => Math.min(mountainPoints.length * 2, 360), [mountainPoints.length]);
-  const zSegments = 160; // lateral detail across mountain width
+  const timeSegments = useMemo(() => {
+    if (mountainPoints.length === 0) return 0;
+    const candidate = mountainPoints.length * TIME_SEGMENT_MULTIPLIER;
+    return Math.min(Math.max(candidate, MIN_TIME_SEGMENTS), MAX_TIME_SEGMENTS);
+  }, [mountainPoints.length]);
+  const zSegments = LATERAL_SEGMENTS; // lateral detail across mountain width
   const maxHalfWidth = 70; // maximum half-width of the mountain in Z
   const maxPeakHeight = 48; // maximum contribution from deaths
   const baseRidgeHeight = 6; // contribution from cases gives baseline rise without flattening valleys
@@ -66,6 +85,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const vertices: number[] = [];
     const indices: number[] = [];
     const uvs: number[] = [];
+    const walkwayBaselines: number[] = [];
 
     const maxCases = Math.max(1, ...mountainPoints.map((p) => p.cases));
     const maxDeaths = Math.max(1, ...mountainPoints.map((p) => p.deaths));
@@ -96,9 +116,9 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       const casesNorm = maxCases > 0 ? point.cases / maxCases : 0;
       const deathsNorm = maxDeaths > 0 ? point.deaths / maxDeaths : 0;
 
-      const halfWidth = Math.max(14, Math.pow(casesNorm, 0.62) * maxHalfWidth);
-      const walkwayHalf = Math.max(4.5, halfWidth * 0.18);
-      const plateauHalf = Math.max(walkwayHalf + 4, halfWidth * 0.34);
+      const halfWidth = Math.max(22, Math.pow(casesNorm, 0.62) * maxHalfWidth);
+      const walkwayHalf = Math.max(9, halfWidth * 0.3);
+      const plateauHalf = Math.max(walkwayHalf + 8, halfWidth * 0.46);
       const rampRange = Math.max(halfWidth - plateauHalf, 0.001);
       const plateauRange = Math.max(plateauHalf - walkwayHalf, 0.001);
       const ridgeHeight = deathsNorm * maxPeakHeight + casesNorm * baseRidgeHeight;
@@ -166,6 +186,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       profile.ridgeHeight = Math.max(profile.ridgeHeight, profile.walkwayHeight + 0.25);
     });
 
+    const baselineY = -4;
+
     for (let i = 0; i < timeSegments; i++) {
       const profile = profiles[i];
       const point = profile.point;
@@ -208,13 +230,12 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
 
         vertices.push(point.x, y, z);
         uvs.push(i / Math.max(1, timeSegments - 1), j / zSegments);
+        walkwayBaselines.push(Math.max(Math.min(walkwayHeight - 1.15, baselineY + 8), MIN_WALKWAY_BASE));
       }
     }
 
     const row = zSegments + 1;
     const topVertexCount = timeSegments * row;
-    const baselineY = -4;
-
     for (let i = 0; i < topVertexCount; i++) {
       const vx = vertices[i * 3 + 0];
       const vy = vertices[i * 3 + 1];
@@ -291,6 +312,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     geometry.computeVertexNormals();
 
     const originalPositions = Float32Array.from(positionAttr.array as Float32Array);
+    const walkwayBaselineArray = Float32Array.from(walkwayBaselines);
     const minX = segmentXs[0] ?? 0;
     const maxX = segmentXs[segmentXs.length - 1] ?? minX;
     const range = Math.max(1e-3, maxX - minX);
@@ -305,6 +327,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       minX,
       maxX,
       range,
+      walkwayBaselines: walkwayBaselineArray,
     };
   }, [mountainPoints, timeSegments, zSegments, maxHalfWidth, maxPeakHeight, baseRidgeHeight]);
 
@@ -317,44 +340,23 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     row,
     baselineY,
     segmentXs,
-    minX,
-    range,
+    walkwayBaselines,
   } = mountainData;
 
   const originalPositionsRef = useRef<Float32Array | null>(originalPositions);
-  const growthSegmentsRef = useRef<Map<number, number>>(new Map());
-  const revealedSegmentRef = useRef(-1);
+  const walkwayBaselinesRef = useRef<Float32Array | null>(walkwayBaselines);
+  const segmentProgressRef = useRef<Float32Array>(new Float32Array(0));
+  const segmentTargetRef = useRef<Float32Array>(new Float32Array(0));
+  const activeSegmentsRef = useRef<Set<number>>(new Set());
+  const normalsTimerRef = useRef(0);
 
   useEffect(() => {
     originalPositionsRef.current = originalPositions;
-    growthSegmentsRef.current.clear();
-    revealedSegmentRef.current = -1;
-  }, [originalPositions]);
-
-  const INITIAL_REVEAL_SEGMENTS = 2;
-  const REVEAL_LOOKAHEAD_SEGMENTS = 6;
-  const GROWTH_SPEED = 0.8;
-  const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-  const revealUpTo = useCallback(
-    (segment: number) => {
-      if (!geometry) return;
-      const clamped = Math.min(Math.max(segment, 0), timeSegments - 1);
-      if (clamped <= revealedSegmentRef.current) return;
-
-      const start = Math.max(revealedSegmentRef.current + 1, 0);
-      const growthMap = growthSegmentsRef.current;
-      for (let seg = start; seg <= clamped; seg++) {
-        if (!growthMap.has(seg)) {
-          growthMap.set(seg, 0);
-          const xVal = segmentXs[seg] ?? segmentXs[segmentXs.length - 1] ?? 0;
-          setRevealedX(xVal);
-        }
-      }
-      revealedSegmentRef.current = clamped;
-    },
-    [geometry, segmentXs, setRevealedX, timeSegments]
-  );
+    walkwayBaselinesRef.current = walkwayBaselines;
+    segmentProgressRef.current = new Float32Array(timeSegments).fill(0);
+    segmentTargetRef.current = new Float32Array(timeSegments).fill(0);
+    activeSegmentsRef.current.clear();
+  }, [originalPositions, walkwayBaselines, timeSegments]);
 
   useEffect(() => {
     if (!geometry) return;
@@ -365,60 +367,112 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     for (let i = 0; i < topVertexCount; i++) {
       positionArray[i * 3 + 1] = baselineY;
     }
+
     positions.needsUpdate = true;
     geometry.computeVertexNormals();
-    growthSegmentsRef.current.clear();
-    revealedSegmentRef.current = -1;
-    if (segmentXs.length) {
-      setRevealedX(segmentXs[0]);
-    }
-    revealUpTo(INITIAL_REVEAL_SEGMENTS);
-  }, [geometry, topVertexCount, baselineY, segmentXs, setRevealedX, revealUpTo]);
+  }, [geometry, topVertexCount, baselineY, timeSegments]);
 
   useEffect(() => {
-    if (!geometry) return;
-    const normalized = THREE.MathUtils.clamp((cameraX - minX) / range, 0, 1);
-    const targetSegment = Math.floor(normalized * Math.max(1, timeSegments - 1)) + REVEAL_LOOKAHEAD_SEGMENTS;
-    revealUpTo(targetSegment);
-  }, [cameraX, geometry, minX, range, revealUpTo, timeSegments]);
+    if (!geometry || !segmentXs.length || timeSegments === 0) return;
+
+    if (segmentTargetRef.current.length !== timeSegments) {
+      segmentTargetRef.current = new Float32Array(timeSegments).fill(0);
+    }
+    if (segmentProgressRef.current.length !== timeSegments) {
+      segmentProgressRef.current = new Float32Array(timeSegments).fill(0);
+    }
+
+    const active = activeSegmentsRef.current;
+    let maxActiveX = -Infinity;
+
+    for (let i = 0; i < timeSegments; i++) {
+      const segX = segmentXs[i] ?? 0;
+      const delta = segX - cameraX;
+      let target = 0;
+
+      if (delta <= 0) {
+        target = 1;
+      } else if (delta <= ACTIVE_RADIUS) {
+        target = 1;
+      } else if (delta <= ACTIVE_RADIUS + FALLOFF_RADIUS) {
+        const t = (delta - ACTIVE_RADIUS) / Math.max(FALLOFF_RADIUS, 1e-3);
+        const smooth = 1 - t * t * (3 - 2 * t);
+        target = smooth;
+      }
+
+      if (Math.abs((segmentTargetRef.current[i] ?? 0) - target) > TARGET_EPSILON) {
+        segmentTargetRef.current[i] = target;
+        active.add(i);
+      }
+
+      if (target > 0) {
+        maxActiveX = Math.max(maxActiveX, segX);
+      }
+    }
+
+    if (maxActiveX > -Infinity) {
+      setRevealedX(maxActiveX);
+    }
+  }, [cameraX, geometry, segmentXs, setRevealedX, timeSegments]);
 
   useFrame((_, delta) => {
     if (!geometry) return;
-    const growthMap = growthSegmentsRef.current;
-    if (!growthMap.size) return;
-
     const positions = geometry.getAttribute('position') as Float32BufferAttribute;
-    const positionArray = positions.array as Float32Array;
+    if (!positions) return;
     const original = originalPositionsRef.current;
-    if (!original) return;
+    const walkwayBase = walkwayBaselinesRef.current;
+    const progressArray = segmentProgressRef.current;
+    const targetArray = segmentTargetRef.current;
+    const active = activeSegmentsRef.current;
 
+    if (!original || !walkwayBase || !progressArray.length || !targetArray.length || active.size === 0) return;
+
+    const positionArray = positions.array as Float32Array;
     let changed = false;
-    const entries = Array.from(growthMap.entries());
-    for (const [segment, progress] of entries) {
-      const next = Math.min(progress + delta * GROWTH_SPEED, 1);
-      const eased = easeOutCubic(next);
+    const completed: number[] = [];
+
+    active.forEach((segment) => {
+      const target = targetArray[segment] ?? 0;
+      const current = progressArray[segment] ?? 0;
+      const next = THREE.MathUtils.damp(current, target, SEGMENT_APPROACH, delta);
+
+      if (Math.abs(next - current) < PROGRESS_EPSILON) {
+        progressArray[segment] = target;
+      } else {
+        progressArray[segment] = next;
+      }
+
+      const eased = easeHeight(progressArray[segment]);
       const baseOffset = segment * row;
 
       for (let j = 0; j < row; j++) {
         const idx = (baseOffset + j) * 3 + 1;
         const targetY = original[idx];
-        positionArray[idx] = THREE.MathUtils.lerp(baselineY, targetY, eased);
+        const baseY = walkwayBase[baseOffset + j] ?? baselineY;
+        positionArray[idx] = THREE.MathUtils.lerp(baseY, targetY, eased);
       }
 
-      if (next >= 1) {
-        growthMap.delete(segment);
-      } else {
-        growthMap.set(segment, next);
-      }
+      changed = true;
 
-      if (next !== progress) {
-        changed = true;
+      if (Math.abs(progressArray[segment] - target) < PROGRESS_EPSILON) {
+        progressArray[segment] = target;
+        completed.push(segment);
       }
+    });
+
+    if (completed.length) {
+      completed.forEach((segment) => active.delete(segment));
     }
 
     if (changed) {
       positions.needsUpdate = true;
-      geometry.computeVertexNormals();
+      normalsTimerRef.current += delta;
+      if (normalsTimerRef.current >= 0.12) {
+        geometry.computeVertexNormals();
+        normalsTimerRef.current = 0;
+      }
+    } else if (normalsTimerRef.current > 0) {
+      normalsTimerRef.current = Math.max(normalsTimerRef.current - delta, 0);
     }
   });
 

@@ -4,8 +4,9 @@ import { Suspense, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useCovidStore } from '../stores/covidStore';
 import { Mountain3D } from './Mountain3D';
-import { Player } from './Player';
 import { EventMarkers3D } from './EventMarkers3D';
+import { MonthlyPlaques3D } from './MonthlyPlaques3D';
+import { Player } from './Player';
 
 
 
@@ -120,6 +121,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           <Mountain3D ref={mountainRef} />
         </Suspense>
         <EventMarkers3D />
+        <MonthlyPlaques3D />
 
         {/* First-person player with pointer lock and flashlight */}
         <Player terrainRef={mountainRef} eyeHeight={2.2} />

@@ -12,6 +12,9 @@ const BOARD_BORDER_OFFSET_X = 0.4 * CARD_SCALE;
 const BOARD_BORDER_OFFSET_Y = 0.2 * CARD_SCALE;
 const BOARD_VERTICAL_OFFSET = 1.4 * CARD_SCALE;
 const BOARD_MIN_HEIGHT = 2.6 * CARD_SCALE;
+const BOARD_FORWARD_OFFSET_PRIMARY = 8.2;
+const BOARD_FORWARD_OFFSET_DEFAULT = 6.4;
+const BOARD_LATERAL_OFFSET = 3.8;
 const TOPPER_LENGTH = 1.1 * CARD_SCALE;
 const TOPPER_RADIUS = 0.5 * CARD_SCALE;
 const POLE_RADIUS_TOP = 0.08 * CARD_SCALE;
@@ -58,10 +61,12 @@ export const EventMarkers3D = () => {
           tangent.normalize();
         }
 
-        const offsetDistance = (index === 0 ? 5 : 3.5) * CARD_SCALE;
-        const boardPoint = new THREE.Vector3(current.x, Math.max(current.y + BOARD_VERTICAL_OFFSET, BOARD_MIN_HEIGHT), current.z).add(
-          tangent.clone().multiplyScalar(offsetDistance)
-        );
+        const forwardOffset = index === 0 ? BOARD_FORWARD_OFFSET_PRIMARY : BOARD_FORWARD_OFFSET_DEFAULT;
+        const up = new THREE.Vector3(0, 1, 0);
+        const lateral = new THREE.Vector3().crossVectors(up, tangent).normalize().multiplyScalar(BOARD_LATERAL_OFFSET * (index % 2 === 0 ? 1 : -1));
+        const boardPoint = new THREE.Vector3(current.x, Math.max(current.y + BOARD_VERTICAL_OFFSET, BOARD_MIN_HEIGHT), current.z)
+          .add(tangent.clone().multiplyScalar(forwardOffset))
+          .add(lateral);
         const markerPoint = new THREE.Vector3(current.x, current.y + MARKER_VERTICAL_OFFSET, current.z);
 
         const facing = tangent.clone().multiplyScalar(-1);
