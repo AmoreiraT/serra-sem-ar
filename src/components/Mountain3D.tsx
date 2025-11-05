@@ -51,6 +51,8 @@ const LATERAL_SEGMENTS = 220;
 const ACTIVE_RADIUS = 55;
 const FALLOFF_RADIUS = 35;
 const MIN_WALKWAY_BASE = -3.2;
+const WALKWAY_THICKNESS = 2;
+const PLATEAU_THICKNESS = 1.2;
 const SEGMENT_APPROACH = 6;
 const PROGRESS_EPSILON = 1e-3;
 const TARGET_EPSILON = 5e-3;
@@ -230,7 +232,20 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
 
         vertices.push(point.x, y, z);
         uvs.push(i / Math.max(1, timeSegments - 1), j / zSegments);
-        walkwayBaselines.push(Math.max(Math.min(walkwayHeight - 1.15, baselineY + 8), MIN_WALKWAY_BASE));
+
+        let baseY = baselineY;
+        if (dist <= profile.walkwayHalf) {
+          baseY = walkwayHeight - WALKWAY_THICKNESS;
+        } else if (dist <= profile.plateauHalf && profile.plateauRange > 1e-5) {
+          const transition = (dist - profile.walkwayHalf) / profile.plateauRange;
+          const eased = THREE.MathUtils.clamp(transition, 0, 1);
+          const plateauBase = walkwayHeight - PLATEAU_THICKNESS;
+          baseY = THREE.MathUtils.lerp(plateauBase, baselineY, eased * eased);
+        }
+
+        baseY = Math.min(baseY, walkwayHeight - 0.1);
+        baseY = Math.max(baseY, MIN_WALKWAY_BASE);
+        walkwayBaselines.push(baseY);
       }
     }
 

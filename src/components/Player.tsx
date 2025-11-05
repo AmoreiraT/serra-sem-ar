@@ -1,11 +1,11 @@
 import { PointerLockControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 import { useCovidStore } from '../stores/covidStore';
 
 interface PlayerProps {
-  terrainRef: React.RefObject<THREE.Object3D>;
+  terrainRef: RefObject<THREE.Object3D>;
   eyeHeight?: number;
 }
 
