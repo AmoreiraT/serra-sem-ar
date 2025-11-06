@@ -1,6 +1,12 @@
-import rockAOTexture from '@/assets/textures/rock_ao.jpg';
-import rockDiffuseTexture from '@assets/textures/rock_diffuse.jpg';
-import rockNormalTexture from '@assets/textures/rock_normal.jpg';
+import rockAOTexture from '@/assets/textures/rock/GroundDirtRocky020_AO_2K.jpg';
+import rockDiffuseTexture from '@assets/textures/rock/GroundDirtRocky020_COL_2K.jpg';
+import rockRoughTexture from '@assets/textures/rock/GroundDirtRocky020_GLOSS_2K.jpg';
+import rockNormalTexture from '@assets/textures/rock/GroundDirtRocky020_NRM_2K.jpg';
+import pathDiffuseTexture from '@assets/textures/terrain/rocky-rugged-terrain_1_albedo.png';
+import pathAOTexture from '@assets/textures/terrain/rocky-rugged-terrain_1_ao.png';
+import pathNormalTexture from '@assets/textures/terrain/rocky-rugged-terrain_1_normal-ogl.png';
+import pathRoughTexture from '@assets/textures/terrain/rocky-rugged-terrain_1_roughness.png';
+// import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { useFrame } from '@react-three/fiber';
 import { forwardRef, useEffect, useMemo, useRef } from 'react';
 import { createNoise2D, createNoise3D } from 'simplex-noise';
@@ -51,8 +57,11 @@ const LATERAL_SEGMENTS = 220;
 const ACTIVE_RADIUS = 55;
 const FALLOFF_RADIUS = 35;
 const MIN_WALKWAY_BASE = -3.2;
-const WALKWAY_THICKNESS = 2;
-const PLATEAU_THICKNESS = 1.2;
+const WALKWAY_THICKNESS = 2.6;
+const PLATEAU_THICKNESS = 1.6;
+const WALKWAY_SURFACE_OFFSET = 0.12;
+const WALKWAY_WIDTH_RATIO = 0.85;
+const WALKWAY_U_SCALE = 0.06;
 const SEGMENT_APPROACH = 6;
 const PROGRESS_EPSILON = 1e-3;
 const TARGET_EPSILON = 5e-3;
@@ -66,6 +75,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
   const meshRef = (ref as React.RefObject<Mesh>) || useRef<Mesh>(null);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const setRevealedX = useCovidStore((state) => state.setRevealedX);
+  const setMountainMesh = useCovidStore((state) => state.setMountainMesh);
   const cameraX = useCovidStore((state) => state.cameraPosition[0]);
   // Parameters
   const timeSegments = useMemo(() => {
@@ -88,6 +98,9 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const indices: number[] = [];
     const uvs: number[] = [];
     const walkwayBaselines: number[] = [];
+    const walkwayVertices: number[] = [];
+    const walkwayUVs: number[] = [];
+    const walkwayIndices: number[] = [];
 
     const maxCases = Math.max(1, ...mountainPoints.map((p) => p.cases));
     const maxDeaths = Math.max(1, ...mountainPoints.map((p) => p.deaths));
@@ -118,9 +131,9 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       const casesNorm = maxCases > 0 ? point.cases / maxCases : 0;
       const deathsNorm = maxDeaths > 0 ? point.deaths / maxDeaths : 0;
 
-      const halfWidth = Math.max(22, Math.pow(casesNorm, 0.62) * maxHalfWidth);
-      const walkwayHalf = Math.max(9, halfWidth * 0.3);
-      const plateauHalf = Math.max(walkwayHalf + 8, halfWidth * 0.46);
+      const halfWidth = Math.max(24, Math.pow(casesNorm, 0.62) * maxHalfWidth);
+      const walkwayHalf = Math.max(10.5, halfWidth * 0.34);
+      const plateauHalf = Math.max(walkwayHalf + 8.5, halfWidth * 0.48);
       const rampRange = Math.max(halfWidth - plateauHalf, 0.001);
       const plateauRange = Math.max(plateauHalf - walkwayHalf, 0.001);
       const ridgeHeight = deathsNorm * maxPeakHeight + casesNorm * baseRidgeHeight;
@@ -247,6 +260,18 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         baseY = Math.max(baseY, MIN_WALKWAY_BASE);
         walkwayBaselines.push(baseY);
       }
+
+      const walkwayHalf = profile.walkwayHalf * WALKWAY_WIDTH_RATIO;
+      const walkwayY = profile.walkwayHeight + WALKWAY_SURFACE_OFFSET;
+      const x = segmentXs[i];
+      walkwayVertices.push(x, walkwayY, -walkwayHalf, x, walkwayY, walkwayHalf);
+      const uCoord = (x - segmentXs[0]) * WALKWAY_U_SCALE;
+      walkwayUVs.push(uCoord, 0, uCoord, 1);
+      if (i < timeSegments - 1) {
+        const base = i * 2;
+        walkwayIndices.push(base, base + 1, base + 2);
+        walkwayIndices.push(base + 1, base + 3, base + 2);
+      }
     }
 
     const row = zSegments + 1;
@@ -258,6 +283,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       const by = Math.min(vy, baselineY);
       vertices.push(vx, by, vz);
       uvs.push(uvs[i * 2 + 0], uvs[i * 2 + 1]);
+      walkwayBaselines.push(walkwayBaselines[i]);
     }
 
     for (let i = 0; i < timeSegments - 1; i++) {
@@ -332,6 +358,16 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const maxX = segmentXs[segmentXs.length - 1] ?? minX;
     const range = Math.max(1e-3, maxX - minX);
 
+    let walkwayGeometry: BufferGeometry | null = null;
+    if (walkwayVertices.length >= 4) {
+      walkwayGeometry = new BufferGeometry();
+      walkwayGeometry.setAttribute('position', new Float32BufferAttribute(walkwayVertices, 3));
+      walkwayGeometry.setAttribute('uv', new Float32BufferAttribute(walkwayUVs, 2));
+      walkwayGeometry.setAttribute('uv2', new Float32BufferAttribute(walkwayUVs.slice(), 2));
+      if (walkwayIndices.length) walkwayGeometry.setIndex(walkwayIndices);
+      walkwayGeometry.computeVertexNormals();
+    }
+
     return {
       geometry,
       originalPositions,
@@ -343,6 +379,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       maxX,
       range,
       walkwayBaselines: walkwayBaselineArray,
+      walkwayGeometry,
     };
   }, [mountainPoints, timeSegments, zSegments, maxHalfWidth, maxPeakHeight, baseRidgeHeight]);
 
@@ -356,6 +393,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     baselineY,
     segmentXs,
     walkwayBaselines,
+    walkwayGeometry,
   } = mountainData;
 
   const originalPositionsRef = useRef<Float32Array | null>(originalPositions);
@@ -386,6 +424,14 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     positions.needsUpdate = true;
     geometry.computeVertexNormals();
   }, [geometry, topVertexCount, baselineY, timeSegments]);
+
+  useEffect(() => {
+    if (meshRef.current) {
+      setMountainMesh(meshRef.current);
+      return () => setMountainMesh(null);
+    }
+    return () => setMountainMesh(null);
+  }, [setMountainMesh]);
 
   useEffect(() => {
     if (!geometry || !segmentXs.length || timeSegments === 0) return;
@@ -491,30 +537,88 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     }
   });
 
-  const { diffuseMap, normalMap, aoMap } = useTextureLoader(
+  const {
+    diffuseMap,
+    normalMap,
+    aoMap,
+    roughnessMap,
+    pathDiffuse,
+    pathNormal,
+    pathAO,
+    pathRough
+  } = useTextureLoader(
     rockDiffuseTexture,
     rockNormalTexture,
-    rockAOTexture
+    rockAOTexture,
+    rockRoughTexture,
+    pathDiffuseTexture,
+    pathNormalTexture,
+    pathAOTexture,
+    pathRoughTexture
   );
 
 
   diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
-  diffuseMap.repeat.set(8, 3);
+  diffuseMap.repeat.set(6, 3);
+  diffuseMap.anisotropy = Math.max(diffuseMap.anisotropy, 8);
+  diffuseMap.colorSpace = THREE.SRGBColorSpace;
   normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
-  normalMap.repeat.set(8, 3);
+  normalMap.repeat.set(6, 3);
+  normalMap.anisotropy = Math.max(normalMap.anisotropy, 4);
   aoMap.wrapS = aoMap.wrapT = THREE.RepeatWrapping;
-  aoMap.repeat.set(8, 3);
+  aoMap.repeat.set(6, 3);
+
+  if (roughnessMap) {
+    roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
+    roughnessMap.repeat.set(6, 3);
+  }
+
+  if (pathDiffuse) {
+    pathDiffuse.wrapS = pathDiffuse.wrapT = THREE.RepeatWrapping;
+    pathDiffuse.repeat.set(1, 1);
+    pathDiffuse.anisotropy = Math.max(pathDiffuse.anisotropy ?? 0, 12);
+    pathDiffuse.colorSpace = THREE.SRGBColorSpace;
+  }
+  if (pathNormal) {
+    pathNormal.wrapS = pathNormal.wrapT = THREE.RepeatWrapping;
+    pathNormal.repeat.set(1, 1);
+    pathNormal.anisotropy = Math.max(pathNormal.anisotropy ?? 0, 6);
+  }
+  if (pathAO) {
+    pathAO.wrapS = pathAO.wrapT = THREE.RepeatWrapping;
+    pathAO.repeat.set(1, 1);
+  }
+  if (pathRough) {
+    pathRough.wrapS = pathRough.wrapT = THREE.RepeatWrapping;
+    pathRough.repeat.set(1, 1);
+  }
+
   return (
-    <mesh ref={meshRef} geometry={geometry} name="mountain" castShadow receiveShadow>
-      <meshStandardMaterial
-        map={diffuseMap}
-        normalMap={normalMap}
-        aoMap={aoMap}
-        side={THREE.DoubleSide}
-        roughness={0.95}
-        metalness={0.05}
-      />
-    </mesh>
+    <group>
+      <mesh ref={meshRef} geometry={geometry} name="mountain" castShadow receiveShadow>
+        <meshStandardMaterial
+          map={diffuseMap}
+          normalMap={normalMap}
+          aoMap={aoMap}
+          roughnessMap={roughnessMap}
+          side={THREE.DoubleSide}
+          roughness={0.92}
+          metalness={0.04}
+        />
+      </mesh>
+      {walkwayGeometry && pathDiffuse && (
+        <mesh geometry={walkwayGeometry} castShadow receiveShadow renderOrder={1}>
+          <meshStandardMaterial
+            map={pathDiffuse}
+            normalMap={pathNormal ?? undefined}
+            aoMap={pathAO ?? undefined}
+            roughnessMap={pathRough ?? undefined}
+            roughness={0.82}
+            metalness={0.03}
+          />
+        </mesh>
+      )}
+    </group>
   );
 });
 

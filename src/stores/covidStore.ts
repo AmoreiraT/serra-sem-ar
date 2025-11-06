@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { create } from 'zustand';
 import { MountainPoint, ProcessedCovidData } from '../types/covid';
 
@@ -8,6 +9,7 @@ interface CovidStore {
   error: string | null;
   currentDateIndex: number;
   revealedX: number;
+  mountainMesh: THREE.Object3D | null;
 
   setData: (data: ProcessedCovidData[]) => void;
   setMountainPoints: (points: MountainPoint[]) => void;
@@ -15,6 +17,7 @@ interface CovidStore {
   setError: (error: string | null) => void;
   setCurrentDateIndex: (index: number) => void;
   setRevealedX: (x: number) => void;
+  setMountainMesh: (mesh: THREE.Object3D | null) => void;
 
   // Navigation state
   cameraPosition: [number, number, number];
@@ -30,6 +33,7 @@ export const useCovidStore = create<CovidStore>((set) => ({
   error: null,
   currentDateIndex: 0,
   revealedX: 0,
+  mountainMesh: null,
 
   setData: (data) => set({ data }),
   setMountainPoints: (points) => set({ mountainPoints: points }),
@@ -41,6 +45,7 @@ export const useCovidStore = create<CovidStore>((set) => ({
       if (x <= state.revealedX) return state;
       return { revealedX: x };
     }),
+  setMountainMesh: (mesh) => set({ mountainMesh: mesh }),
 
   // Default camera position - viewing the mountain from a distance
   cameraPosition: [50, 30, 50],

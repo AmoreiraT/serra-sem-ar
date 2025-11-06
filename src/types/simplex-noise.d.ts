@@ -1,4 +1,4 @@
-declare module 'simplex-noise' {
+declare module 'simplex-noiseX' {
   class SimplexNoise {
     constructor(random?: () => number);
     noise2D(xin: number, yin: number): number;

@@ -1,6 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useCovidStore } from '../stores/covidStore';
+
+const useMountainRaycaster = () => {
+  const raycasterRef = useRef(new THREE.Raycaster());
+  return raycasterRef.current;
+};
 
 const PLAQUE_SCALE = 0.42;
 const BOARD_WIDTH = 3.4 * PLAQUE_SCALE;
@@ -97,6 +102,8 @@ export const MonthlyPlaques3D = () => {
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const revealedX = useCovidStore((state) => state.revealedX);
+  const mountainMesh = useCovidStore((state) => state.mountainMesh);
+  const raycaster = useMountainRaycaster();
 
   const plaques = useMemo(() => {
     if (!data.length || !mountainPoints.length) return [];
@@ -144,9 +151,19 @@ export const MonthlyPlaques3D = () => {
         const forward = tangent.clone().multiplyScalar(FORWARD_OFFSET);
         const sideDirection = order % 2 === 0 ? 1 : -1;
         const side = lateral.clone().multiplyScalar(LATERAL_OFFSET * sideDirection);
-        const baseHeight = Math.max(point.y - 0.4, -2.6);
 
-        const boardPoint = new THREE.Vector3(point.x, baseHeight, point.z).add(forward).add(side);
+        const targetPosition = new THREE.Vector3(point.x, point.y + 12, point.z).add(forward).add(side);
+
+        let groundY = Math.max(point.y - 0.4, -2.6);
+        if (mountainMesh) {
+          raycaster.set(targetPosition.clone().setY(targetPosition.y + 120), new THREE.Vector3(0, -1, 0));
+          const hits = raycaster.intersectObject(mountainMesh, true);
+          if (hits.length > 0) {
+            groundY = hits[0].point.y + 0.02;
+          }
+        }
+
+        const boardPoint = targetPosition.setY(groundY);
         const rotationY = Math.atan2(-tangent.x, -tangent.z);
         const monthLabel = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
         const dayLabel = date.toLocaleDateString('pt-BR', { day: '2-digit' });
