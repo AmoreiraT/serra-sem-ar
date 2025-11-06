@@ -1,239 +1,414 @@
-import { PointerLockControls } from '@react-three/drei';
+import { useAnimations, useGLTF } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { RapierRigidBody } from '@react-three/rapier';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useCovidStore } from '../stores/covidStore';
+import { useCovidStore, WalkwaySample } from '../stores/covidStore';
 
 interface PlayerProps {
-  terrainRef: RefObject<THREE.Object3D>;
   eyeHeight?: number;
 }
 
-const FORWARD_KEYS = new Set(['w', 'W', 'ArrowUp', 'd', 'D', 'ArrowRight']);
-const BACKWARD_KEYS = new Set(['s', 'S', 'ArrowDown', 'a', 'A', 'ArrowLeft']);
-const WHEEL_SENSITIVITY_STEP = 1;
-const TOUCH_SCROLL_THRESHOLD = 45;
-const TOUCH_YAW_SENSITIVITY = 0.003;
+const FORWARD_KEYS = new Set(['w', 'W', 'ArrowUp']);
+const BACKWARD_KEYS = new Set(['s', 'S', 'ArrowDown']);
+const LEFT_KEYS = new Set(['a', 'A', 'ArrowLeft']);
+const RIGHT_KEYS = new Set(['d', 'D', 'ArrowRight']);
+const RUN_KEYS = new Set(['Shift']);
 
-export const Player = ({ terrainRef, eyeHeight = 2.2 }: PlayerProps) => {
-  const { camera } = useThree();
+const MOVE_SPEED = 24;
+const RUN_MULTIPLIER = 1.6;
+const STRAFE_SPEED = 12;
+const FOLLOW_RADIUS = 10.5;
+const BASE_CAMERA_HEIGHT = 3.4;
+const CAMERA_SMOOTH = 6;
+const POSITION_SMOOTH = 9;
+const LATERAL_MARGIN = 0.4;
+const ROTATION_SMOOTH = 8;
+const SCROLL_MULTIPLIER = 1.2;
+const MIN_PITCH = THREE.MathUtils.degToRad(-20);
+const MAX_PITCH = THREE.MathUtils.degToRad(15);
+const YAW_SENSITIVITY = 0.0018;
+const PITCH_SENSITIVITY = 0.0013;
+const CAMERA_COLLISION_CLEARANCE = 0.45;
+const PLAYER_FOOT_OFFSET = 0.05;
+const PLAYER_MODEL_URL = new URL('../assets/glb/player/source/player.glb', import.meta.url).href;
+const PLAYER_CLIPS = {
+  idle: 'idle',
+  walk: 'walk',
+  run: 'run',
+};
+
+type KeyState = {
+  forward: boolean;
+  backward: boolean;
+  left: boolean;
+  right: boolean;
+  run: boolean;
+};
+
+const defaultKeyState: KeyState = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  run: false,
+};
+
+const findWalkwaySample = (profile: WalkwaySample[], distance: number) => {
+  if (!profile.length) {
+    return {
+      position: new THREE.Vector3(distance, 0, 0),
+      halfWidth: 6,
+      outerWidth: 8,
+      forward: new THREE.Vector3(1, 0, 0),
+    };
+  }
+
+  const clamped = THREE.MathUtils.clamp(distance, 0, profile[profile.length - 1].distance);
+
+  let low = 0;
+  let high = profile.length - 1;
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if (profile[mid].distance < clamped) low = mid + 1;
+    else high = mid;
+  }
+
+  const upper = low;
+  const lower = Math.max(upper - 1, 0);
+  const start = profile[lower];
+  const end = profile[upper];
+  const span = Math.max(end.distance - start.distance, 1e-4);
+  const t = THREE.MathUtils.clamp((clamped - start.distance) / span, 0, 1);
+
+  const x = THREE.MathUtils.lerp(start.x, end.x, t);
+  const y = THREE.MathUtils.lerp(start.y, end.y, t);
+  const halfWidth = THREE.MathUtils.lerp(start.halfWidth, end.halfWidth, t);
+  const outerWidth = THREE.MathUtils.lerp(start.outerWidth, end.outerWidth, t);
+
+  const forward = new THREE.Vector3(end.x - start.x || 1, 0, 0).normalize();
+
+  return {
+    position: new THREE.Vector3(x, y, 0),
+    halfWidth,
+    outerWidth,
+    forward,
+  };
+};
+
+export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
+  const { camera, gl } = useThree();
+  const { scene, animations } = useGLTF(PLAYER_MODEL_URL);
+  const model = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+    clone.scale.setScalar(1.05);
+    clone.position.set(0, -1.55, 0);
+    return clone;
+  }, [scene]);
+
+  const playerRef = useRef<THREE.Group>(null);
+  const bodyRef = useRef<RapierRigidBody | null>(null);
+  const { actions } = useAnimations(animations, playerRef);
+  const defaultActionName = animations[0]?.name;
+  const cameraTargetRef = useRef(new THREE.Vector3());
+  const pointerLockedRef = useRef(false);
+  const yawRef = useRef(Math.PI * 0.5);
+  const pitchRef = useRef(THREE.MathUtils.degToRad(8));
+
+  const keyStateRef = useRef<KeyState>({ ...defaultKeyState });
+  const distanceRef = useRef(0);
+  const targetDistanceRef = useRef(0);
+  const lateralOffsetRef = useRef(0);
+  const lateralTargetRef = useRef(0);
+  const lastSpeedRef = useRef(0);
+  const downRaycasterRef = useRef(new THREE.Raycaster());
+  const cameraCollisionRayRef = useRef(new THREE.Raycaster());
+
+  const walkwayProfile = useCovidStore((state) => state.walkwayProfile);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
+  const dataLength = useCovidStore((state) => state.data.length);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const setCurrentDateIndex = useCovidStore((state) => state.setCurrentDateIndex);
   const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
-  const spotRef = useRef<THREE.SpotLight>(null);
-  const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
-  const raycaster = useRef(new THREE.Raycaster()).current;
-  const exactIndexRef = useRef(0);
-  const targetIndexRef = useRef(0);
-  const touchScrollAccumulatorRef = useRef(0);
-  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
-  const touchActiveRef = useRef(false);
-  const yawRef = useRef(0);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
+  const mountainMesh = useCovidStore((state) => state.mountainMesh);
 
-  const spawn = useMemo(() => {
-    if (!mountainPoints.length) return new THREE.Vector3(0, 10, 0);
-    const minX = Math.min(...mountainPoints.map((p) => p.x));
-    return new THREE.Vector3(minX, 10, 0);
-  }, [mountainPoints]);
+  const walkwayLength = useMemo(() => {
+    if (!walkwayProfile.length) return 0;
+    return walkwayProfile[walkwayProfile.length - 1].distance;
+  }, [walkwayProfile]);
 
-  const clampLinearIndex = useCallback(
-    (index: number) => THREE.MathUtils.clamp(index, 0, Math.max(0, mountainPoints.length - 1)),
-    [mountainPoints.length]
-  );
-
-  const updateTimeline = useCallback(
-    (delta: number) => {
-      if (!mountainPoints.length || delta === 0) return;
-      const next = clampLinearIndex(targetIndexRef.current + delta);
-      targetIndexRef.current = next;
-      setCurrentDateIndex(Math.round(next));
-    },
-    [clampLinearIndex, mountainPoints.length, setCurrentDateIndex]
-  );
+  const distanceFromDataIndex = useMemo(() => {
+    if (!walkwayLength || dataLength <= 1) return (idx: number) => 0;
+    return (idx: number) => walkwayLength * (idx / (dataLength - 1));
+  }, [walkwayLength, dataLength]);
 
   useEffect(() => {
-    camera.position.copy(spawn);
-    camera.lookAt(spawn.x + 1, spawn.y, spawn.z);
-    yawRef.current = camera.rotation.y;
-    setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
-    if (mountainPoints.length) {
-      setCurrentDateIndex(0);
-      exactIndexRef.current = 0;
-      targetIndexRef.current = 0;
+    if (!playerRef.current || !model) return;
+    playerRef.current.add(model);
+    return () => {
+      playerRef.current?.remove(model);
+    };
+  }, [model]);
+
+  useEffect(() => {
+    if (!actions || !defaultActionName) return;
+    const action = actions[defaultActionName];
+    if (!action) return;
+    action.reset().play();
+    return () => {
+      action.stop();
+    };
+  }, [actions, defaultActionName]);
+
+  const dataIndexFromDistance = useMemo(() => {
+    if (!walkwayLength || dataLength <= 1) return (distance: number) => 0;
+    return (distance: number) => {
+      const t = THREE.MathUtils.clamp(distance / walkwayLength, 0, 1);
+      return Math.round(t * (dataLength - 1));
+    };
+  }, [walkwayLength, dataLength]);
+
+  useEffect(() => {
+    if (!walkwayLength) return;
+    const startDistance = distanceFromDataIndex(currentDateIndex);
+    distanceRef.current = startDistance;
+    targetDistanceRef.current = startDistance;
+
+    const forwardSample = findWalkwaySample(walkwayProfile, startDistance + 2);
+    const currentSample = findWalkwaySample(walkwayProfile, startDistance);
+    const dir = forwardSample.position.clone().sub(currentSample.position);
+    dir.y = 0;
+    if (dir.lengthSq() > 1e-5) {
+      dir.normalize();
+      yawRef.current = Math.atan2(dir.x, dir.z === 0 ? 1e-4 : dir.z);
     }
-  }, [camera, mountainPoints.length, setCameraPosition, setCurrentDateIndex, spawn]);
+  }, [currentDateIndex, distanceFromDataIndex, walkwayLength, walkwayProfile]);
 
   useEffect(() => {
-    if (!mountainPoints.length) return;
-    const clamped = clampLinearIndex(currentDateIndex);
-    targetIndexRef.current = clamped;
-    if (!Number.isFinite(exactIndexRef.current)) {
-      exactIndexRef.current = clamped;
-    }
-  }, [clampLinearIndex, currentDateIndex, mountainPoints.length]);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const key = event.key;
+      if (FORWARD_KEYS.has(key)) keyStateRef.current.forward = true;
+      if (BACKWARD_KEYS.has(key)) keyStateRef.current.backward = true;
+      if (LEFT_KEYS.has(key)) keyStateRef.current.left = true;
+      if (RIGHT_KEYS.has(key)) keyStateRef.current.right = true;
+      if (RUN_KEYS.has(key)) keyStateRef.current.run = true;
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      const key = event.key;
+      if (FORWARD_KEYS.has(key)) keyStateRef.current.forward = false;
+      if (BACKWARD_KEYS.has(key)) keyStateRef.current.backward = false;
+      if (LEFT_KEYS.has(key)) keyStateRef.current.left = false;
+      if (RIGHT_KEYS.has(key)) keyStateRef.current.right = false;
+      if (RUN_KEYS.has(key)) keyStateRef.current.run = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const detectTouch = () =>
-      typeof navigator !== 'undefined' &&
-      (navigator.maxTouchPoints > 0 ||
-        // @ts-expect-error older Safari
-        navigator.msMaxTouchPoints > 0 ||
-        'ontouchstart' in window ||
-        (window.matchMedia && window.matchMedia('(pointer: coarse)').matches));
-    const isTouch = detectTouch();
-    setIsTouchDevice(isTouch);
-    yawRef.current = camera.rotation.y;
-  }, [camera]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!mountainPoints.length) return;
-      const step = event.shiftKey ? 10 : 1;
-      if (FORWARD_KEYS.has(event.key)) {
-        event.preventDefault();
-        updateTimeline(step);
-      }
-      if (BACKWARD_KEYS.has(event.key)) {
-        event.preventDefault();
-        updateTimeline(-step);
+    const canvas = gl.domElement;
+    const requestPointerLock = () => canvas.requestPointerLock?.();
+    const handlePointerLockChange = () => {
+      pointerLockedRef.current = document.pointerLockElement === canvas;
+      if (!pointerLockedRef.current) {
+        pitchRef.current = THREE.MathUtils.lerp(pitchRef.current, THREE.MathUtils.degToRad(8), 0.4);
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [mountainPoints.length, updateTimeline]);
-
-  useEffect(() => {
-    const onWheel = (event: WheelEvent) => {
-      if (!mountainPoints.length) return;
-      event.preventDefault();
-      const direction = event.deltaY === 0 ? 0 : event.deltaY < 0 ? 1 : -1;
-      if (direction === 0) return;
-
-      const stepMultiplier = event.shiftKey ? 10 : WHEEL_SENSITIVITY_STEP;
-      const delta = direction * stepMultiplier;
-      updateTimeline(delta);
+    const handlePointerMove = (event: MouseEvent) => {
+      if (!pointerLockedRef.current) return;
+      yawRef.current -= event.movementX * YAW_SENSITIVITY;
+      pitchRef.current = THREE.MathUtils.clamp(
+        pitchRef.current - event.movementY * PITCH_SENSITIVITY,
+        MIN_PITCH,
+        MAX_PITCH
+      );
     };
 
-    window.addEventListener('wheel', onWheel, { passive: false });
-    return () => window.removeEventListener('wheel', onWheel);
-  }, [mountainPoints.length, updateTimeline]);
-
-  useEffect(() => {
-    if (!isTouchDevice) return;
-
-    const handleTouchStart = (event: TouchEvent) => {
-      if (event.touches.length !== 1) return;
-      touchActiveRef.current = true;
-      const touch = event.touches[0];
-      lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
-      touchScrollAccumulatorRef.current = 0;
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      if (!touchActiveRef.current || event.touches.length !== 1) return;
-      event.preventDefault();
-      const touch = event.touches[0];
-      const last = lastTouchRef.current;
-      if (!last) {
-        lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
-        return;
-      }
-
-      const dx = touch.clientX - last.x;
-      const dy = touch.clientY - last.y;
-      lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
-
-      yawRef.current -= dx * TOUCH_YAW_SENSITIVITY;
-      camera.rotation.order = 'YXZ';
-      camera.rotation.y = yawRef.current;
-
-      touchScrollAccumulatorRef.current += dy;
-      while (touchScrollAccumulatorRef.current <= -TOUCH_SCROLL_THRESHOLD) {
-        updateTimeline(1);
-        touchScrollAccumulatorRef.current += TOUCH_SCROLL_THRESHOLD;
-      }
-      while (touchScrollAccumulatorRef.current >= TOUCH_SCROLL_THRESHOLD) {
-        updateTimeline(-1);
-        touchScrollAccumulatorRef.current -= TOUCH_SCROLL_THRESHOLD;
-      }
-    };
-
-    const handleTouchEnd = () => {
-      touchActiveRef.current = false;
-      lastTouchRef.current = null;
-      touchScrollAccumulatorRef.current = 0;
-    };
-
-    window.addEventListener('touchstart', handleTouchStart, { passive: false });
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleTouchEnd);
-    window.addEventListener('touchcancel', handleTouchEnd);
+    canvas.addEventListener('click', requestPointerLock);
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+    document.addEventListener('mousemove', handlePointerMove);
 
     return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-      window.removeEventListener('touchcancel', handleTouchEnd);
+      canvas.removeEventListener('click', requestPointerLock);
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      document.removeEventListener('mousemove', handlePointerMove);
+      if (pointerLockedRef.current) document.exitPointerLock?.();
     };
-  }, [camera, isTouchDevice, updateTimeline]);
+  }, [gl]);
+
+  useEffect(() => {
+    if (!walkwayLength) return;
+    const step = walkwayLength / Math.max(dataLength - 1, 1) * SCROLL_MULTIPLIER;
+    const onWheel = (event: WheelEvent) => {
+      if (!walkwayLength) return;
+      event.preventDefault();
+      const direction = event.deltaY < 0 ? -1 : 1;
+      targetDistanceRef.current = THREE.MathUtils.clamp(
+        targetDistanceRef.current + direction * step,
+        0,
+        walkwayLength
+      );
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [walkwayLength, dataLength]);
 
   useFrame((_, delta) => {
-    if (!mountainPoints.length) return;
+    if (!walkwayLength || !walkwayProfile.length || !playerRef.current) return;
 
-    const damped = THREE.MathUtils.damp(exactIndexRef.current, targetIndexRef.current, 12, delta);
-    exactIndexRef.current = clampLinearIndex(damped);
+    const keyState = keyStateRef.current;
+    const moveIntent = (keyState.forward ? 1 : 0) - (keyState.backward ? 1 : 0);
+    const strafeIntent = (keyState.right ? 1 : 0) - (keyState.left ? 1 : 0);
 
-    const lower = Math.floor(exactIndexRef.current);
-    const upper = Math.min(lower + 1, mountainPoints.length - 1);
-    const t = THREE.MathUtils.clamp(exactIndexRef.current - lower, 0, 1);
-    const pointA = mountainPoints[lower];
-    const pointB = mountainPoints[upper];
-    const targetX = THREE.MathUtils.lerp(pointA.x, pointB.x, t);
-    camera.position.x = targetX;
-    camera.position.z = 0;
+    const appliedSpeed = keyState.run ? MOVE_SPEED * RUN_MULTIPLIER : MOVE_SPEED;
+    const speed = appliedSpeed * delta;
+    const strafeSpeed = STRAFE_SPEED * delta;
 
-    let groundY = THREE.MathUtils.lerp(pointA.y, pointB.y, t);
+    targetDistanceRef.current = THREE.MathUtils.clamp(
+      targetDistanceRef.current + moveIntent * speed,
+      0,
+      walkwayLength
+    );
 
-    if (terrainRef.current) {
-      const origin = new THREE.Vector3(targetX, groundY + 150, 0);
-      raycaster.set(origin, new THREE.Vector3(0, -1, 0));
-      const hits = raycaster.intersectObject(terrainRef.current, true);
-      if (hits.length > 0) {
-        groundY = hits[0].point.y;
+    const sample = findWalkwaySample(walkwayProfile, distanceRef.current);
+    const maxLateral = Math.max(sample.halfWidth - LATERAL_MARGIN, 0.3);
+
+    lateralTargetRef.current = THREE.MathUtils.clamp(
+      lateralTargetRef.current + strafeIntent * strafeSpeed,
+      -maxLateral,
+      maxLateral
+    );
+
+    distanceRef.current = THREE.MathUtils.damp(
+      distanceRef.current,
+      targetDistanceRef.current,
+      POSITION_SMOOTH,
+      delta
+    );
+
+    const smoothedSample = findWalkwaySample(walkwayProfile, distanceRef.current);
+    const lateral = THREE.MathUtils.damp(
+      lateralOffsetRef.current,
+      THREE.MathUtils.clamp(lateralTargetRef.current, -maxLateral, maxLateral),
+      POSITION_SMOOTH,
+      delta
+    );
+    lateralOffsetRef.current = lateral;
+
+    const aheadSample = findWalkwaySample(walkwayProfile, distanceRef.current + 1.2);
+    const forwardVec = aheadSample.position.clone().sub(smoothedSample.position);
+    forwardVec.y = 0;
+    if (forwardVec.lengthSq() < 1e-4) forwardVec.set(1, 0, 0);
+    forwardVec.normalize();
+    const desiredYaw = Math.atan2(forwardVec.x, forwardVec.z === 0 ? 1e-4 : forwardVec.z);
+    if (!pointerLockedRef.current) {
+      const diff = THREE.MathUtils.euclideanModulo(desiredYaw - yawRef.current + Math.PI, Math.PI * 2) - Math.PI;
+      yawRef.current += diff * (1 - Math.exp(-ROTATION_SMOOTH * delta));
+    }
+
+    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), forwardVec).normalize();
+    const playerPos = smoothedSample.position.clone().add(right.clone().multiplyScalar(lateral));
+
+    if (mountainMesh) {
+      const rayOrigin = playerPos.clone();
+      rayOrigin.y += 30;
+      downRaycasterRef.current.set(rayOrigin, new THREE.Vector3(0, -1, 0));
+      const groundHits = downRaycasterRef.current.intersectObject(mountainMesh, true);
+      if (groundHits.length) {
+        playerPos.y = groundHits[0].point.y + PLAYER_FOOT_OFFSET;
       }
     }
 
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, groundY + eyeHeight, 14, delta);
-    setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
+    const lookMatrix = new THREE.Matrix4().lookAt(
+      new THREE.Vector3(0, 0, 0),
+      forwardVec,
+      new THREE.Vector3(0, 1, 0)
+    );
+    const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookMatrix);
+    if (bodyRef.current) {
+      bodyRef.current.setNextKinematicTranslation({
+        x: playerPos.x,
+        y: playerPos.y,
+        z: playerPos.z,
+      });
+      bodyRef.current.setNextKinematicRotation({
+        x: targetQuat.x,
+        y: targetQuat.y,
+        z: targetQuat.z,
+        w: targetQuat.w,
+      });
+    }
 
-    if (spotRef.current) {
-      spotRef.current.position.copy(camera.position);
-      const ahead = new THREE.Vector3();
-      camera.getWorldDirection(ahead);
-      ahead.normalize().multiplyScalar(5).add(camera.position);
-      targetRef.current.position.copy(ahead);
-      spotRef.current.target = targetRef.current as unknown as THREE.Object3D & { matrixWorld: THREE.Matrix4 };
+    lastSpeedRef.current = THREE.MathUtils.lerp(lastSpeedRef.current, Math.abs(moveIntent) + Math.abs(strafeIntent), 1 - Math.exp(-6 * delta));
+    if (actions && defaultActionName) {
+      const action = actions[defaultActionName];
+      if (action) {
+        action.timeScale = THREE.MathUtils.lerp(action.timeScale, 0.4 + lastSpeedRef.current * (keyState.run ? 2.4 : 1.4), 1 - Math.exp(-5 * delta));
+      }
+    }
+
+    const radius = FOLLOW_RADIUS * (keyState.run ? 0.92 : 1);
+    const effectivePitch = pointerLockedRef.current ? pitchRef.current : THREE.MathUtils.lerp(pitchRef.current, THREE.MathUtils.degToRad(6), 1 - Math.exp(-3 * delta));
+    const cosPitch = Math.cos(effectivePitch);
+    const yaw = yawRef.current;
+    const offset = new THREE.Vector3(
+      -Math.sin(yaw) * cosPitch,
+      Math.sin(effectivePitch),
+      -Math.cos(yaw) * cosPitch
+    ).multiplyScalar(radius);
+
+    const cameraTarget = cameraTargetRef.current.copy(playerPos).add(new THREE.Vector3(0, eyeHeight, 0));
+    const desiredCameraPos = cameraTarget.clone().add(offset).add(new THREE.Vector3(0, BASE_CAMERA_HEIGHT, 0));
+    desiredCameraPos.y = Math.max(desiredCameraPos.y, smoothedSample.position.y + eyeHeight + 1.2);
+
+    if (mountainMesh) {
+      const dirToCamera = desiredCameraPos.clone().sub(cameraTarget);
+      const distance = dirToCamera.length();
+      if (distance > 0.1) {
+        dirToCamera.normalize();
+        cameraCollisionRayRef.current.set(cameraTarget.clone(), dirToCamera);
+        cameraCollisionRayRef.current.far = distance;
+        const cameraHits = cameraCollisionRayRef.current.intersectObject(mountainMesh, true);
+        if (cameraHits.length) {
+          const hit = cameraHits[0];
+          const normal = hit.face?.normal ? hit.face.normal.clone() : dirToCamera.clone().multiplyScalar(-1);
+          desiredCameraPos.copy(hit.point.clone().add(normal.multiplyScalar(CAMERA_COLLISION_CLEARANCE)));
+        }
+      }
+    }
+
+    camera.position.lerp(desiredCameraPos, 1 - Math.exp(-CAMERA_SMOOTH * delta));
+    camera.lookAt(cameraTarget);
+    setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
+    setCameraTarget([cameraTarget.x, cameraTarget.y, cameraTarget.z]);
+
+    const newIndex = dataIndexFromDistance(distanceRef.current);
+    if (newIndex !== currentDateIndex) {
+      setCurrentDateIndex(newIndex);
     }
   });
 
   return (
-    <>
-      {!isTouchDevice && <PointerLockControls />}
-      <primitive object={targetRef.current} />
-      <spotLight
-        ref={spotRef}
-        color="#261d0a"
-        intensity={2.2}
-        distance={40}
-        angle={Math.PI / 8}
-        penumbra={0.5}
-        castShadow
-      />
-    </>
+    <group ref={playerRef}>
+      <primitive object={model} dispose={null} />
+    </group>
   );
 };
+
+useGLTF.preload(PLAYER_MODEL_URL);
 
 export default Player;

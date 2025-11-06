@@ -1,11 +1,12 @@
 import { Grid, Sky, Stats } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useCovidStore } from '../stores/covidStore';
-import { Mountain3D } from './Mountain3D';
 import { EventMarkers3D } from './EventMarkers3D';
 import { MonthlyPlaques3D } from './MonthlyPlaques3D';
+import { Mountain3D } from './Mountain3D';
 import { Player } from './Player';
 
 
@@ -116,15 +117,19 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           infiniteGrid
         />
 
-        {/* Main mountain */}
-        <Suspense fallback={null}>
-          <Mountain3D ref={mountainRef} />
-        </Suspense>
-        <EventMarkers3D />
-        <MonthlyPlaques3D />
+        <Physics gravity={[0, -9.81, 0]} colliders="trimesh">
+          {/* Main mountain */}
+          <Suspense fallback={null}>
+            <Mountain3D ref={mountainRef} />
+          </Suspense>
+          <EventMarkers3D />
+          <MonthlyPlaques3D />
 
-        {/* First-person player with pointer lock and flashlight */}
-        <Player terrainRef={mountainRef} eyeHeight={2.2} />
+          {/* Third-person player with smooth follow camera */}
+          <Suspense fallback={null}>
+            <Player eyeHeight={1.6} />
+          </Suspense>
+        </Physics>
 
         {/* Performance stats */}
         {showStats && <Stats />}

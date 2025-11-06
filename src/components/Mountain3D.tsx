@@ -12,9 +12,11 @@ import { forwardRef, useEffect, useMemo, useRef } from 'react';
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import * as THREE from 'three';
 import { BufferGeometry, Float32BufferAttribute, Mesh } from 'three';
+import { RigidBody } from '@react-three/rapier';
 import useTextureLoader from '../hooks/useTextureLoader';
 import { useCovidStore } from '../stores/covidStore';
 import { MountainPoint } from '../types/covid';
+import { WalkwaySample } from '../stores/covidStore';
 
 const cyrb128 = (str: string) => {
   let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
@@ -50,21 +52,21 @@ const makeRng = (seed: string) => {
   return sfc32(state[0], state[1], state[2], state[3]);
 };
 
-const TIME_SEGMENT_MULTIPLIER = 5;
-const MIN_TIME_SEGMENTS = 180;
-const MAX_TIME_SEGMENTS = 900;
-const LATERAL_SEGMENTS = 320;
+const TIME_SEGMENT_MULTIPLIER = 6;
+const MIN_TIME_SEGMENTS = 220;
+const MAX_TIME_SEGMENTS = 1200;
+const LATERAL_SEGMENTS = 420;
 const ACTIVE_RADIUS = 55;
 const FALLOFF_RADIUS = 35;
 const MIN_WALKWAY_BASE = -3.2;
-const WALKWAY_THICKNESS = 2.4;
-const PLATEAU_THICKNESS = 1.6;
-const WALKWAY_SURFACE_OFFSET = 0.02;
-const WALKWAY_WIDTH_RATIO = 0.68;
-const WALKWAY_BEVEL_INNER = 1.8;
-const WALKWAY_BEVEL_OUTER = 2.6;
-const WALKWAY_TILE_U = 0.035;
-const WALKWAY_TILE_V = 0.8;
+const WALKWAY_THICKNESS = 2.0;
+const PLATEAU_THICKNESS = 1.3;
+const WALKWAY_SURFACE_OFFSET = 0.012;
+const WALKWAY_WIDTH_RATIO = 0.6;
+const WALKWAY_BEVEL_INNER = 2.8;
+const WALKWAY_BEVEL_OUTER = 4.2;
+const WALKWAY_TILE_U = 0.028;
+const WALKWAY_TILE_V = 0.7;
 const SEGMENT_APPROACH = 6;
 const PROGRESS_EPSILON = 1e-3;
 const TARGET_EPSILON = 5e-3;
@@ -73,12 +75,12 @@ const easeHeight = (t: number) => {
   return clamped * clamped * (3 - 2 * clamped);
 };
 
-const WALKWAY_SMOOTH_PASSES = 12;
-const WALKWAY_SMOOTH_INFLUENCE = 0.78;
-const RIDGE_SMOOTH_PASSES = 12;
-const RIDGE_SMOOTH_INFLUENCE = 0.7;
-const WIDTH_SMOOTH_PASSES = 9;
-const WIDTH_SMOOTH_INFLUENCE = 0.65;
+const WALKWAY_SMOOTH_PASSES = 18;
+const WALKWAY_SMOOTH_INFLUENCE = 0.84;
+const RIDGE_SMOOTH_PASSES = 18;
+const RIDGE_SMOOTH_INFLUENCE = 0.76;
+const WIDTH_SMOOTH_PASSES = 14;
+const WIDTH_SMOOTH_INFLUENCE = 0.7;
 
 const smoothArray = (values: number[], iterations: number, influence: number) => {
   if (values.length < 2) return values.slice();
@@ -104,6 +106,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const setRevealedX = useCovidStore((state) => state.setRevealedX);
   const setMountainMesh = useCovidStore((state) => state.setMountainMesh);
+  const setWalkwayProfile = useCovidStore((state) => state.setWalkwayProfile);
   const cameraX = useCovidStore((state) => state.cameraPosition[0]);
   // Parameters
   const timeSegments = useMemo(() => {
@@ -129,6 +132,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const walkwayVertices: number[] = [];
     const walkwayUVs: number[] = [];
     const walkwayIndices: number[] = [];
+    const walkwaySamples: WalkwaySample[] = [];
 
     const maxCases = Math.max(1, ...mountainPoints.map((p) => p.cases));
     const maxDeaths = Math.max(1, ...mountainPoints.map((p) => p.deaths));
@@ -238,6 +242,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
 
     const baselineY = -4;
 
+    let cumulativeDistance = 0;
+
     for (let i = 0; i < timeSegments; i++) {
       const profile = profiles[i];
       const point = profile.point;
@@ -331,6 +337,17 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         walkwayIndices.push(base + 3, next + 3, base + 4, base + 4, next + 3, next + 4);
         walkwayIndices.push(base + 4, next + 4, base + 5, base + 5, next + 4, next + 5);
       }
+
+      if (i > 0) {
+        cumulativeDistance += Math.abs(segmentXs[i] - segmentXs[i - 1]);
+      }
+      walkwaySamples.push({
+        x,
+        y: walkwayInnerHeight,
+        halfWidth: walkwayHalf,
+        outerWidth: walkwayOuter,
+        distance: cumulativeDistance,
+      });
     }
 
     const row = zSegments + 1;
@@ -439,6 +456,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       range,
       walkwayBaselines: walkwayBaselineArray,
       walkwayGeometry,
+      walkwaySamples,
     };
   }, [mountainPoints, timeSegments, zSegments, maxHalfWidth, maxPeakHeight, baseRidgeHeight]);
 
@@ -453,6 +471,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     segmentXs,
     walkwayBaselines,
     walkwayGeometry,
+    walkwaySamples,
   } = mountainData;
 
   const originalPositionsRef = useRef<Float32Array | null>(originalPositions);
@@ -491,6 +510,11 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     }
     return () => setMountainMesh(null);
   }, [setMountainMesh]);
+
+  useEffect(() => {
+    setWalkwayProfile(walkwaySamples);
+    return () => setWalkwayProfile([]);
+  }, [setWalkwayProfile, walkwaySamples]);
 
   useEffect(() => {
     if (!geometry || !segmentXs.length || timeSegments === 0) return;
@@ -653,31 +677,33 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
   }
 
   return (
-    <group>
-      <mesh ref={meshRef} geometry={geometry} name="mountain" castShadow receiveShadow>
-        <meshStandardMaterial
-          map={diffuseMap}
-          normalMap={normalMap}
-          aoMap={aoMap}
-          roughnessMap={roughnessMap}
-          side={THREE.DoubleSide}
-          roughness={0.92}
-          metalness={0.04}
-        />
-      </mesh>
-      {walkwayGeometry && pathDiffuse && (
-        <mesh geometry={walkwayGeometry} castShadow receiveShadow renderOrder={1}>
+    <RigidBody type="fixed" colliders="trimesh" name="mountain-body">
+      <group>
+        <mesh ref={meshRef} geometry={geometry} name="mountain" castShadow receiveShadow>
           <meshStandardMaterial
-            map={pathDiffuse}
-            normalMap={pathNormal ?? undefined}
-            aoMap={pathAO ?? undefined}
-            roughnessMap={pathRough ?? undefined}
-            roughness={0.82}
-            metalness={0.03}
+            map={diffuseMap}
+            normalMap={normalMap}
+            aoMap={aoMap}
+            roughnessMap={roughnessMap}
+            side={THREE.DoubleSide}
+            roughness={0.92}
+            metalness={0.04}
           />
         </mesh>
-      )}
-    </group>
+        {walkwayGeometry && pathDiffuse && (
+          <mesh geometry={walkwayGeometry} castShadow receiveShadow renderOrder={1}>
+            <meshStandardMaterial
+              map={pathDiffuse}
+              normalMap={pathNormal ?? undefined}
+              aoMap={pathAO ?? undefined}
+              roughnessMap={pathRough ?? undefined}
+              roughness={0.82}
+              metalness={0.03}
+            />
+          </mesh>
+        )}
+      </group>
+    </RigidBody>
   );
 });
 

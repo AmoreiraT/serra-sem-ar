@@ -57,7 +57,7 @@ const generateMountainPoints = (data: ProcessedCovidData[]): MountainPoint[] => 
   const maxCases = Math.max(...data.map((d) => d.cases), 1);
   const maxDeaths = Math.max(...data.map((d) => d.deaths), 1);
 
-  const daySpacing = 0.55;
+  const daySpacing = 0.65;
   const centerOffset = (data.length > 1 ? daySpacing * (data.length - 1) : 0) * 0.5;
 
   return data.map((item, index) => {
@@ -66,10 +66,8 @@ const generateMountainPoints = (data: ProcessedCovidData[]): MountainPoint[] => 
     const z = 0; // Keep Z at 0 for now, can be used for other dimensions
 
     // Height based on cases (width of mountain base)
-    const caseHeight = (item.cases / maxCases) * 20; // Scale to max height of 20
-
-    // Deaths determine the peak height
-    const deathHeight = (item.deaths / maxDeaths) * 30; // Scale to max height of 30
+    const caseHeight = Math.pow(item.cases / maxCases, 0.6) * 24;
+    const deathHeight = Math.pow(item.deaths / maxDeaths, 0.68) * 36;
 
     // Combine both for total height
     const y = caseHeight + deathHeight;

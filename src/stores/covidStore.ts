@@ -2,9 +2,18 @@ import * as THREE from 'three';
 import { create } from 'zustand';
 import { MountainPoint, ProcessedCovidData } from '../types/covid';
 
+export interface WalkwaySample {
+  x: number;
+  y: number;
+  halfWidth: number;
+  outerWidth: number;
+  distance: number;
+}
+
 interface CovidStore {
   data: ProcessedCovidData[];
   mountainPoints: MountainPoint[];
+  walkwayProfile: WalkwaySample[];
   isLoading: boolean;
   error: string | null;
   currentDateIndex: number;
@@ -13,6 +22,7 @@ interface CovidStore {
 
   setData: (data: ProcessedCovidData[]) => void;
   setMountainPoints: (points: MountainPoint[]) => void;
+  setWalkwayProfile: (profile: WalkwaySample[]) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setCurrentDateIndex: (index: number) => void;
@@ -29,6 +39,7 @@ interface CovidStore {
 export const useCovidStore = create<CovidStore>((set) => ({
   data: [],
   mountainPoints: [],
+  walkwayProfile: [],
   isLoading: false,
   error: null,
   currentDateIndex: 0,
@@ -37,6 +48,7 @@ export const useCovidStore = create<CovidStore>((set) => ({
 
   setData: (data) => set({ data }),
   setMountainPoints: (points) => set({ mountainPoints: points }),
+  setWalkwayProfile: (profile) => set({ walkwayProfile: profile }),
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
   setCurrentDateIndex: (index) => set({ currentDateIndex: index }),
