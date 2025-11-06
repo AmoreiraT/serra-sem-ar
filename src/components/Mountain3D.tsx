@@ -50,24 +50,52 @@ const makeRng = (seed: string) => {
   return sfc32(state[0], state[1], state[2], state[3]);
 };
 
-const TIME_SEGMENT_MULTIPLIER = 3;
-const MIN_TIME_SEGMENTS = 90;
-const MAX_TIME_SEGMENTS = 540;
-const LATERAL_SEGMENTS = 220;
+const TIME_SEGMENT_MULTIPLIER = 5;
+const MIN_TIME_SEGMENTS = 180;
+const MAX_TIME_SEGMENTS = 900;
+const LATERAL_SEGMENTS = 320;
 const ACTIVE_RADIUS = 55;
 const FALLOFF_RADIUS = 35;
 const MIN_WALKWAY_BASE = -3.2;
-const WALKWAY_THICKNESS = 2.6;
+const WALKWAY_THICKNESS = 2.4;
 const PLATEAU_THICKNESS = 1.6;
-const WALKWAY_SURFACE_OFFSET = 0.12;
-const WALKWAY_WIDTH_RATIO = 0.85;
-const WALKWAY_U_SCALE = 0.06;
+const WALKWAY_SURFACE_OFFSET = 0.02;
+const WALKWAY_WIDTH_RATIO = 0.68;
+const WALKWAY_BEVEL_INNER = 1.8;
+const WALKWAY_BEVEL_OUTER = 2.6;
+const WALKWAY_TILE_U = 0.035;
+const WALKWAY_TILE_V = 0.8;
 const SEGMENT_APPROACH = 6;
 const PROGRESS_EPSILON = 1e-3;
 const TARGET_EPSILON = 5e-3;
 const easeHeight = (t: number) => {
   const clamped = THREE.MathUtils.clamp(t, 0, 1);
   return clamped * clamped * (3 - 2 * clamped);
+};
+
+const WALKWAY_SMOOTH_PASSES = 12;
+const WALKWAY_SMOOTH_INFLUENCE = 0.78;
+const RIDGE_SMOOTH_PASSES = 12;
+const RIDGE_SMOOTH_INFLUENCE = 0.7;
+const WIDTH_SMOOTH_PASSES = 9;
+const WIDTH_SMOOTH_INFLUENCE = 0.65;
+
+const smoothArray = (values: number[], iterations: number, influence: number) => {
+  if (values.length < 2) return values.slice();
+  let prev = values.slice();
+  let next = values.slice();
+
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < prev.length; i++) {
+      const left = prev[Math.max(i - 1, 0)];
+      const right = prev[Math.min(i + 1, prev.length - 1)];
+      const target = (left + prev[i] * 2 + right) / 4;
+      next[i] = THREE.MathUtils.lerp(prev[i], target, influence);
+    }
+    prev = next.slice();
+  }
+
+  return next;
 };
 
 interface Mountain3DProps { }
@@ -153,21 +181,28 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       };
     }
 
-    // Smooth ridge heights to make the walkway friendlier
-    const ridgeHeights = profiles.map((p) => p.ridgeHeight);
-    const smoothedHeights = ridgeHeights.map((height, idx) => {
-      const sample = (offset: number) => ridgeHeights[Math.min(Math.max(idx + offset, 0), ridgeHeights.length - 1)];
-      const kernel = sample(-2) + sample(-1) + height + sample(1) + sample(2);
-      return kernel / 5;
+    const walkwayWidthRaw = profiles.map((p) => p.walkwayHalf);
+    const walkwayWidthSmooth = smoothArray(walkwayWidthRaw, WIDTH_SMOOTH_PASSES, WIDTH_SMOOTH_INFLUENCE);
+    walkwayWidthSmooth.forEach((value, idx) => {
+      const profile = profiles[idx];
+      profile.walkwayHalf = Math.max(value, 6.2);
+      profile.plateauHalf = Math.max(profile.walkwayHalf + 7.5, profile.plateauHalf);
+      profile.rampRange = Math.max(profile.halfWidth - profile.plateauHalf, 0.001);
+      profile.plateauRange = Math.max(profile.plateauHalf - profile.walkwayHalf, 0.001);
     });
 
+    const walkwayHeightsRaw = profiles.map((p) => p.walkwayHeight);
+    const walkwaySoft = smoothArray(walkwayHeightsRaw, WALKWAY_SMOOTH_PASSES, WALKWAY_SMOOTH_INFLUENCE);
+    const walkwayFinal = smoothArray(walkwaySoft, 3, WALKWAY_SMOOTH_INFLUENCE * 0.6);
+    walkwayFinal.forEach((value, idx) => {
+      profiles[idx].walkwayHeight = value;
+    });
+
+    const ridgeHeights = profiles.map((p) => p.ridgeHeight);
+    const ridgeSoft = smoothArray(ridgeHeights, RIDGE_SMOOTH_PASSES, RIDGE_SMOOTH_INFLUENCE);
+    const ridgeFinal = smoothArray(ridgeSoft, 3, RIDGE_SMOOTH_INFLUENCE * 0.65);
     profiles.forEach((profile, idx) => {
-      const secondary = (
-        smoothedHeights[Math.max(idx - 1, 0)] +
-        smoothedHeights[idx] +
-        smoothedHeights[Math.min(idx + 1, smoothedHeights.length - 1)]
-      ) / 3;
-      profile.smoothedHeight = (smoothedHeights[idx] + secondary) * 0.5;
+      profile.smoothedHeight = ridgeFinal[idx];
     });
 
     const walkwayScale = maxPeakHeight * 0.9 + baseRidgeHeight * 0.25;
@@ -221,25 +256,25 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         let y = smoothFalloff * ridgeBlend;
 
         if (dist <= profile.walkwayHalf) {
-          const ripple = noise2D(point.x * 0.12, i * 0.03) * 0.35;
+          const ripple = noise2D(point.x * 0.1, i * 0.022) * 0.18;
           y = walkwayHeight + ripple;
         } else if (dist <= profile.plateauHalf) {
           const centerT = (dist - profile.walkwayHalf) / profile.plateauRange;
-          const plateauEase = 1 - centerT * centerT * 0.28;
+          const plateauEase = 1 - centerT * centerT * 0.18;
           const undulation =
-            (Math.sin(point.x * 0.28 + z * 0.07) * 0.35 + Math.cos(point.x * 0.16 + z * 0.2) * 0.22) *
+            (Math.sin(point.x * 0.22 + z * 0.06) * 0.22 + Math.cos(point.x * 0.14 + z * 0.18) * 0.16) *
             (1 - centerT);
           const blend = THREE.MathUtils.lerp(walkwayHeight, ridgeBlend, plateauEase);
-          const folds = (primaryFold * 4 + secondaryFold * 1.6) * (1 - centerT);
+          const folds = (primaryFold * 2.4 + secondaryFold * 1.1) * (1 - centerT);
           y = blend + undulation + folds;
         } else {
           const shoulder = 1 - THREE.MathUtils.clamp(dist / profile.halfWidth, 0, 1);
           const brokenEdge =
-            (Math.sin(point.x * 0.22 + dist * 0.16) + Math.cos(point.x * 0.3 + z * 0.24)) *
-            0.35 *
+            (Math.sin(point.x * 0.18 + dist * 0.12) + Math.cos(point.x * 0.26 + z * 0.2)) *
+            0.22 *
             shoulder *
             (1 - smoothFalloff);
-          const folds = (primaryFold * 6 + secondaryFold * 2.5) * shoulder * (1 - smoothFalloff);
+          const folds = (primaryFold * 3.2 + secondaryFold * 1.8) * shoulder * (1 - smoothFalloff);
           y += brokenEdge + folds;
         }
 
@@ -262,15 +297,39 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       }
 
       const walkwayHalf = profile.walkwayHalf * WALKWAY_WIDTH_RATIO;
-      const walkwayY = profile.walkwayHeight + WALKWAY_SURFACE_OFFSET;
       const x = segmentXs[i];
-      walkwayVertices.push(x, walkwayY, -walkwayHalf, x, walkwayY, walkwayHalf);
-      const uCoord = (x - segmentXs[0]) * WALKWAY_U_SCALE;
-      walkwayUVs.push(uCoord, 0, uCoord, 1);
+      const walkwayOuterHeight = profile.walkwayHeight + WALKWAY_SURFACE_OFFSET * 0.35;
+      const walkwayInnerHeight = profile.walkwayHeight + WALKWAY_SURFACE_OFFSET;
+      const walkwayInner = Math.max(walkwayHalf - WALKWAY_BEVEL_INNER, walkwayHalf * 0.6);
+      const walkwayOuter = walkwayHalf + WALKWAY_BEVEL_OUTER;
+
+      walkwayVertices.push(
+        x, walkwayOuterHeight, -walkwayOuter,
+        x, walkwayOuterHeight, -walkwayHalf,
+        x, walkwayInnerHeight, -walkwayInner,
+        x, walkwayInnerHeight, walkwayInner,
+        x, walkwayOuterHeight, walkwayHalf,
+        x, walkwayOuterHeight, walkwayOuter
+      );
+
+      const uCoord = (x - segmentXs[0]) * WALKWAY_TILE_U;
+      walkwayUVs.push(
+        uCoord, 0,
+        uCoord, WALKWAY_TILE_V * 0.25,
+        uCoord, WALKWAY_TILE_V * 0.55,
+        uCoord, WALKWAY_TILE_V * 0.55,
+        uCoord, WALKWAY_TILE_V * 0.25,
+        uCoord, 0
+      );
+
       if (i < timeSegments - 1) {
-        const base = i * 2;
-        walkwayIndices.push(base, base + 1, base + 2);
-        walkwayIndices.push(base + 1, base + 3, base + 2);
+        const base = i * 6;
+        const next = base + 6;
+        walkwayIndices.push(base, next, base + 1, base + 1, next, next + 1);
+        walkwayIndices.push(base + 1, next + 1, base + 2, base + 2, next + 1, next + 2);
+        walkwayIndices.push(base + 2, next + 2, base + 3, base + 3, next + 2, next + 3);
+        walkwayIndices.push(base + 3, next + 3, base + 4, base + 4, next + 3, next + 4);
+        walkwayIndices.push(base + 4, next + 4, base + 5, base + 5, next + 4, next + 5);
       }
     }
 
