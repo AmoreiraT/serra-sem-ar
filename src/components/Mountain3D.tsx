@@ -1,11 +1,11 @@
 import rockAOTexture from '@/assets/textures/rock/GroundDirtRocky020_AO_2K.jpg';
+import pathAOTexture from '@assets/textures/road/old_road_01_ambientOcclusion_1k.png';
+import pathDiffuseTexture from '@assets/textures/road/old_road_01_baseColor_1k.png';
+import pathNormalTexture from '@assets/textures/road/old_road_01_normal_gl_1k.png';
+import pathRoughTexture from '@assets/textures/road/old_road_01_roughness_1k.png';
 import rockDiffuseTexture from '@assets/textures/rock/GroundDirtRocky020_COL_2K.jpg';
 import rockRoughTexture from '@assets/textures/rock/GroundDirtRocky020_GLOSS_2K.jpg';
 import rockNormalTexture from '@assets/textures/rock/GroundDirtRocky020_NRM_2K.jpg';
-import pathDiffuseTexture from '@assets/textures/road/old_road_01_baseColor_1k.png';
-import pathAOTexture from '@assets/textures/road/old_road_01_ambientOcclusion_1k.png';
-import pathNormalTexture from '@assets/textures/road/old_road_01_normal_gl_1k.png';
-import pathRoughTexture from '@assets/textures/road/old_road_01_roughness_1k.png';
 // import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody } from '@react-three/rapier';
@@ -52,14 +52,14 @@ const makeRng = (seed: string) => {
   return sfc32(state[0], state[1], state[2], state[3]);
 };
 
-const TIME_SEGMENT_MULTIPLIER = 6;
-const MIN_TIME_SEGMENTS = 220;
-const MAX_TIME_SEGMENTS = 1200;
-const LATERAL_SEGMENTS = 420;
-const ACTIVE_RADIUS = 55;
-const FALLOFF_RADIUS = 35;
-const MIN_WALKWAY_BASE = -3.2;
-const WALKWAY_THICKNESS = 2.0;
+const TIME_SEGMENT_MULTIPLIER = 10;
+const MIN_TIME_SEGMENTS = 120;
+const MAX_TIME_SEGMENTS = 1000;
+const LATERAL_SEGMENTS = 620;
+const ACTIVE_RADIUS = 105;
+const FALLOFF_RADIUS = 55;
+const MIN_WALKWAY_BASE = -8.2;
+const WALKWAY_THICKNESS = 5.0;
 const PLATEAU_THICKNESS = 1.3;
 const WALKWAY_SURFACE_OFFSET = 0.012;
 const WALKWAY_WIDTH_RATIO = 0.6;
@@ -68,7 +68,7 @@ const WALKWAY_BEVEL_OUTER = 4.2;
 const WALKWAY_TILE_U = 0.028;
 const WALKWAY_TILE_V = 0.7;
 const MIN_WALKWAY_HALF = 3.5;
-const SEGMENT_APPROACH = 6;
+const SEGMENT_APPROACH = 2;
 const PROGRESS_EPSILON = 1e-3;
 const TARGET_EPSILON = 5e-3;
 const easeHeight = (t: number) => {

@@ -113,8 +113,8 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
         mesh.receiveShadow = true;
       }
     });
-    clone.scale.setScalar(1.05);
-    clone.position.set(0, -1.55, 0);
+    clone.scale.setScalar(2.05);
+    clone.position.set(0, 1.0, 0);
     return clone;
   }, [scene]);
 
@@ -330,7 +330,7 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
     const lateralClamped = THREE.MathUtils.clamp(lateral, -smoothedSample.outerWidth, smoothedSample.outerWidth);
     const lateralRatio = smoothedSample.halfWidth > 1e-4 ? Math.min(Math.abs(lateralClamped) / smoothedSample.halfWidth, 1) : 0;
     const crossFalloff = lateralRatio ** 1.35;
-    const walkwaySurfaceY = THREE.MathUtils.lerp(smoothedSample.y, smoothedSample.baseY, crossFalloff);
+    const walkwaySurfaceY = THREE.MathUtils.lerp(smoothedSample.position.y, smoothedSample.baseY, crossFalloff);
     const playerPos = smoothedSample.position.clone().add(right.clone().multiplyScalar(lateralClamped));
     const sampledHeight = terrainSampler?.sampleHeight(playerPos.x, playerPos.z);
     const targetHeight = (sampledHeight ?? walkwaySurfaceY) + PLAYER_FOOT_OFFSET;

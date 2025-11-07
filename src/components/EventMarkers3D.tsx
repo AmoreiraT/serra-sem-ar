@@ -33,6 +33,7 @@ export const EventMarkers3D = () => {
   const data = useCovidStore((state) => state.data);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
+  const terrainSampler = useCovidStore((state) => state.terrainSampler);
 
   type MarkerData = {
     event: typeof covidEvents[0];
@@ -64,21 +65,31 @@ export const EventMarkers3D = () => {
         const forwardOffset = index === 0 ? BOARD_FORWARD_OFFSET_PRIMARY : BOARD_FORWARD_OFFSET_DEFAULT;
         const up = new THREE.Vector3(0, 1, 0);
         const lateral = new THREE.Vector3().crossVectors(up, tangent).normalize().multiplyScalar(BOARD_LATERAL_OFFSET * (index % 2 === 0 ? 1 : -1));
-        const boardPoint = new THREE.Vector3(current.x, Math.max(current.y + BOARD_VERTICAL_OFFSET, BOARD_MIN_HEIGHT), current.z)
+        const boardAnchor = new THREE.Vector3(current.x, 0, current.z)
           .add(tangent.clone().multiplyScalar(forwardOffset))
           .add(lateral);
-        const markerPoint = new THREE.Vector3(current.x, current.y + MARKER_VERTICAL_OFFSET, current.z);
+        const sampledBoardHeight = terrainSampler?.sampleHeight(boardAnchor.x, boardAnchor.z);
+        const boardGround =
+          sampledBoardHeight !== undefined && sampledBoardHeight !== null
+            ? sampledBoardHeight + 0.04
+            : Math.max(current.y + BOARD_VERTICAL_OFFSET, BOARD_MIN_HEIGHT);
+        boardAnchor.y = boardGround;
+
+        const markerLocation = new THREE.Vector3(current.x, 0, current.z);
+        const sampledMarkerHeight = terrainSampler?.sampleHeight(markerLocation.x, markerLocation.z);
+        markerLocation.y =
+          (sampledMarkerHeight ?? current.y) + MARKER_VERTICAL_OFFSET;
 
         const facing = tangent.clone().multiplyScalar(-1);
         const rotationY = Math.atan2(facing.x, facing.z);
 
-        const entry: MarkerData = { event, boardPoint, markerPoint, rotationY, index };
+        const entry: MarkerData = { event, boardPoint: boardAnchor, markerPoint: markerLocation, rotationY, index };
         markerList.push(entry);
       }
     });
 
     return markerList;
-  }, [data, mountainPoints]);
+  }, [data, mountainPoints, terrainSampler]);
 
   const sortedMarkers = useMemo(() => [...markers].sort((a, b) => a.index - b.index), [markers]);
   const activeData = useMemo(() => {

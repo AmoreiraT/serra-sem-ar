@@ -11,31 +11,6 @@ import { Player } from './Player';
 
 
 
-function TerrainWalker({ meshRef, enabled = true, eyeHeight = 2 }: { meshRef: React.RefObject<THREE.Mesh>, enabled?: boolean, eyeHeight?: number }) {
-  const { camera } = useThree();
-  const raycaster = useRef(new THREE.Raycaster()).current;
-  const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
-
-  useFrame(() => {
-    if (!enabled || !meshRef.current) return;
-    const camPos = camera.position.clone();
-    // Cast a ray straight down from above the camera XZ
-    const origin = new THREE.Vector3(camPos.x, 200, camPos.z);
-    raycaster.set(origin, new THREE.Vector3(0, -1, 0));
-    const hits = raycaster.intersectObject(meshRef.current, true);
-    if (hits.length > 0) {
-      const groundY = hits[0].point.y;
-      const desiredY = groundY + eyeHeight;
-      if (Math.abs(camPos.y - desiredY) > 0.01) {
-        camera.position.y = desiredY;
-        // keep store in sync
-        setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
-      }
-    }
-  });
-  return null;
-}
-
 interface Scene3DProps {
   enableControls?: boolean;
   showStats?: boolean;
@@ -79,6 +54,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           setCameraPosition(pos);
           setCameraTarget(tgt);
         }} />
+        <CameraGroundClamp enabled={enableControls} clearance={1.2} />
         {/* Lighting */}
         <hemisphereLight color={"#fcc884"} groundColor={"#4c331e"} intensity={0.6} />
         <directionalLight
@@ -156,6 +132,23 @@ function CameraSync({ cameraPosition, cameraTarget, onSync }: { cameraPosition: 
     }
     onSync?.(cameraPosition, cameraTarget);
   }, [camera, controls, cameraPosition, cameraTarget, onSync]);
+
+  return null;
+}
+
+function CameraGroundClamp({ enabled = true, clearance = 1.0 }: { enabled?: boolean; clearance?: number }) {
+  const sampler = useCovidStore((state) => state.terrainSampler);
+  const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
+  const { camera } = useThree();
+
+  useFrame((_, delta) => {
+    if (!enabled || !sampler) return;
+    const surfaceY = sampler.sampleHeight(camera.position.x, camera.position.z);
+    const minY = surfaceY + clearance;
+    if (camera.position.y + 0.01 >= minY) return;
+    camera.position.y = THREE.MathUtils.damp(camera.position.y, minY, 10, delta);
+    setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
+  });
 
   return null;
 }
