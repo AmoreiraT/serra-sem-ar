@@ -51,34 +51,56 @@ const fetchOfficialDataset = async (): Promise<ProcessedCovidData[]> => {
   }
 };
 
+const smoothSeries = (series: number[], radius = 6) => {
+  if (series.length === 0) return [];
+  const weights: number[] = [];
+  let weightSum = 0;
+  for (let k = -radius; k <= radius; k++) {
+    const weight = Math.exp(-(k * k) / (2 * radius * radius));
+    weights.push(weight);
+    weightSum += weight;
+  }
+
+  return series.map((_, idx) => {
+    let acc = 0;
+    weights.forEach((weight, offset) => {
+      const relative = offset - radius;
+      const sampleIndex = Math.min(Math.max(idx + relative, 0), series.length - 1);
+      acc += series[sampleIndex] * weight;
+    });
+    return acc / weightSum;
+  });
+};
+
 const generateMountainPoints = (data: ProcessedCovidData[]): MountainPoint[] => {
   if (data.length === 0) return [];
 
-  const maxCases = Math.max(...data.map((d) => d.cases), 1);
-  const maxDeaths = Math.max(...data.map((d) => d.deaths), 1);
+  const rawCases = data.map((d) => d.cases);
+  const rawDeaths = data.map((d) => d.deaths);
+  const smoothedCases = smoothSeries(rawCases, 8);
+  const smoothedDeaths = smoothSeries(rawDeaths, 8);
 
-  const daySpacing = 0.65;
+  const maxCases = Math.max(...smoothedCases, 1);
+  const maxDeaths = Math.max(...smoothedDeaths, 1);
+
+  const daySpacing = 0.7;
   const centerOffset = (data.length > 1 ? daySpacing * (data.length - 1) : 0) * 0.5;
 
   return data.map((item, index) => {
-    // Normalize the data for 3D positioning
     const x = index * daySpacing - centerOffset;
-    const z = 0; // Keep Z at 0 for now, can be used for other dimensions
+    const z = 0;
 
-    // Height based on cases (width of mountain base)
-    const caseHeight = Math.pow(item.cases / maxCases, 0.6) * 24;
-    const deathHeight = Math.pow(item.deaths / maxDeaths, 0.68) * 36;
-
-    // Combine both for total height
+    const caseHeight = Math.pow(smoothedCases[index] / maxCases, 0.58) * 22;
+    const deathHeight = Math.pow(smoothedDeaths[index] / maxDeaths, 0.66) * 34;
     const y = caseHeight + deathHeight;
 
     return {
       x,
       y,
       z,
-      cases: item.cases,
-      deaths: item.deaths,
-      date: item.date
+      cases: smoothedCases[index],
+      deaths: smoothedDeaths[index],
+      date: item.date,
     };
   });
 };

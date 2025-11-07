@@ -80,7 +80,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           setCameraTarget(tgt);
         }} />
         {/* Lighting */}
-        <hemisphereLight color={"#FCC884FF"} groundColor={"#4C331EFF"} intensity={0.6} />
+        <hemisphereLight color={"#fcc884"} groundColor={"#4c331e"} intensity={0.6} />
         <directionalLight
           position={[80, 100, 50]}
           intensity={1.1}

@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { create } from 'zustand';
 import { MountainPoint, ProcessedCovidData } from '../types/covid';
+import { TerrainSampler } from '../utils/terrainSampler';
 
 export interface WalkwaySample {
   x: number;
   y: number;
+  baseY: number;
   halfWidth: number;
   outerWidth: number;
   distance: number;
@@ -14,6 +16,7 @@ interface CovidStore {
   data: ProcessedCovidData[];
   mountainPoints: MountainPoint[];
   walkwayProfile: WalkwaySample[];
+  terrainSampler: TerrainSampler | null;
   isLoading: boolean;
   error: string | null;
   currentDateIndex: number;
@@ -23,6 +26,7 @@ interface CovidStore {
   setData: (data: ProcessedCovidData[]) => void;
   setMountainPoints: (points: MountainPoint[]) => void;
   setWalkwayProfile: (profile: WalkwaySample[]) => void;
+  setTerrainSampler: (sampler: TerrainSampler | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setCurrentDateIndex: (index: number) => void;
@@ -40,6 +44,7 @@ export const useCovidStore = create<CovidStore>((set) => ({
   data: [],
   mountainPoints: [],
   walkwayProfile: [],
+  terrainSampler: null,
   isLoading: false,
   error: null,
   currentDateIndex: 0,
@@ -49,6 +54,7 @@ export const useCovidStore = create<CovidStore>((set) => ({
   setData: (data) => set({ data }),
   setMountainPoints: (points) => set({ mountainPoints: points }),
   setWalkwayProfile: (profile) => set({ walkwayProfile: profile }),
+  setTerrainSampler: (sampler) => set({ terrainSampler: sampler }),
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
   setCurrentDateIndex: (index) => set({ currentDateIndex: index }),

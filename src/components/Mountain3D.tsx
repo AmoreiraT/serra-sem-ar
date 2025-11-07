@@ -2,21 +2,21 @@ import rockAOTexture from '@/assets/textures/rock/GroundDirtRocky020_AO_2K.jpg';
 import rockDiffuseTexture from '@assets/textures/rock/GroundDirtRocky020_COL_2K.jpg';
 import rockRoughTexture from '@assets/textures/rock/GroundDirtRocky020_GLOSS_2K.jpg';
 import rockNormalTexture from '@assets/textures/rock/GroundDirtRocky020_NRM_2K.jpg';
-import pathDiffuseTexture from '@assets/textures/terrain/rocky-rugged-terrain_1_albedo.png';
-import pathAOTexture from '@assets/textures/terrain/rocky-rugged-terrain_1_ao.png';
-import pathNormalTexture from '@assets/textures/terrain/rocky-rugged-terrain_1_normal-ogl.png';
-import pathRoughTexture from '@assets/textures/terrain/rocky-rugged-terrain_1_roughness.png';
+import pathDiffuseTexture from '@assets/textures/road/old_road_01_baseColor_1k.png';
+import pathAOTexture from '@assets/textures/road/old_road_01_ambientOcclusion_1k.png';
+import pathNormalTexture from '@assets/textures/road/old_road_01_normal_gl_1k.png';
+import pathRoughTexture from '@assets/textures/road/old_road_01_roughness_1k.png';
 // import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { useFrame } from '@react-three/fiber';
+import { RigidBody } from '@react-three/rapier';
 import { forwardRef, useEffect, useMemo, useRef } from 'react';
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import * as THREE from 'three';
 import { BufferGeometry, Float32BufferAttribute, Mesh } from 'three';
-import { RigidBody } from '@react-three/rapier';
 import useTextureLoader from '../hooks/useTextureLoader';
-import { useCovidStore } from '../stores/covidStore';
+import { useCovidStore, WalkwaySample } from '../stores/covidStore';
 import { MountainPoint } from '../types/covid';
-import { WalkwaySample } from '../stores/covidStore';
+import { createTerrainSampler } from '../utils/terrainSampler';
 
 const cyrb128 = (str: string) => {
   let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
@@ -67,6 +67,7 @@ const WALKWAY_BEVEL_INNER = 2.8;
 const WALKWAY_BEVEL_OUTER = 4.2;
 const WALKWAY_TILE_U = 0.028;
 const WALKWAY_TILE_V = 0.7;
+const MIN_WALKWAY_HALF = 3.5;
 const SEGMENT_APPROACH = 6;
 const PROGRESS_EPSILON = 1e-3;
 const TARGET_EPSILON = 5e-3;
@@ -107,6 +108,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
   const setRevealedX = useCovidStore((state) => state.setRevealedX);
   const setMountainMesh = useCovidStore((state) => state.setMountainMesh);
   const setWalkwayProfile = useCovidStore((state) => state.setWalkwayProfile);
+  const setTerrainSampler = useCovidStore((state) => state.setTerrainSampler);
   const cameraX = useCovidStore((state) => state.cameraPosition[0]);
   // Parameters
   const timeSegments = useMemo(() => {
@@ -137,6 +139,11 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const maxCases = Math.max(1, ...mountainPoints.map((p) => p.cases));
     const maxDeaths = Math.max(1, ...mountainPoints.map((p) => p.deaths));
     const segmentXs: number[] = new Array(timeSegments);
+    const firstPoint = mountainPoints[0];
+    const lastPoint = mountainPoints[mountainPoints.length - 1] ?? firstPoint;
+    const minPointX = firstPoint?.x ?? 0;
+    const maxPointX = lastPoint?.x ?? minPointX;
+    const xRange = Math.max(1e-5, maxPointX - minPointX);
 
     type SegmentProfile = {
       point: MountainPoint;
@@ -158,7 +165,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       const lerpT = timeSegments <= 1 ? 0 : i / (timeSegments - 1);
       const sourceIndex = Math.floor(lerpT * (mountainPoints.length - 1));
       const point = mountainPoints[sourceIndex];
-      segmentXs[i] = point.x;
+      const sampleX = minPointX + xRange * lerpT;
+      segmentXs[i] = sampleX;
 
       const casesNorm = maxCases > 0 ? point.cases / maxCases : 0;
       const deathsNorm = maxDeaths > 0 ? point.deaths / maxDeaths : 0;
@@ -302,7 +310,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         walkwayBaselines.push(baseY);
       }
 
-      const walkwayHalf = profile.walkwayHalf * WALKWAY_WIDTH_RATIO;
+      const walkwayHalf = Math.max(profile.walkwayHalf * WALKWAY_WIDTH_RATIO, MIN_WALKWAY_HALF);
       const x = segmentXs[i];
       const walkwayOuterHeight = profile.walkwayHeight + WALKWAY_SURFACE_OFFSET * 0.35;
       const walkwayInnerHeight = profile.walkwayHeight + WALKWAY_SURFACE_OFFSET;
@@ -344,6 +352,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       walkwaySamples.push({
         x,
         y: walkwayInnerHeight,
+        baseY: walkwayHeight - WALKWAY_THICKNESS,
         halfWidth: walkwayHalf,
         outerWidth: walkwayOuter,
         distance: cumulativeDistance,
@@ -430,7 +439,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
 
     const originalPositions = Float32Array.from(positionAttr.array as Float32Array);
     const walkwayBaselineArray = Float32Array.from(walkwayBaselines);
-    const minX = segmentXs[0] ?? 0;
+    const minX = segmentXs[0] ?? minPointX;
     const maxX = segmentXs[segmentXs.length - 1] ?? minX;
     const range = Math.max(1e-3, maxX - minX);
 
@@ -457,6 +466,9 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       walkwayBaselines: walkwayBaselineArray,
       walkwayGeometry,
       walkwaySamples,
+      timeSegments,
+      zMin: -maxHalfWidth,
+      zMax: maxHalfWidth,
     };
   }, [mountainPoints, timeSegments, zSegments, maxHalfWidth, maxPeakHeight, baseRidgeHeight]);
 
@@ -472,6 +484,10 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     walkwayBaselines,
     walkwayGeometry,
     walkwaySamples,
+    minX,
+    maxX,
+    zMin,
+    zMax,
   } = mountainData;
 
   const originalPositionsRef = useRef<Float32Array | null>(originalPositions);
@@ -488,6 +504,28 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     segmentTargetRef.current = new Float32Array(timeSegments).fill(0);
     activeSegmentsRef.current.clear();
   }, [originalPositions, walkwayBaselines, timeSegments]);
+
+  useEffect(() => {
+    if (!mountainData || timeSegments <= 0 || row <= 0) {
+      setTerrainSampler(null);
+      return;
+    }
+    const heights = new Float32Array(topVertexCount);
+    for (let i = 0; i < topVertexCount; i++) {
+      heights[i] = originalPositions[i * 3 + 1];
+    }
+    const sampler = createTerrainSampler({
+      heights,
+      columns: timeSegments,
+      rows: row,
+      minX,
+      maxX,
+      minZ: zMin,
+      maxZ: zMax,
+    });
+    setTerrainSampler(sampler);
+    return () => setTerrainSampler(null);
+  }, [mountainData, originalPositions, topVertexCount, timeSegments, row, minX, maxX, zMin, zMax, setTerrainSampler]);
 
   useEffect(() => {
     if (!geometry) return;

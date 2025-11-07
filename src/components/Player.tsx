@@ -1,6 +1,6 @@
 import { useAnimations, useGLTF } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import { RapierRigidBody } from '@react-three/rapier';
+import { CapsuleCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
@@ -31,6 +31,8 @@ const YAW_SENSITIVITY = 0.0018;
 const PITCH_SENSITIVITY = 0.0013;
 const CAMERA_COLLISION_CLEARANCE = 0.45;
 const PLAYER_FOOT_OFFSET = 0.05;
+const PLAYER_CAPSULE_RADIUS = 0.45;
+const PLAYER_CAPSULE_HALF_HEIGHT = 0.95;
 const PLAYER_MODEL_URL = new URL('../assets/glb/player/source/player.glb', import.meta.url).href;
 const PLAYER_CLIPS = {
   idle: 'idle',
@@ -58,6 +60,7 @@ const findWalkwaySample = (profile: WalkwaySample[], distance: number) => {
   if (!profile.length) {
     return {
       position: new THREE.Vector3(distance, 0, 0),
+      baseY: 0,
       halfWidth: 6,
       outerWidth: 8,
       forward: new THREE.Vector3(1, 0, 0),
@@ -83,6 +86,7 @@ const findWalkwaySample = (profile: WalkwaySample[], distance: number) => {
 
   const x = THREE.MathUtils.lerp(start.x, end.x, t);
   const y = THREE.MathUtils.lerp(start.y, end.y, t);
+  const baseY = THREE.MathUtils.lerp(start.baseY, end.baseY, t);
   const halfWidth = THREE.MathUtils.lerp(start.halfWidth, end.halfWidth, t);
   const outerWidth = THREE.MathUtils.lerp(start.outerWidth, end.outerWidth, t);
 
@@ -90,6 +94,7 @@ const findWalkwaySample = (profile: WalkwaySample[], distance: number) => {
 
   return {
     position: new THREE.Vector3(x, y, 0),
+    baseY,
     halfWidth,
     outerWidth,
     forward,
@@ -128,8 +133,8 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
   const lateralOffsetRef = useRef(0);
   const lateralTargetRef = useRef(0);
   const lastSpeedRef = useRef(0);
-  const downRaycasterRef = useRef(new THREE.Raycaster());
   const cameraCollisionRayRef = useRef(new THREE.Raycaster());
+  const playerHeightRef = useRef(0);
 
   const walkwayProfile = useCovidStore((state) => state.walkwayProfile);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
@@ -139,6 +144,7 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
   const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
   const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
   const mountainMesh = useCovidStore((state) => state.mountainMesh);
+  const terrainSampler = useCovidStore((state) => state.terrainSampler);
 
   const walkwayLength = useMemo(() => {
     if (!walkwayProfile.length) return 0;
@@ -321,17 +327,16 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
     }
 
     const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), forwardVec).normalize();
-    const playerPos = smoothedSample.position.clone().add(right.clone().multiplyScalar(lateral));
-
-    if (mountainMesh) {
-      const rayOrigin = playerPos.clone();
-      rayOrigin.y += 30;
-      downRaycasterRef.current.set(rayOrigin, new THREE.Vector3(0, -1, 0));
-      const groundHits = downRaycasterRef.current.intersectObject(mountainMesh, true);
-      if (groundHits.length) {
-        playerPos.y = groundHits[0].point.y + PLAYER_FOOT_OFFSET;
-      }
-    }
+    const lateralClamped = THREE.MathUtils.clamp(lateral, -smoothedSample.outerWidth, smoothedSample.outerWidth);
+    const lateralRatio = smoothedSample.halfWidth > 1e-4 ? Math.min(Math.abs(lateralClamped) / smoothedSample.halfWidth, 1) : 0;
+    const crossFalloff = lateralRatio ** 1.35;
+    const walkwaySurfaceY = THREE.MathUtils.lerp(smoothedSample.y, smoothedSample.baseY, crossFalloff);
+    const playerPos = smoothedSample.position.clone().add(right.clone().multiplyScalar(lateralClamped));
+    const sampledHeight = terrainSampler?.sampleHeight(playerPos.x, playerPos.z);
+    const targetHeight = (sampledHeight ?? walkwaySurfaceY) + PLAYER_FOOT_OFFSET;
+    const smoothedHeight = THREE.MathUtils.damp(playerHeightRef.current, targetHeight, POSITION_SMOOTH, delta);
+    playerHeightRef.current = smoothedHeight;
+    playerPos.y = smoothedHeight;
 
     const lookMatrix = new THREE.Matrix4().lookAt(
       new THREE.Vector3(0, 0, 0),
@@ -403,9 +408,21 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
   });
 
   return (
-    <group ref={playerRef}>
-      <primitive object={model} dispose={null} />
-    </group>
+    <RigidBody
+      ref={bodyRef}
+      type="kinematicPosition"
+      colliders={false}
+      enabledRotations={[false, true, false]}
+      friction={0.9}
+      linearDamping={2.5}
+      angularDamping={2.5}
+      userData={{ id: 'player' }}
+    >
+      <CapsuleCollider args={[PLAYER_CAPSULE_HALF_HEIGHT, PLAYER_CAPSULE_RADIUS]} />
+      <group ref={playerRef}>
+        <primitive object={model} dispose={null} />
+      </group>
+    </RigidBody>
   );
 };
 
