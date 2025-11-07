@@ -1,6 +1,8 @@
 import rockAOTexture from '@/assets/textures/rock/GroundDirtRocky020_AO_2K.jpg';
 import pathAOTexture from '@assets/textures/road/old_road_01_ambientOcclusion_1k.png';
 import pathDiffuseTexture from '@assets/textures/road/old_road_01_baseColor_1k.png';
+import pathHeightTexture from '@assets/textures/road/old_road_01_height_1k.png';
+import pathMetallicTexture from '@assets/textures/road/old_road_01_metallic_1k.png';
 import pathNormalTexture from '@assets/textures/road/old_road_01_normal_gl_1k.png';
 import pathRoughTexture from '@assets/textures/road/old_road_01_roughness_1k.png';
 import rockDiffuseTexture from '@assets/textures/rock/GroundDirtRocky020_COL_2K.jpg';
@@ -61,8 +63,9 @@ const FALLOFF_RADIUS = 55;
 const MIN_WALKWAY_BASE = -8.2;
 const WALKWAY_THICKNESS = 5.0;
 const PLATEAU_THICKNESS = 1.3;
-const WALKWAY_SURFACE_OFFSET = 0.012;
-const WALKWAY_WIDTH_RATIO = 0.6;
+const WALKWAY_SURFACE_OFFSET = 0.28;
+const WALKWAY_WIDTH_RATIO = 0.62;
+const WALKWAY_GROOVE_DEPTH = 0.18;
 const WALKWAY_BEVEL_INNER = 2.8;
 const WALKWAY_BEVEL_OUTER = 4.2;
 const WALKWAY_TILE_U = 0.028;
@@ -117,7 +120,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     return Math.min(Math.max(candidate, MIN_TIME_SEGMENTS), MAX_TIME_SEGMENTS);
   }, [mountainPoints.length]);
   const zSegments = LATERAL_SEGMENTS; // lateral detail across mountain width
-  const maxHalfWidth = 70; // maximum half-width of the mountain in Z
+  const maxHalfWidth = 80; // maximum half-width of the mountain in Z
   const maxPeakHeight = 48; // maximum contribution from deaths
   const baseRidgeHeight = 6; // contribution from cases gives baseline rise without flattening valleys
 
@@ -271,7 +274,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
 
         if (dist <= profile.walkwayHalf) {
           const ripple = noise2D(point.x * 0.1, i * 0.022) * 0.18;
-          y = walkwayHeight + ripple;
+          y = walkwayHeight - WALKWAY_GROOVE_DEPTH + ripple;
         } else if (dist <= profile.plateauHalf) {
           const centerT = (dist - profile.walkwayHalf) / profile.plateauRange;
           const plateauEase = 1 - centerT * centerT * 0.18;
@@ -317,6 +320,17 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       const walkwayInner = Math.max(walkwayHalf - WALKWAY_BEVEL_INNER, walkwayHalf * 0.6);
       const walkwayOuter = walkwayHalf + WALKWAY_BEVEL_OUTER;
 
+      const lengthCoord = (x - segmentXs[0]) * WALKWAY_TILE_U;
+      const widthRange = Math.max(walkwayOuter * 2, 1e-4);
+      const mapWidth = (value: number) => THREE.MathUtils.clamp((value + walkwayOuter) / widthRange, 0, 1);
+      const widthCoords = [
+        mapWidth(-walkwayOuter),
+        mapWidth(-walkwayHalf),
+        mapWidth(-walkwayInner),
+        mapWidth(walkwayInner),
+        mapWidth(walkwayHalf),
+        mapWidth(walkwayOuter),
+      ];
       walkwayVertices.push(
         x, walkwayOuterHeight, -walkwayOuter,
         x, walkwayOuterHeight, -walkwayHalf,
@@ -326,14 +340,13 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         x, walkwayOuterHeight, walkwayOuter
       );
 
-      const uCoord = (x - segmentXs[0]) * WALKWAY_TILE_U;
       walkwayUVs.push(
-        uCoord, 0,
-        uCoord, WALKWAY_TILE_V * 0.25,
-        uCoord, WALKWAY_TILE_V * 0.55,
-        uCoord, WALKWAY_TILE_V * 0.55,
-        uCoord, WALKWAY_TILE_V * 0.25,
-        uCoord, 0
+        widthCoords[0], lengthCoord,
+        widthCoords[1], lengthCoord,
+        widthCoords[2], lengthCoord,
+        widthCoords[3], lengthCoord,
+        widthCoords[4], lengthCoord,
+        widthCoords[5], lengthCoord
       );
 
       if (i < timeSegments - 1) {
@@ -666,7 +679,9 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     pathDiffuse,
     pathNormal,
     pathAO,
-    pathRough
+    pathRough,
+    pathHeight,
+    pathMetallic
   } = useTextureLoader(
     rockDiffuseTexture,
     rockNormalTexture,
@@ -675,7 +690,9 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     pathDiffuseTexture,
     pathNormalTexture,
     pathAOTexture,
-    pathRoughTexture
+    pathRoughTexture,
+    pathHeightTexture,
+    pathMetallicTexture
   );
 
 
@@ -713,6 +730,14 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     pathRough.wrapS = pathRough.wrapT = THREE.RepeatWrapping;
     pathRough.repeat.set(1, 1);
   }
+  if (pathHeight) {
+    pathHeight.wrapS = pathHeight.wrapT = THREE.RepeatWrapping;
+    pathHeight.repeat.set(1, 1);
+  }
+  if (pathMetallic) {
+    pathMetallic.wrapS = pathMetallic.wrapT = THREE.RepeatWrapping;
+    pathMetallic.repeat.set(1, 1);
+  }
 
   return (
     <RigidBody type="fixed" colliders="trimesh" name="mountain-body">
@@ -735,8 +760,16 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
               normalMap={pathNormal ?? undefined}
               aoMap={pathAO ?? undefined}
               roughnessMap={pathRough ?? undefined}
-              roughness={0.82}
-              metalness={0.03}
+              metalnessMap={pathMetallic ?? undefined}
+              displacementMap={pathHeight ?? undefined}
+              displacementScale={pathHeight ? 0.06 : 0}
+              displacementBias={pathHeight ? -0.015 : 0}
+              side={THREE.DoubleSide}
+              polygonOffset
+              polygonOffsetFactor={-1}
+              polygonOffsetUnits={-1}
+              roughness={0.68}
+              metalness={pathMetallic ? 0.25 : 0.08}
             />
           </mesh>
         )}

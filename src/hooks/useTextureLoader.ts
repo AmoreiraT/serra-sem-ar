@@ -10,7 +10,9 @@ const useTextureLoader = (
   pathDiffuseTexture?: string,
   pathNormalTexture?: string,
   pathAOTexture?: string,
-  pathRoughTexture?: string
+  pathRoughTexture?: string,
+  pathHeightTexture?: string,
+  pathMetallicTexture?: string
 ) => {
   const textureLoader = useMemo(() => new THREE.TextureLoader(), []);
 
@@ -47,6 +49,14 @@ const useTextureLoader = (
     () => (pathRoughTexture ? textureLoader.load(pathRoughTexture) : undefined),
     [textureLoader, pathRoughTexture]
   );
+  const pathHeight = useMemo(
+    () => (pathHeightTexture ? textureLoader.load(pathHeightTexture) : undefined),
+    [textureLoader, pathHeightTexture]
+  );
+  const pathMetallic = useMemo(
+    () => (pathMetallicTexture ? textureLoader.load(pathMetallicTexture) : undefined),
+    [textureLoader, pathMetallicTexture]
+  );
 
   return {
     diffuseMap,
@@ -57,6 +67,8 @@ const useTextureLoader = (
     pathNormal,
     pathAO,
     pathRough,
+    pathHeight,
+    pathMetallic,
   };
 };
 
