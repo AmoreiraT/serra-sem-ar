@@ -1,6 +1,7 @@
 import { FirebaseOptions, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
 
 export const ambiente = import.meta.env.VITE_AMBIENTE;
 export const firebaseConfig: FirebaseOptions = {
@@ -18,5 +19,6 @@ const app = initializeApp(
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app, 'us-east1');
 
-export { app, auth, db };
+export { app, auth, db, functions };
