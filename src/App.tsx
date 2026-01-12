@@ -5,11 +5,13 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { EventCard } from './components/EventCard';
 import { InfoPanel } from './components/InfoPanel';
 import { LoadingScreen } from './components/LoadingScreen';
+import { MemorialPanel } from './components/MemorialPanel';
 import { Scene3D } from './components/Scene3D';
 import { TimelineControls } from './components/TimelineControls';
 import { useCovidData } from './hooks/useCovidData';
 // import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useTemporalNavigation } from './hooks/useTemporalNavigation';
+import { AuthProvider } from './providers/AuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
 
 function AppContent() {
@@ -51,6 +53,7 @@ function AppContent() {
         <div className="relative flex-1">
           <Scene3D enableControls showStats={false} />
           <EventCard />
+          <MemorialPanel />
           <div className="md:hidden">
             <TimelineControls />
           </div>
@@ -70,7 +73,9 @@ function AppContent() {
 function App() {
   return (
     <QueryProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </QueryProvider>
   );
 }

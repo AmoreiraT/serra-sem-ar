@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
 import { EventMarkers3D } from './EventMarkers3D';
+import { MemorialPins3D } from './MemorialPins3D';
 import { MonthlyPlaques3D } from './MonthlyPlaques3D';
 import { Mountain3D } from './Mountain3D';
 
@@ -103,6 +104,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           </Suspense>
           <EventMarkers3D />
           <MonthlyPlaques3D />
+          <MemorialPins3D />
 
           {/* First-person camera walker (no model to keep it light) */}
           <Suspense fallback={null}>
