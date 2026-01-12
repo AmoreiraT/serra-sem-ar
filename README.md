@@ -84,8 +84,8 @@ A geracao acontece em `src/components/Mountain3D.tsx`. O fluxo principal:
 ### Fluxo
 
 1) Usuario faz login Google.
-2) Frontend chama a function `createMemorial`.
-3) Function valida e grava em `memorials` no Firestore.
+2) Frontend grava direto em `memorials` no Firestore.
+3) Regras validam schema e autenticacao.
 4) Frontend le memorials e cria cruzes na estrada.
 
 ### Modelo de dados (memorials)
@@ -106,8 +106,12 @@ A geracao acontece em `src/components/Mountain3D.tsx`. O fluxo principal:
 ### Regras do Firestore
 
 - Leitura publica para renderizar os pins.
-- Escrita bloqueada no client.
-- Escrita somente via Cloud Functions autenticadas.
+- Escrita permitida apenas para usuarios autenticados.
+- Validacao de campos e tamanhos diretamente nas rules.
+
+### Cloud Functions (opcional)
+
+Cloud Functions exigem o plano Blaze. O projeto ja possui `functions/` pronto para evolucao, mas no plano gratuito o memorial grava direto via Firestore.
 
 ## Estrutura do projeto
 
@@ -158,23 +162,20 @@ pnpm install
 pnpm dev
 ```
 
-### Functions
+### Regras Firestore
 
 ```bash
-npm --prefix functions run build
-firebase deploy --only functions,firestore:rules
+firebase deploy --only firestore:rules
 ```
 
 ## Deploy
 
 - Hosting: Vite build com Firebase Hosting.
-- Functions: `firebase deploy --only functions`.
 - Firestore rules: `firebase deploy --only firestore:rules`.
-- Storage nao e usado (removido do `firebase.json`).
+- Functions: somente com plano Blaze.
 
 ## Creditos
 
 - Ministerio da Saude (PortalGeral/Painel COVID-19)
 - Three.js + React Three Fiber
 - Firebase (Auth, Functions, Firestore)
-

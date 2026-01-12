@@ -1,8 +1,8 @@
-import { httpsCallable } from 'firebase/functions';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { LogIn, LogOut, Pin } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-import { functions } from '../services/firebaseConfig';
+import { db } from '../services/firebaseConfig';
 import { useCovidStore } from '../stores/covidStore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -19,7 +19,6 @@ export const MemorialPanel = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const createMemorial = httpsCallable(functions, 'createMemorial');
 
   useEffect(() => {
     setError(null);
@@ -44,23 +43,20 @@ export const MemorialPanel = () => {
     setError(null);
     setIsSubmitting(true);
     try {
-      await createMemorial({
+      await addDoc(collection(db, 'memorials'), {
         date: isoDate,
         dateIndex: currentDateIndex,
         name: name.trim() || null,
         message: message.trim(),
+        uid: user.uid,
+        userName: user.displayName ?? null,
+        userPhoto: user.photoURL ?? null,
+        createdAt: serverTimestamp(),
       });
       setName('');
       setMessage('');
     } catch (submitError: any) {
-      const code = submitError?.code ?? '';
-      if (code === 'functions/unauthenticated') {
-        setError('Voce precisa entrar com o Google para salvar.');
-      } else if (code === 'functions/invalid-argument') {
-        setError('Confira os campos e tente novamente.');
-      } else {
-        setError('Nao foi possivel salvar o memorial. Tente novamente.');
-      }
+      setError('Nao foi possivel salvar o memorial. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
