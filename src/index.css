@@ -1,0 +1,33 @@
+@font-face {
+  font-family: "Serra Sans";
+  src: url("./assets/fonts/hsbc/UniversNextforHSBCW29-Thin.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Serra Sans";
+  src: url("./assets/fonts/hsbc/UniversNextforHSBCW29-Rg.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Serra Sans";
+  src: url("./assets/fonts/hsbc/UniversNextforHSBCW29-Md.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-serra: "Serra Sans", "Segoe UI", sans-serif;
+}
+
+body {
+  font-family: var(--font-serra);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}

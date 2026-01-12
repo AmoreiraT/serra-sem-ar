@@ -4,30 +4,38 @@ import * as THREE from 'three';
 import { covidEvents } from '../data/covidEvents';
 import { useCovidStore } from '../stores/covidStore';
 
-const CARD_SCALE = 0.45;
-const BOARD_WIDTH = 5.6 * CARD_SCALE;
-const BOARD_HEIGHT = 1.45 * CARD_SCALE;
-const POLE_HEIGHT = 4.8 * CARD_SCALE;
-const BOARD_BORDER_OFFSET_X = 0.4 * CARD_SCALE;
-const BOARD_BORDER_OFFSET_Y = 0.2 * CARD_SCALE;
-const BOARD_VERTICAL_OFFSET = 1.4 * CARD_SCALE;
-const BOARD_MIN_HEIGHT = 2.6 * CARD_SCALE;
-const BOARD_FORWARD_OFFSET_PRIMARY = 8.2;
-const BOARD_FORWARD_OFFSET_DEFAULT = 6.4;
-const BOARD_LATERAL_OFFSET = 3.8;
-const TOPPER_LENGTH = 1.1 * CARD_SCALE;
-const TOPPER_RADIUS = 0.5 * CARD_SCALE;
-const POLE_RADIUS_TOP = 0.08 * CARD_SCALE;
-const POLE_RADIUS_BOTTOM = 0.02 * CARD_SCALE;
-const MARKER_POLE_RADIUS_TOP = 0.06 * CARD_SCALE;
-const MARKER_POLE_RADIUS_BOTTOM = 0.1 * CARD_SCALE;
-const MARKER_POLE_HEIGHT = 0.22 * CARD_SCALE;
-const MARKER_SPHERE_RADIUS = 0.12 * CARD_SCALE;
-const MARKER_SPHERE_HEIGHT = 0.14 * CARD_SCALE;
-const MARKER_VERTICAL_OFFSET = 1.2 * CARD_SCALE;
+const CARD_SCALE = 0.6;
+const BOARD_WIDTH = 6.2 * CARD_SCALE;
+const BOARD_HEIGHT = 2.2 * CARD_SCALE;
+const POLE_HEIGHT = 5.2 * CARD_SCALE;
+const BOARD_BORDER_OFFSET_X = 0.55 * CARD_SCALE;
+const BOARD_BORDER_OFFSET_Y = 0.3 * CARD_SCALE;
+const BOARD_VERTICAL_OFFSET = 2.0 * CARD_SCALE;
+const BOARD_MIN_HEIGHT = 3.0 * CARD_SCALE;
+const BOARD_FORWARD_OFFSET_PRIMARY = 9.2;
+const BOARD_FORWARD_OFFSET_DEFAULT = 7.2;
+const BOARD_LATERAL_OFFSET = 4.4;
+const TOPPER_LENGTH = 1.15 * CARD_SCALE;
+const TOPPER_RADIUS = 0.55 * CARD_SCALE;
+const POLE_RADIUS_TOP = 0.09 * CARD_SCALE;
+const POLE_RADIUS_BOTTOM = 0.03 * CARD_SCALE;
+const MARKER_POLE_RADIUS_TOP = 0.07 * CARD_SCALE;
+const MARKER_POLE_RADIUS_BOTTOM = 0.12 * CARD_SCALE;
+const MARKER_POLE_HEIGHT = 0.26 * CARD_SCALE;
+const MARKER_SPHERE_RADIUS = 0.15 * CARD_SCALE;
+const MARKER_SPHERE_HEIGHT = 0.17 * CARD_SCALE;
+const MARKER_VERTICAL_OFFSET = 1.35 * CARD_SCALE;
+const HTML_SCALE = 80;
+const HTML_DISTANCE_FACTOR = 26;
+const DESCRIPTION_MAX = 180;
 
 const formatDate = (date: Date) =>
   date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' });
+
+const truncateText = (value: string, max: number) => {
+  if (value.length <= max) return value;
+  return `${value.slice(0, Math.max(0, max - 3)).trim()}...`;
+};
 
 export const EventMarkers3D = () => {
   const data = useCovidStore((state) => state.data);
@@ -103,6 +111,26 @@ export const EventMarkers3D = () => {
     if (!activeData) return null;
     return data[activeData.index]?.date ?? new Date(activeData.event.date);
   }, [activeData, data]);
+  const activeDescription = useMemo(() => {
+    if (!activeData) return '';
+    return truncateText(activeData.event.description, DESCRIPTION_MAX);
+  }, [activeData]);
+  const primaryLink = useMemo(() => {
+    if (!activeData) return null;
+    if (activeData.event.source) {
+      return { url: activeData.event.source, label: 'Fonte oficial' };
+    }
+    const attachment = activeData.event.attachments?.find((item) => item.url);
+    if (!attachment?.url) return null;
+    const label =
+      attachment.label ??
+      (attachment.type === 'video'
+        ? 'Assistir vídeo'
+        : attachment.type === 'image'
+          ? 'Ver imagem'
+          : 'Abrir referência');
+    return { url: attachment.url, label };
+  }, [activeData]);
 
   return (
     <group>
@@ -142,101 +170,36 @@ export const EventMarkers3D = () => {
             <Html
               transform
               position={[0, 0, 0.03]}
-              distanceFactor={32}
+              distanceFactor={HTML_DISTANCE_FACTOR}
               style={{
-                width: `${BOARD_WIDTH * 30}px`,
-                height: `${BOARD_HEIGHT * 30}px`,
+                width: `${BOARD_WIDTH * HTML_SCALE}px`,
+                height: `${BOARD_HEIGHT * HTML_SCALE}px`,
                 pointerEvents: 'auto',
               }}
             >
-              <div className="flex h-full w-full flex-col gap-0.5 rounded-lg border border-white/15 bg-black/85 px-1.5 py-1 text-white shadow-xl text-[6px] leading-tight">
-                <div className="text-[5px] uppercase tracking-[0.35em] text-amber-200">
-                  {activeDate ? formatDate(activeDate) : formatDate(new Date(activeData.event.date))}
-                </div>
-                <h3 className="text-[7px] font-semibold leading-snug">{activeData.event.title}</h3>
-                <p className="text-[5px] leading-snug text-white/80">{activeData.event.description}</p>
+              <div
+                className="flex h-full w-full flex-col gap-1 overflow-hidden rounded-lg border border-white/20 bg-black/90 px-3 py-2 text-[10px] leading-snug text-white shadow-2xl"
+                style={{ textShadow: '0 2px 10px rgba(0, 0, 0, 0.65)' }}
+              >
+              <div className="text-[10px] uppercase tracking-[0.28em] text-amber-200">
+                {activeDate ? formatDate(activeDate) : formatDate(new Date(activeData.event.date))}
+              </div>
+              <h3 className="text-[13px] font-semibold leading-snug text-white">
+                {activeData.event.title}
+              </h3>
+              <p className="text-[11px] leading-snug text-white/80">{activeDescription}</p>
 
-                {activeData.event.attachments && activeData.event.attachments.length > 0 && (
-                  <div className="space-y-1">
-                    {activeData.event.attachments.map((attachment, idx) => {
-                      const key = `${activeData.event.date}-attachment-${idx}`;
-                      if (attachment.type === 'text' && attachment.content) {
-                        return (
-                          <blockquote
-                            key={key}
-                            className="rounded-md border border-white/15 bg-white/10 px-1.5 py-0.5 text-[6px] text-white/80"
-                          >
-                            “{attachment.content}”
-                          </blockquote>
-                        );
-                      }
-                      if (attachment.type === 'image' && attachment.url) {
-                        return (
-                          <figure key={key} className="overflow-hidden rounded-md border border-white/15 bg-white/10">
-                            <img
-                              src={attachment.url}
-                              alt={attachment.label ?? activeData.event.title}
-                              className="h-10 w-full object-cover"
-                              loading="lazy"
-                            />
-                            {attachment.label && (
-                              <figcaption className="px-1.5 py-0.5 text-[5px] uppercase tracking-[0.35em] text-white/60">
-                                {attachment.label}
-                              </figcaption>
-                            )}
-                          </figure>
-                        );
-                      }
-                      if (attachment.type === 'video' && attachment.url) {
-                        return (
-                          <div key={key} className="overflow-hidden rounded-md border border-white/15 bg-white/10">
-                            <div className="aspect-video w-full">
-                              <iframe
-                                src={attachment.url}
-                                title={attachment.label ?? activeData.event.title}
-                                className="h-full w-full"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                              />
-                            </div>
-                            {attachment.label && (
-                              <p className="px-1.5 py-0.5 text-[5px] uppercase tracking-[0.35em] text-white/60">
-                                {attachment.label}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      }
-                      if (attachment.type === 'link' && attachment.url) {
-                        return (
-                          <a
-                            key={key}
-                            href={attachment.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-0.5 rounded-md border border-amber-200/40 bg-amber-200/10 px-1.5 py-0.5 text-[5px] uppercase tracking-[0.35em] text-amber-200 hover:bg-amber-200/20"
-                          >
-                            {attachment.label ?? 'Abrir referência'}
-                            <span aria-hidden>↗</span>
-                          </a>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-                )}
-
-                {activeData.event.source && (
-                  <a
-                    href={activeData.event.source}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-auto inline-flex items-center gap-1 text-[5px] uppercase tracking-[0.35em] text-amber-300 hover:text-amber-100"
-                  >
-                    Fonte oficial
-                    <span aria-hidden>↗</span>
-                  </a>
-                )}
+              {primaryLink && (
+                <a
+                  href={primaryLink.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 rounded-md border border-amber-200/40 bg-amber-200/10 px-2 py-1 text-[10px] uppercase tracking-[0.25em] text-amber-200 hover:bg-amber-200/20"
+                >
+                  {primaryLink.label}
+                  <span aria-hidden>↗</span>
+                </a>
+              )}
               </div>
             </Html>
           </group>

@@ -56,12 +56,12 @@ export const TimelineControls = () => {
   if (data.length === 0) return null;
 
   return (
-    <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-sm text-white p-4 rounded-lg min-w-96">
+    <div className="absolute bottom-20 left-1/2 z-10 -translate-x-1/2 w-[min(92vw,480px)] rounded-xl border border-white/15 bg-black/80 p-4 text-white backdrop-blur-sm shadow-lg">
       <div className="space-y-4">
         {/* Current Date Display */}
         <div className="text-center">
-          <p className="text-sm opacity-80">Data Atual</p>
-          <p className="text-lg font-semibold">
+          <p className="text-sm text-white/70">Data Atual</p>
+          <p className="text-base font-semibold sm:text-lg">
             {currentDate?.toLocaleDateString('pt-BR', {
               year: 'numeric',
               month: 'long',
@@ -79,7 +79,7 @@ export const TimelineControls = () => {
             min={0}
             step={1}
             className="w-full" defaultValue={undefined} />
-          <div className="flex justify-between text-xs opacity-60">
+          <div className="flex justify-between text-[11px] text-white/60">
             <span>{data[0]?.date.toLocaleDateString('pt-BR')}</span>
             <span>{progress.toFixed(1)}%</span>
             <span>{data[data.length - 1]?.date.toLocaleDateString('pt-BR')}</span>

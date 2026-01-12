@@ -2,9 +2,11 @@ import { AlertCircle } from 'lucide-react';
 import './App.css';
 import { ControlsHelp } from './components/ControlsHelp';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { EventCard } from './components/EventCard';
 import { InfoPanel } from './components/InfoPanel';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Scene3D } from './components/Scene3D';
+import { TimelineControls } from './components/TimelineControls';
 import { useCovidData } from './hooks/useCovidData';
 // import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useTemporalNavigation } from './hooks/useTemporalNavigation';
@@ -40,7 +42,7 @@ function AppContent() {
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden">
-      <header className="z-10 flex flex-wrap items-center justify-between gap-4 bg-black/70 px-6 py-3 text-white backdrop-blur-md">
+      <header className="z-10 flex flex-wrap items-center justify-between gap-3 bg-black/70 px-4 py-2 text-white backdrop-blur-md sm:gap-4 sm:px-6 sm:py-3">
         <InfoPanel variant="compact" />
         <ControlsHelp variant="header" />
       </header>
@@ -48,9 +50,13 @@ function AppContent() {
       <ErrorBoundary>
         <div className="relative flex-1">
           <Scene3D enableControls showStats={false} />
+          <EventCard />
+          <div className="md:hidden">
+            <TimelineControls />
+          </div>
           {/* Footer */}
-          <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 transform rounded-lg bg-black/70 px-4 py-2 text-white backdrop-blur-sm">
-            <p className="text-sm text-center">
+          <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 transform rounded-lg bg-black/70 px-3 py-2 text-white backdrop-blur-sm sm:px-4">
+            <p className="text-xs text-center sm:text-sm">
               Web Art • AmoreiraT • Three.js - saude.gov.br
             </p>
           </div>

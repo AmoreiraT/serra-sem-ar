@@ -21,6 +21,10 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
   const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
   const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
   const mountainRef = useRef<THREE.Mesh>(null) as React.RefObject<THREE.Mesh>;
+  const dpr = useMemo(() => {
+    if (typeof window === 'undefined') return [1, 1.5] as [number, number];
+    return window.innerWidth < 768 ? 1 : ([1, 1.5] as [number, number]);
+  }, []);
 
   return (
     <div className="w-full h-full">
@@ -32,7 +36,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           far: 1000,
         }}
         shadows
-        dpr={[1, 1.5]}
+        dpr={dpr}
         className="bg-gradient-to-b from-orange-900 to-amber-700"
       >
         {/* Sky and atmosphere */}

@@ -29,8 +29,8 @@ export const ControlsHelp = ({ variant = 'floating' }: ControlsHelpProps = {}) =
         onClick={() => setIsOpen(true)}
         className={
           variant === 'header'
-            ? 'pointer-events-auto bg-black/60 border-white/20 text-white hover:bg-white/10'
-            : 'absolute top-4 right-4 z-10 bg-black/70 border-white/30 text-white hover:bg-white/10'
+            ? 'pointer-events-auto bg-black/70 border-white/30 text-white shadow-md hover:bg-white/10'
+            : 'absolute top-4 right-4 z-10 bg-black/80 border-white/40 text-white shadow-md hover:bg-white/10'
         }
       >
         <HelpCircle className="w-4 h-4 mr-2" />
@@ -41,9 +41,9 @@ export const ControlsHelp = ({ variant = 'floating' }: ControlsHelpProps = {}) =
       {isOpen &&
         createPortal(
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-            <div className="bg-black/90 text-white p-6 rounded-lg max-w-md w-full mx-4">
+            <div className="bg-black/90 text-white p-6 rounded-xl max-w-[min(92vw,420px)] w-full mx-4 border border-white/10 shadow-2xl">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">Controles de Navegação</h3>
+                <h3 className="text-lg font-bold sm:text-xl">Controles de Navegação</h3>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -55,6 +55,12 @@ export const ControlsHelp = ({ variant = 'floating' }: ControlsHelpProps = {}) =
               </div>
 
               <div className="space-y-3">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/80 sm:hidden">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-amber-300">Toque</p>
+                  <p className="mt-2 text-[12px] leading-relaxed">
+                    Use o slider na base da tela para avançar ou voltar no tempo. Toque nas placas para abrir links.
+                  </p>
+                </div>
                 <div>
                   <h4 className="font-semibold mb-2 text-blue-400">Movimento (1ª pessoa)</h4>
                   <div className="grid grid-cols-1 gap-2 text-sm">

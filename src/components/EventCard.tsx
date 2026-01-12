@@ -30,6 +30,15 @@ export const EventCard = () => {
     const isoDate = selected.event.date;
     return covidEventsByDate.get(isoDate) ?? selected.event;
   }, [currentDateIndex, eventsByIndex]);
+  const formattedDate = useMemo(() => {
+    if (!event) return '';
+    const safeDate = new Date(`${event.date}T00:00:00`);
+    return safeDate.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [event]);
 
   return (
     <AnimatePresence mode="wait">
@@ -40,29 +49,28 @@ export const EventCard = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="pointer-events-none absolute bottom-6 left-6 max-w-sm"
-          style={{ transform: 'scale(0.45)', transformOrigin: 'bottom left' }}
+          className="pointer-events-none absolute bottom-32 left-1/2 z-10 w-[min(92vw,380px)] -translate-x-1/2 sm:bottom-6 sm:left-6 sm:translate-x-0"
         >
-          <div className="pointer-events-auto rounded-xl border border-white/20 bg-black/80 p-2.5 shadow-xl backdrop-blur-md text-white space-y-1.5">
-            <div className="flex items-center gap-1.5 text-amber-300">
-              <Info className="h-3 w-3" />
-              <p className="text-[10px] uppercase tracking-[0.45em]">Registro Histórico</p>
+          <div className="pointer-events-auto space-y-2 rounded-2xl border border-white/20 bg-black/85 p-3.5 text-white shadow-2xl backdrop-blur-md max-h-[60vh] overflow-auto sm:max-h-none sm:overflow-visible">
+            <div className="flex items-center gap-2 text-amber-300">
+              <Info className="h-4 w-4" />
+              <p className="text-[11px] uppercase tracking-[0.35em]">Registro Histórico</p>
             </div>
             <div>
-              <p className="text-[10px] text-white/60">{event.date}</p>
-              <h3 className="text-sm font-semibold leading-snug">{event.title}</h3>
+              <p className="text-[11px] text-white/70">{formattedDate}</p>
+              <h3 className="text-[15px] font-semibold leading-snug">{event.title}</h3>
             </div>
-            <p className="text-[11px] leading-tight text-white/85">{event.description}</p>
+            <p className="text-[12px] leading-relaxed text-white/85">{event.description}</p>
 
             {event.attachments?.length ? (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {event.attachments.map((attachment, idx) => {
                   switch (attachment.type) {
                     case 'text':
                       return (
-                        <div key={idx} className="rounded-lg border border-white/10 bg-white/5 p-2 text-[11px] leading-snug text-white/80">
-                          <div className="mb-1 flex items-center gap-1.5 text-amber-200">
-                            <TextQuote className="h-3 w-3" />
+                        <div key={idx} className="rounded-lg border border-white/10 bg-white/5 p-2 text-[12px] leading-snug text-white/80">
+                          <div className="mb-1 flex items-center gap-2 text-amber-200">
+                            <TextQuote className="h-4 w-4" />
                             <span>Citação</span>
                           </div>
                           <p>{attachment.content}</p>
@@ -75,12 +83,12 @@ export const EventCard = () => {
                             <img
                               src={attachment.url}
                               alt={attachment.label ?? 'Imagem histórica'}
-                              className="h-32 w-full object-cover"
+                              className="h-36 w-full object-cover"
                               loading="lazy"
                             />
                           )}
                           {attachment.label && (
-                            <p className="px-2 py-1 text-[11px] text-white/65">{attachment.label}</p>
+                            <p className="px-2 py-1 text-[12px] text-white/65">{attachment.label}</p>
                           )}
                         </div>
                       );
@@ -98,11 +106,11 @@ export const EventCard = () => {
                               />
                             </div>
                           ) : attachment.url ? (
-                            <video className="h-32 w-full object-cover" controls src={attachment.url} />
+                            <video className="h-36 w-full object-cover" controls src={attachment.url} />
                           ) : null}
                           {attachment.label && (
-                            <p className="px-2 py-1 text-[11px] text-white/65 flex items-center gap-1.5">
-                              <PlayCircle className="h-3 w-3 text-amber-200" />
+                            <p className="flex items-center gap-2 px-2 py-1 text-[12px] text-white/65">
+                              <PlayCircle className="h-4 w-4 text-amber-200" />
                               {attachment.label}
                             </p>
                           )}
@@ -116,10 +124,10 @@ export const EventCard = () => {
                           href={attachment.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-amber-200 hover:text-amber-100 transition-colors"
+                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[12px] text-amber-200 transition-colors hover:text-amber-100"
                         >
                           {attachment.label ?? 'Abrir referência'}
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-4 w-4" />
                         </a>
                       );
                   }
@@ -132,9 +140,9 @@ export const EventCard = () => {
                 href={event.source}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-[11px] text-amber-200 hover:text-amber-100 transition-colors"
+                className="inline-flex items-center gap-2 text-[12px] text-amber-200 transition-colors hover:text-amber-100"
               >
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-4 w-4" />
                 Fonte oficial
               </a>
             )}

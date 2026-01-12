@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { useCovidStore } from '../stores/covidStore';
 
-const PLAQUE_SCALE = 0.42;
+const PLAQUE_SCALE = 0.52;
 const BOARD_WIDTH = 3.4 * PLAQUE_SCALE;
 const BOARD_HEIGHT = 1.7 * PLAQUE_SCALE;
 const BOARD_DEPTH = 0.08 * PLAQUE_SCALE;
@@ -13,9 +13,10 @@ const CROSSBAR_THICKNESS = 0.18 * PLAQUE_SCALE;
 const CROSSBAR_WIDTH = 2.8 * PLAQUE_SCALE;
 const BASE_RADIUS = 0.32 * PLAQUE_SCALE;
 const BASE_HEIGHT = 0.12 * PLAQUE_SCALE;
-const FORWARD_OFFSET = 3.6;
-const LATERAL_OFFSET = 2.4;
-const PLAQUE_TEXTURE_SIZE = 512;
+const FORWARD_OFFSET = 4.2;
+const LATERAL_OFFSET = 2.8;
+const PLAQUE_TEXTURE_WIDTH = 768;
+const PLAQUE_TEXTURE_HEIGHT = 384;
 
 const createPlaqueTexture = (
   monthLabel: string,
@@ -25,56 +26,120 @@ const createPlaqueTexture = (
 ) => {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
-  canvas.width = PLAQUE_TEXTURE_SIZE;
-  canvas.height = PLAQUE_TEXTURE_SIZE;
+  canvas.width = PLAQUE_TEXTURE_WIDTH;
+  canvas.height = PLAQUE_TEXTURE_HEIGHT;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
-  const backgroundGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  backgroundGradient.addColorStop(0, '#4a2d18');
-  backgroundGradient.addColorStop(1, '#2a170d');
+  const width = canvas.width;
+  const height = canvas.height;
+
+  const backgroundGradient = ctx.createLinearGradient(0, 0, 0, height);
+  backgroundGradient.addColorStop(0, '#5f3a1f');
+  backgroundGradient.addColorStop(1, '#2a160c');
   ctx.fillStyle = backgroundGradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, width, height);
 
-  ctx.strokeStyle = '#b98a52';
-  ctx.lineWidth = 12;
-  ctx.strokeRect(32, 32, canvas.width - 64, canvas.height - 64);
+  const frameInset = Math.round(width * 0.06);
+  ctx.strokeStyle = '#d9ad73';
+  ctx.lineWidth = Math.max(8, Math.round(width * 0.018));
+  ctx.strokeRect(frameInset, frameInset, width - frameInset * 2, height - frameInset * 2);
 
-  ctx.fillStyle = '#f3d8b4';
-  ctx.font = '600 52px "Inter", "Helvetica Neue", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillText(monthLabel.toUpperCase(), canvas.width / 2, 72);
+  const drawText = (
+    text: string,
+    x: number,
+    y: number,
+    {
+      size,
+      weight = 500,
+      color,
+      align = 'center',
+      baseline = 'top',
+      stroke = false,
+    }: {
+      size: number;
+      weight?: number;
+      color: string;
+      align?: CanvasTextAlign;
+      baseline?: CanvasTextBaseline;
+      stroke?: boolean;
+    }
+  ) => {
+    ctx.save();
+    ctx.font = `${weight} ${size}px "Serra Sans", "Helvetica Neue", sans-serif`;
+    ctx.textAlign = align;
+    ctx.textBaseline = baseline;
+    ctx.fillStyle = color;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+    ctx.shadowBlur = Math.max(4, size * 0.15);
+    ctx.shadowOffsetY = Math.max(1, size * 0.05);
+    if (stroke) {
+      ctx.lineWidth = Math.max(2, size * 0.08);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.strokeText(text, x, y);
+    }
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  };
 
-  ctx.fillStyle = '#f8f0e5';
-  ctx.font = '500 44px "Inter", "Helvetica Neue", sans-serif';
-  ctx.fillText(`DIA ${dayLabel}`, canvas.width / 2, 150);
+  const headerSize = Math.round(height * 0.12);
+  const daySize = Math.round(height * 0.085);
+  const labelSize = Math.round(height * 0.075);
+  const valueSize = Math.round(height * 0.13);
+  const footerSize = Math.round(height * 0.065);
+  const leftX = Math.round(width * 0.12);
+  const rightX = width - leftX;
 
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#c8f7da';
-  ctx.font = '500 36px "Inter", "Helvetica Neue", sans-serif';
-  ctx.fillText('Casos', 96, 232);
+  drawText(monthLabel.toUpperCase(), width / 2, height * 0.08, {
+    size: headerSize,
+    weight: 600,
+    color: '#f6ddb7',
+    stroke: true,
+  });
+  drawText(`DIA ${dayLabel}`, width / 2, height * 0.26, {
+    size: daySize,
+    weight: 500,
+    color: '#fff4e4',
+    stroke: true,
+  });
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '700 64px "Inter", "Helvetica Neue", sans-serif';
-  ctx.fillText(casesLabel, 96, 280);
+  drawText('Casos', leftX, height * 0.5, {
+    size: labelSize,
+    weight: 500,
+    color: '#c8f7da',
+    align: 'left',
+  });
+  drawText(casesLabel, leftX, height * 0.62, {
+    size: valueSize,
+    weight: 600,
+    color: '#ffffff',
+    align: 'left',
+    stroke: true,
+  });
 
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#ffc3cf';
-  ctx.font = '500 36px "Inter", "Helvetica Neue", sans-serif';
-  ctx.fillText('Mortes', canvas.width - 96, 232);
+  drawText('Mortes', rightX, height * 0.5, {
+    size: labelSize,
+    weight: 500,
+    color: '#ffc3cf',
+    align: 'right',
+  });
+  drawText(deathsLabel, rightX, height * 0.62, {
+    size: valueSize,
+    weight: 600,
+    color: '#ffffff',
+    align: 'right',
+    stroke: true,
+  });
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '700 64px "Inter", "Helvetica Neue", sans-serif';
-  ctx.fillText(deathsLabel, canvas.width - 96, 280);
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#f4dcb3';
-  ctx.font = '450 32px "Inter", "Helvetica Neue", sans-serif';
-  ctx.fillText('Horizonte Mensal', canvas.width / 2, 392);
+  drawText('Horizonte Mensal', width / 2, height * 0.84, {
+    size: footerSize,
+    weight: 500,
+    color: '#f4dcb3',
+  });
 
   const texture = new THREE.CanvasTexture(canvas);
-  texture.anisotropy = 4;
+  texture.anisotropy = 8;
+  texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
   return texture;
 };
@@ -98,9 +163,31 @@ export const MonthlyPlaques3D = () => {
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const revealedX = useCovidStore((state) => state.revealedX);
   const terrainSampler = useCovidStore((state) => state.terrainSampler);
+  const [fontsReady, setFontsReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (typeof document === 'undefined' || !document.fonts) {
+      setFontsReady(true);
+      return () => {
+        active = false;
+      };
+    }
+    Promise.all([
+      document.fonts.load('600 32px "Serra Sans"'),
+      document.fonts.load('500 20px "Serra Sans"'),
+    ])
+      .catch(() => null)
+      .finally(() => {
+        if (active) setFontsReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const plaques = useMemo(() => {
-    if (!data.length || !mountainPoints.length) return [];
+    if (!data.length || !mountainPoints.length || !fontsReady) return [];
 
     const monthly = new Map<string, { index: number; date: Date; cases: number; deaths: number }>();
     data.forEach((entry, index) => {
@@ -177,7 +264,7 @@ export const MonthlyPlaques3D = () => {
         };
       })
       .filter(Boolean) as PlaqueData[];
-  }, [data, mountainPoints, terrainSampler]);
+  }, [data, mountainPoints, terrainSampler, fontsReady]);
 
   const activeMonthKey = useMemo(() => {
     const entry = data[currentDateIndex];
@@ -204,10 +291,11 @@ export const MonthlyPlaques3D = () => {
       {visiblePlaques.map((plaque) => {
         const boardPosition = plaque.boardPoint.toArray() as [number, number, number];
         const isActive = plaque.key === activeMonthKey;
-        const postColor = isActive ? '#f4d2a4' : '#3d2918';
-        const frameColor = isActive ? '#5c3014' : '#2b1a10';
-        const panelColor = isActive ? '#8b4513' : '#4a2b16';
-        const panelEmissive = isActive ? '#c27a30' : '#1a0f06';
+        const postColor = isActive ? '#f4d8b4' : '#4a2b16';
+        const frameColor = isActive ? '#6b3a1b' : '#2b1a10';
+        const panelColor = '#ffffff';
+        const panelEmissive = isActive ? '#f1a95b' : '#2a160c';
+        const panelEmissiveIntensity = isActive ? 0.55 : 0.2;
 
         return (
           <group key={`month-plaque-${plaque.key}`} position={boardPosition} rotation={[0, plaque.rotationY, 0]}>
@@ -247,7 +335,7 @@ export const MonthlyPlaques3D = () => {
                   metalness={0.14}
                   map={plaque.texture ?? undefined}
                   emissive={panelEmissive}
-                  emissiveIntensity={isActive ? 0.35 : 0.12}
+                  emissiveIntensity={panelEmissiveIntensity}
                   toneMapped={false}
                 />
               </mesh>
