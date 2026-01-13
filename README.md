@@ -22,9 +22,9 @@ Web Instalacao artistica interativa que transforma dados oficiais da COVID-19 no
 - Memorials com backend simples em Cloud Functions + Firestore.
 - Responsivo (mobile e desktop).
 
-## Arquitetura (alto nivel)
+## Arquitetura
 
-```mermaid
+```
 graph LR
   UI[React + Vite] --> Auth[Firebase Auth]
   UI --> Functions[Cloud Functions]
