@@ -1,153 +1,188 @@
-# SERRA SEM AR - Web Art Brasil
+# SERRA SEM AR - COVID-19 no Brasil
 
-Uma representação artística interativa dos dados da COVID-19 no Brasil como uma montanha 3D navegável, criada com React TypeScript, Three.js e React Three Fiber.
+![alt](./src/assets/jpg/docs/capa.png)
 
-## 🎨 Conceito Artístico
+Web Instalacao artistica interativa que transforma dados oficiais da COVID-19 no Brasil em uma montanha 3D navegavel. O usuario percorre uma estrada-tempo e pode registrar memoriais em datas especificas.
 
-Este projeto transforma dados epidemiológicos em uma experiência visual imersiva, onde:
+## Visao geral
 
-- **Largura da montanha** = Número de casos diários
-- **Altura da montanha** = Número de mortes diárias  
-- **Distância temporal** = Progressão no tempo (cada dia da pandemia)
-- **Cores** = Taxa de mortalidade (vermelho = alta, verde = baixa)
+- **Largura da montanha** representa casos diarios.
+- **Altura da montanha** representa mortes diarias.
+- **Distancia no eixo X** representa a passagem do tempo.
+- **Estrada** e o caminho navegavel que acompanha a linha do tempo.
+- **Memoriais** sao pins em forma de cruz criados por usuarios autenticados.
 
-A montanha evolui ao longo do tempo, permitindo "caminhar" pela história da pandemia no Brasil de forma visual e interativa.
+## Features
 
-## 🚀 Tecnologias Utilizadas
+- Montanha 3D gerada a partir de dados oficiais do Ministerio da Saude.
+- Navegacao em primeira pessoa com pointer lock.
+- Timeline e HUD com dia e estatisticas.
+- Placas mensais e registros historicos.
+- Login Google via Firebase Auth.
+- Memorials com backend simples em Cloud Functions + Firestore.
+- Responsivo (mobile e desktop).
 
-- **React 19** com TypeScript
-- **Vite** para build e desenvolvimento
-- **Three.js** e **React Three Fiber** para renderização 3D
-- **React Three Drei** para utilitários 3D
-- **Zustand** para gerenciamento de estado
-- **TanStack React Query** para cache de dados
-- **Tailwind CSS** para estilização
-- **Shadcn/UI** para componentes de interface
+## Arquitetura (alto nivel)
 
-## 📊 Fonte dos Dados
-
-Os dados da COVID-19 são provenientes do **Our World in Data**, uma fonte confiável e atualizada que compila informações epidemiológicas globais.
-
-## 🎮 Controles de Navegação
-
-### Movimento da Câmera
-- `↑ / W` - Mover para frente
-- `↓ / S` - Mover para trás  
-- `← / A` - Mover para esquerda
-- `→ / D` - Mover para direita
-- `Espaço` - Mover para cima
-- `Shift` - Mover para baixo
-- `Q` - Rotacionar esquerda
-- `E` - Rotacionar direita
-- `R` - Resetar câmera
-
-### Mouse
-- **Arrastar** - Rotacionar câmera
-- **Scroll** - Zoom in/out
-- **Botão direito + arrastar** - Pan
-
-### Navegação Temporal
-- `, / <` - Dia anterior
-- `. / >` - Próximo dia
-- **Timeline** - Controles de reprodução automática
-
-## 🛠️ Instalação e Execução
-
-### Pré-requisitos
-- Node.js 18+ 
-- pnpm (recomendado) ou npm
-
-### Instalação
-```bash
-# Clone o repositório
-git clone [url-do-repositorio]
-cd serra-sem-ar
-
-# Instale as dependências
-pnpm install
-
-# Execute em modo de desenvolvimento
-pnpm run dev
-
-# Build para produção
-pnpm run build
+```mermaid
+graph LR
+  UI[React + Vite] --> Auth[Firebase Auth]
+  UI --> Functions[Cloud Functions]
+  Functions --> Firestore[(Firestore)]
+  UI --> FirestoreRead[Firestore (read memorials)]
+  Data[PortalGeral CSV] --> Script[scripts/fetch-brasil-covid-data.mjs]
+  Script --> JSON[public/data/brasil-covid-daily.json]
+  JSON --> UI
 ```
 
-### Estrutura do Projeto
+## Dados oficiais
+
+O dataset vem do **PortalGeral** (Painel COVID-19 do Brasil). O script `scripts/fetch-brasil-covid-data.mjs` baixa o arquivo historico, extrai as linhas do Brasil e gera:
+
+- `public/data/brasil-covid-daily.json`
+
+Esse arquivo e lido no frontend pelo hook `useCovidData`.
+
+### Atualizar dados
+
+```bash
+pnpm run update:data
+```
+
+![alt](./src/assets/jpg/docs/paisagem.png)
+
+
+## Como a montanha e criada (tecnica)
+
+A geracao acontece em `src/components/Mountain3D.tsx`. O fluxo principal:
+
+1) **Normalizacao dos dados**
+   - `cases` e `deaths` sao normalizados pelo maximo da serie.
+2) **Perfil por segmento de tempo**
+   - O tempo vira `timeSegments` (min 120, max 1000).
+   - Cada segmento recebe `halfWidth` (casos) e `ridgeHeight` (mortes).
+3) **Smoothing**
+   - Largura e altura passam por varias iteracoes de suavizacao (curvas mais fluidas).
+4) **Secao transversal**
+   - A montanha possui uma **estrada central**, um **plateau** e **encostas** laterais.
+   - O perfil e composto por:
+     - **Walkway** (estrada) com profundidade controlada
+     - **Plateau** (transicao suave)
+     - **Rampas/encostas** (queda ate a base)
+5) **Ruido procedural**
+   - Simplex noise 2D/3D adiciona dobras, ondulacoes e irregularidades naturais.
+6) **Geometria final**
+   - BufferGeometry com topo, base e laterais.
+   - Texturas de rocha e estrada com UVs e normal maps.
+7) **Revelacao progressiva**
+   - Os segmentos vao "subindo" conforme a camera avanca pela linha do tempo.
+
+### Curvas e relevo
+
+- A largura da secao em cada dia nasce de `casesNorm`.
+- A altura nasce de `deathsNorm`.
+- Smoothing reduz picos abruptos para manter o fluxo visual.
+- Ruido 3D garante variacao organica nas encostas.
+
+
+![alt](./src/assets/jpg/docs/memoria.jpeg)
+## Memorial (backend simples)
+
+### Fluxo
+
+1) Usuario faz login Google.
+2) Frontend grava direto em `memorials` no Firestore.
+3) Regras validam schema e autenticacao.
+4) Frontend le memorials e cria cruzes na estrada.
+
+### Modelo de dados (memorials)
+
+```json
+{
+  "date": "2020-03-11",
+  "dateIndex": 15,
+  "name": "Nome opcional",
+  "message": "Mensagem memorial",
+  "uid": "firebase-uid",
+  "userName": "Nome do usuario",
+  "userPhoto": "URL da foto",
+  "createdAt": "server timestamp"
+}
+```
+
+### Regras do Firestore
+
+- Leitura publica para renderizar os pins.
+- Escrita permitida apenas para usuarios autenticados.
+- Validacao de campos e tamanhos diretamente nas rules.
+
+### Cloud Functions (opcional)
+
+Cloud Functions exigem o plano Blaze. O projeto ja possui `functions/` pronto para evolucao, mas no plano gratuito o memorial grava direto via Firestore.
+
+## Estrutura do projeto
+
 ```
 src/
-├── components/          # Componentes React
-│   ├── Mountain3D.tsx   # Componente principal da montanha 3D
-│   ├── Scene3D.tsx      # Cena 3D com iluminação e controles
-│   ├── InfoPanel.tsx    # Painel de informações dos dados
-│   ├── TimelineControls.tsx # Controles de timeline
-│   └── ...
-├── hooks/               # Hooks customizados
-│   ├── useCovidData.ts  # Hook para carregar dados da COVID
-│   └── useKeyboardControls.ts # Hook para controles de teclado
-├── stores/              # Gerenciamento de estado (Zustand)
-│   └── covidStore.ts    # Store principal dos dados
-├── types/               # Definições TypeScript
-│   └── covid.ts         # Tipos para dados da COVID
-└── providers/           # Providers React
-    └── QueryProvider.tsx # Provider do React Query
+  components/
+    Mountain3D.tsx
+    Scene3D.tsx
+    EventMarkers3D.tsx
+    MonthlyPlaques3D.tsx
+    MemorialPanel.tsx
+    MemorialPins3D.tsx
+  hooks/
+  stores/
+  providers/
+  services/
+functions/
+  src/index.ts
+public/data/
+  brasil-covid-daily.json
 ```
 
-## 🎯 Funcionalidades
+## Setup local
 
-### ✅ Implementadas
-- [x] Visualização 3D da montanha baseada em dados reais
-- [x] Navegação interativa com teclado e mouse
-- [x] Timeline para navegar pelos dados temporais
-- [x] Painel de informações em tempo real
-- [x] Controles de reprodução automática
-- [x] Sistema de cores baseado na taxa de mortalidade
-- [x] Interface responsiva e acessível
-- [x] Tratamento de erros e loading states
+### Pre-requisitos
 
-### 🔮 Possíveis Melhorias Futuras
-- [ ] Integração com Firebase para dados em tempo real
-- [ ] Múltiplas visualizações (por estado, região)
-- [ ] Exportação de imagens/vídeos da visualização
-- [ ] Modo VR/AR para imersão completa
-- [ ] Comparação com outros países
-- [ ] Análise de tendências e previsões
+- Node 18+ (frontend)
+- Node 22 (functions)
+- Firebase CLI
 
-## 🎨 Design e UX
+### Variaveis de ambiente
 
-A interface foi projetada para ser:
-- **Imersiva**: Foco na experiência 3D
-- **Informativa**: Dados contextuais sempre visíveis
-- **Intuitiva**: Controles familiares de jogos
-- **Acessível**: Suporte a teclado e múltiplas formas de navegação
+Crie `.env` na raiz:
 
-## 📱 Compatibilidade
+```
+VITE_FIREBASE_APIKEY=...
+VITE_FIREBASE_AUTHDOMAIN=...
+VITE_FIREBASE_PROJECTID=...
+VITE_FIREBASE_STORAGEBUCKET=...
+VITE_FIREBASE_MESSAGINGSENDERID=...
+VITE_FIREBASE_APPID=...
+```
 
-- **Navegadores**: Chrome, Firefox, Safari, Edge (com suporte a WebGL)
-- **Dispositivos**: Desktop, tablet, mobile (com limitações de performance)
-- **WebGL**: Requerido para renderização 3D
+### Rodar local
 
-## 🤝 Contribuição
+```bash
+pnpm install
+pnpm dev
+```
 
-Este é um projeto de Web Art que combina dados científicos com expressão artística. Contribuições são bem-vindas para:
+### Regras Firestore
 
-- Melhorias na visualização 3D
-- Otimizações de performance
-- Novas formas de interação
-- Acessibilidade
-- Documentação
+```bash
+firebase deploy --only firestore:rules
+```
 
-## 📄 Licença
+## Deploy
 
-Este projeto é uma obra de arte digital criada para fins educacionais e artísticos.
+- Hosting: Vite build com Firebase Hosting.
+- Firestore rules: `firebase deploy --only firestore:rules`.
+- Functions: somente com plano Blaze.
 
-## 🙏 Agradecimentos
+## Creditos
 
-- **Our World in Data** pelos dados confiáveis da COVID-19
-- **Three.js** e **React Three Fiber** pela tecnologia 3D
-- **Comunidade open source** pelas ferramentas utilizadas
-
----
-
-*"Transformar dados em arte é uma forma de humanizar números e criar empatia através da visualização."*
-
+- Ministerio da Saude (PortalGeral/Painel COVID-19)
+- Three.js + React Three Fiber
+- Firebase (Auth, Functions, Firestore)

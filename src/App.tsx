@@ -2,12 +2,16 @@ import { AlertCircle } from 'lucide-react';
 import './App.css';
 import { ControlsHelp } from './components/ControlsHelp';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { EventCard } from './components/EventCard';
 import { InfoPanel } from './components/InfoPanel';
 import { LoadingScreen } from './components/LoadingScreen';
+import { MemorialPanel } from './components/MemorialPanel';
 import { Scene3D } from './components/Scene3D';
+import { TimelineControls } from './components/TimelineControls';
 import { useCovidData } from './hooks/useCovidData';
 // import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useTemporalNavigation } from './hooks/useTemporalNavigation';
+import { AuthProvider } from './providers/AuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
 
 function AppContent() {
@@ -39,18 +43,25 @@ function AppContent() {
   }
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden">
-      <header className="z-10 flex flex-wrap items-center justify-between gap-4 bg-black/70 px-6 py-3 text-white backdrop-blur-md">
-        <InfoPanel variant="compact" />
-        <ControlsHelp variant="header" />
+    <div className="relative h-screen w-full overflow-hidden bg-black">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
+        <div className="pointer-events-auto flex flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 sm:gap-4 sm:px-6 sm:py-3">
+          <InfoPanel variant="compact" />
+          <ControlsHelp variant="header" />
+        </div>
       </header>
       {/* 3D Scene with Error Boundary */}
       <ErrorBoundary>
-        <div className="relative flex-1">
+        <div className="relative h-full">
           <Scene3D enableControls showStats={false} />
+          <EventCard />
+          <MemorialPanel />
+          <div className="md:hidden">
+            <TimelineControls />
+          </div>
           {/* Footer */}
-          <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 transform rounded-lg bg-black/70 px-4 py-2 text-white backdrop-blur-sm">
-            <p className="text-sm text-center">
+          <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 transform rounded-lg bg-black/70 px-3 py-2 text-white backdrop-blur-sm sm:px-4">
+            <p className="text-xs text-center sm:text-sm">
               Web Art • AmoreiraT • Three.js - saude.gov.br
             </p>
           </div>
@@ -64,7 +75,9 @@ function AppContent() {
 function App() {
   return (
     <QueryProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </QueryProvider>
   );
 }

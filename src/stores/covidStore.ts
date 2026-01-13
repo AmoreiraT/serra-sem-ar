@@ -1,20 +1,37 @@
+import * as THREE from 'three';
 import { create } from 'zustand';
 import { MountainPoint, ProcessedCovidData } from '../types/covid';
+import { TerrainSampler } from '../utils/terrainSampler';
+
+export interface WalkwaySample {
+  x: number;
+  y: number;
+  baseY: number;
+  halfWidth: number;
+  outerWidth: number;
+  distance: number;
+}
 
 interface CovidStore {
   data: ProcessedCovidData[];
   mountainPoints: MountainPoint[];
+  walkwayProfile: WalkwaySample[];
+  terrainSampler: TerrainSampler | null;
   isLoading: boolean;
   error: string | null;
   currentDateIndex: number;
   revealedX: number;
+  mountainMesh: THREE.Object3D | null;
 
   setData: (data: ProcessedCovidData[]) => void;
   setMountainPoints: (points: MountainPoint[]) => void;
+  setWalkwayProfile: (profile: WalkwaySample[]) => void;
+  setTerrainSampler: (sampler: TerrainSampler | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setCurrentDateIndex: (index: number) => void;
   setRevealedX: (x: number) => void;
+  setMountainMesh: (mesh: THREE.Object3D | null) => void;
 
   // Navigation state
   cameraPosition: [number, number, number];
@@ -26,13 +43,18 @@ interface CovidStore {
 export const useCovidStore = create<CovidStore>((set) => ({
   data: [],
   mountainPoints: [],
+  walkwayProfile: [],
+  terrainSampler: null,
   isLoading: false,
   error: null,
   currentDateIndex: 0,
   revealedX: 0,
+  mountainMesh: null,
 
   setData: (data) => set({ data }),
   setMountainPoints: (points) => set({ mountainPoints: points }),
+  setWalkwayProfile: (profile) => set({ walkwayProfile: profile }),
+  setTerrainSampler: (sampler) => set({ terrainSampler: sampler }),
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
   setCurrentDateIndex: (index) => set({ currentDateIndex: index }),
@@ -41,6 +63,7 @@ export const useCovidStore = create<CovidStore>((set) => ({
       if (x <= state.revealedX) return state;
       return { revealedX: x };
     }),
+  setMountainMesh: (mesh) => set({ mountainMesh: mesh }),
 
   // Default camera position - viewing the mountain from a distance
   cameraPosition: [50, 30, 50],

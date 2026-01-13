@@ -4,7 +4,7 @@ import rockDiffuseTexture from '@assets/textures/rock_diffuse.jpg';
 import rockNormalTexture from '@assets/textures/rock_normal.jpg';
 // Removed invalid import of PlaneBufferGeometryProps
 import React, { useMemo } from 'react';
-import SimplexNoise from 'simplex-noise';
+import SimplexNoise from 'simplex-noiseX';
 import * as THREE from 'three';
 import useTextureLoader from './useTextureLoader';
 

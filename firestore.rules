@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /memorials/{memorialId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          "date",
+          "dateIndex",
+          "name",
+          "message",
+          "uid",
+          "userName",
+          "userPhoto",
+          "createdAt"
+        ])
+        && request.resource.data.date is string
+        && request.resource.data.date.matches("^\\d{4}-\\d{2}-\\d{2}$")
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 240
+        && request.resource.data.uid == request.auth.uid
+        && (!("name" in request.resource.data) || request.resource.data.name == null || (request.resource.data.name is string && request.resource.data.name.size() <= 64))
+        && (!("dateIndex" in request.resource.data) || request.resource.data.dateIndex == null || request.resource.data.dateIndex is int)
+        && (!("userName" in request.resource.data) || request.resource.data.userName == null || (request.resource.data.userName is string && request.resource.data.userName.size() <= 120))
+        && (!("userPhoto" in request.resource.data) || request.resource.data.userPhoto == null || (request.resource.data.userPhoto is string && request.resource.data.userPhoto.size() <= 512));
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

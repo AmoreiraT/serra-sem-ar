@@ -28,19 +28,19 @@ export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
 
   if (variant === 'compact') {
     return (
-      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-white/15 bg-black/65 px-5 py-3 text-white backdrop-blur-md shadow-lg">
-        <div className="flex flex-col">
-          <span className="text-[14px] uppercase tracking-[0.4em] py-2 text-amber-200">Serra Sem Ar</span>
-          <span className="text-[10px] text-white/70">
+      <div className="flex w-full flex-wrap items-center gap-4 rounded-xl border border-white/20 bg-black/80 px-4 py-3 text-white backdrop-blur-md shadow-lg sm:px-5">
+        <div className="flex max-w-xs flex-col gap-1">
+          <span className="text-[13px] uppercase tracking-[0.32em] text-amber-200 sm:text-[14px]">Serra Sem Ar</span>
+          <span className="text-[12px] leading-relaxed text-white/75 sm:text-[11px]">
             Serra generativa da COVID-19 no Brasil. Onde largura é o número de casos e altura é o número de mortes e a distância representa o tempo.
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-[11px] sm:text-xs">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-blue-300" />
             <div className="flex flex-col">
-              <span className="uppercase text-[10px] text-white/60">Data</span>
-              <span className="text-sm font-semibold">
+              <span className="uppercase text-[9px] tracking-[0.26em] text-white/60 sm:text-[10px]">Data</span>
+              <span className="text-[13px] font-semibold sm:text-sm">
                 {currentData.date.toLocaleDateString('pt-BR')}
               </span>
             </div>
@@ -48,8 +48,8 @@ export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-orange-300" />
             <div className="flex flex-col">
-              <span className="uppercase text-[10px] text-white/60">Casos (dia)</span>
-              <span className="font-semibold text-orange-300">
+              <span className="uppercase text-[9px] tracking-[0.26em] text-white/60 sm:text-[10px]">Casos (dia)</span>
+              <span className="text-[13px] font-semibold text-orange-300 sm:text-sm">
                 {currentData.cases.toLocaleString('pt-BR')}
               </span>
             </div>
@@ -57,24 +57,24 @@ export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
           <div className="flex items-center gap-2">
             <Skull className="h-4 w-4 text-red-300" />
             <div className="flex flex-col">
-              <span className="uppercase text-[10px] text-white/60">Mortes (dia)</span>
-              <span className="font-semibold text-red-300">
+              <span className="uppercase text-[9px] tracking-[0.26em] text-white/60 sm:text-[10px]">Mortes (dia)</span>
+              <span className="text-[13px] font-semibold text-red-300 sm:text-sm">
                 {currentData.deaths.toLocaleString('pt-BR')}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex flex-col text-[10px] text-white/60">
+            <div className="flex flex-col text-[9px] tracking-[0.22em] text-white/60 sm:text-[10px]">
               <span>Total Casos</span>
-              <span className="text-sm font-semibold text-orange-200">
+              <span className="text-[13px] font-semibold text-orange-200 sm:text-sm">
                 {totalStats.totalCases.toLocaleString('pt-BR')}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex flex-col text-[10px] text-white/60">
+            <div className="flex flex-col text-[9px] tracking-[0.22em] text-white/60 sm:text-[10px]">
               <span>Total Mortes</span>
-              <span className="text-sm font-semibold text-red-200">
+              <span className="text-[13px] font-semibold text-red-200 sm:text-sm">
                 {totalStats.totalDeaths.toLocaleString('pt-BR')}
               </span>
             </div>
@@ -85,10 +85,10 @@ export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
   }
 
   return (
-    <div className="absolute left-4 top-4 w-55 max-w-sm rounded-lg bg-black/70 p-6 text-white backdrop-blur-sm">
-      <h3 className="mb-4 text-center text-xl font-bold">SERRA SEM AR</h3>
+    <div className="absolute left-4 top-4 w-55 max-w-sm rounded-xl border border-white/15 bg-black/85 p-6 text-white shadow-xl backdrop-blur-sm">
+      <h3 className="mb-4 text-center text-2xl font-bold">SERRA SEM AR</h3>
       <div className="space-y-4">
-        <p className="mb-4 text-sm opacity-80">
+        <p className="mb-4 text-sm leading-relaxed text-white/80">
           Uma representação artística dos dados da COVID-19 no Brasil como uma serra generativa com interações.
         </p>
         <div className="flex items-center space-x-3">
