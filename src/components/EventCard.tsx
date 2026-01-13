@@ -1,11 +1,18 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ExternalLink, Info, PlayCircle, TextQuote } from 'lucide-react';
 import { useMemo } from 'react';
+import { cn } from '@/lib/utils';
 import { covidEvents, covidEventsByDate } from '../data/covidEvents';
 import { useCovidStore } from '../stores/covidStore';
 
-export const EventCard = () => {
+interface EventCardProps {
+  layout?: 'floating' | 'sheet';
+  className?: string;
+}
+
+export const EventCard = ({ layout = 'floating', className }: EventCardProps = {}) => {
   const { data, currentDateIndex } = useCovidStore();
+  const isSheet = layout === 'sheet';
 
   const eventsByIndex = useMemo(() => {
     if (!data.length) return [];
@@ -49,10 +56,22 @@ export const EventCard = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="pointer-events-none absolute bottom-28 left-1/2 z-10 w-[min(94vw,400px)] -translate-x-1/2 sm:bottom-6 sm:left-6 sm:translate-x-0"
-          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          className={cn(
+            isSheet
+              ? 'w-full'
+              : 'pointer-events-none absolute bottom-28 left-1/2 z-10 w-[min(94vw,400px)] -translate-x-1/2 sm:bottom-6 sm:left-6 sm:translate-x-0',
+            className
+          )}
+          style={isSheet ? undefined : { marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
-          <div className="pointer-events-auto max-h-[72vh] space-y-2 overflow-auto rounded-2xl border border-white/20 bg-black/85 p-3.5 text-white shadow-2xl backdrop-blur-md sm:max-h-[78vh] lg:max-h-none lg:overflow-visible">
+          <div
+            className={cn(
+              'pointer-events-auto space-y-2 overflow-auto rounded-2xl border border-white/20 bg-black/85 p-3.5 text-white shadow-2xl backdrop-blur-md',
+              isSheet
+                ? 'max-h-[60vh]'
+                : 'max-h-[72vh] sm:max-h-[78vh] lg:max-h-none lg:overflow-visible'
+            )}
+          >
             <div className="flex items-center gap-2 text-amber-300">
               <Info className="h-4 w-4" />
               <p className="text-[11px] uppercase tracking-[0.35em]">Registro Histórico</p>

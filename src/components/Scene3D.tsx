@@ -222,6 +222,13 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
   const lateralOffsetRef = useRef(0);
   const lateralTargetRef = useRef(0);
   const cameraCollisionRayRef = useRef(new THREE.Raycaster());
+  const hasInitialOrientationRef = useRef(false);
+  const touchStateRef = useRef({
+    active: false,
+    pointerId: null as number | null,
+    x: 0,
+    y: 0,
+  });
 
   const walkwayLength = useMemo(() => {
     if (!walkwayProfile.length) return 0;
@@ -238,7 +245,19 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
     const startDistance = distanceFromDataIndex(currentDateIndex);
     distanceRef.current = startDistance;
     targetDistanceRef.current = startDistance;
-  }, [currentDateIndex, distanceFromDataIndex, walkwayLength]);
+    if (!hasInitialOrientationRef.current && walkwayProfile.length) {
+      const baseSample = findWalkwaySample(walkwayProfile, startDistance);
+      const aheadDistance = Math.min(startDistance + 1.4, walkwayLength);
+      const aheadSample = findWalkwaySample(walkwayProfile, aheadDistance);
+      const forwardVec = aheadSample.position.clone().sub(baseSample.position);
+      forwardVec.y = 0;
+      if (forwardVec.lengthSq() < 1e-4) forwardVec.set(1, 0, 0);
+      forwardVec.normalize();
+      yawRef.current = Math.atan2(-forwardVec.x, -forwardVec.z);
+      pitchRef.current = THREE.MathUtils.degToRad(-6);
+      hasInitialOrientationRef.current = true;
+    }
+  }, [currentDateIndex, distanceFromDataIndex, walkwayLength, walkwayProfile]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -292,6 +311,54 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
   }, [gl]);
 
   useEffect(() => {
+    const canvas = gl.domElement;
+    const touchState = touchStateRef.current;
+    const touchSensitivity = 0.0032;
+    const previousTouchAction = canvas.style.touchAction;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') return;
+      touchState.active = true;
+      touchState.pointerId = event.pointerId;
+      touchState.x = event.clientX;
+      touchState.y = event.clientY;
+      canvas.setPointerCapture?.(event.pointerId);
+    };
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!touchState.active || touchState.pointerId !== event.pointerId) return;
+      const dx = event.clientX - touchState.x;
+      const dy = event.clientY - touchState.y;
+      touchState.x = event.clientX;
+      touchState.y = event.clientY;
+      yawRef.current -= dx * touchSensitivity;
+      pitchRef.current = THREE.MathUtils.clamp(
+        pitchRef.current - dy * touchSensitivity,
+        THREE.MathUtils.degToRad(-60),
+        THREE.MathUtils.degToRad(70)
+      );
+    };
+    const handlePointerUp = (event: PointerEvent) => {
+      if (touchState.pointerId !== event.pointerId) return;
+      touchState.active = false;
+      touchState.pointerId = null;
+    };
+
+    canvas.style.touchAction = 'none';
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointercancel', handlePointerUp);
+
+    return () => {
+      canvas.style.touchAction = previousTouchAction;
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerup', handlePointerUp);
+      canvas.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, [gl]);
+
+  useEffect(() => {
     if (!walkwayLength) return;
     const step = (walkwayLength / Math.max(dataLength - 1, 1)) * 1.2;
     const onWheel = (event: WheelEvent) => {
@@ -337,17 +404,40 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
     const speed = appliedSpeed * delta;
     const strafeSpeed = STRAFE_SPEED * delta;
 
+    const baseSample = findWalkwaySample(walkwayProfile, distanceRef.current);
+    let maxLateral = Math.max(baseSample.halfWidth - LATERAL_MARGIN, 0.3);
+
+    const groundNormalForMove = sampleGroundNormal(baseSample.position.x, baseSample.position.z);
+    const moveDir = new THREE.Vector3();
+    if (moveIntent !== 0 || strafeIntent !== 0) {
+      const alignQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), groundNormalForMove);
+      const planarForward = new THREE.Vector3(0, 0, -1)
+        .applyQuaternion(alignQuat)
+        .applyAxisAngle(groundNormalForMove, yawRef.current)
+        .normalize();
+      const planarRight = new THREE.Vector3().crossVectors(planarForward, groundNormalForMove).normalize();
+      moveDir.addScaledVector(planarForward, moveIntent);
+      moveDir.addScaledVector(planarRight, strafeIntent);
+      if (moveDir.lengthSq() > 1) moveDir.normalize();
+    }
+
+    const aheadSample = findWalkwaySample(walkwayProfile, distanceRef.current + 1.2);
+    const forwardVec = aheadSample.position.clone().sub(baseSample.position);
+    forwardVec.y = 0;
+    if (forwardVec.lengthSq() < 1e-4) forwardVec.set(1, 0, 0);
+    forwardVec.normalize();
+    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), forwardVec).normalize();
+
+    const alongIntent = moveDir.dot(forwardVec);
+    const lateralIntent = moveDir.dot(right);
+
     targetDistanceRef.current = THREE.MathUtils.clamp(
-      targetDistanceRef.current + moveIntent * speed,
+      targetDistanceRef.current + alongIntent * speed,
       0,
       walkwayLength
     );
-
-    const sample = findWalkwaySample(walkwayProfile, distanceRef.current);
-    const maxLateral = Math.max(sample.halfWidth - LATERAL_MARGIN, 0.3);
-
     lateralTargetRef.current = THREE.MathUtils.clamp(
-      lateralTargetRef.current + strafeIntent * strafeSpeed,
+      lateralTargetRef.current + lateralIntent * strafeSpeed,
       -maxLateral,
       maxLateral
     );
@@ -360,6 +450,7 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
     );
 
     const smoothedSample = findWalkwaySample(walkwayProfile, distanceRef.current);
+    maxLateral = Math.max(smoothedSample.halfWidth - LATERAL_MARGIN, 0.3);
     const lateral = THREE.MathUtils.damp(
       lateralOffsetRef.current,
       THREE.MathUtils.clamp(lateralTargetRef.current, -maxLateral, maxLateral),
@@ -367,13 +458,6 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
       delta
     );
     lateralOffsetRef.current = lateral;
-
-    const aheadSample = findWalkwaySample(walkwayProfile, distanceRef.current + 1.2);
-    const forwardVec = aheadSample.position.clone().sub(smoothedSample.position);
-    forwardVec.y = 0;
-    if (forwardVec.lengthSq() < 1e-4) forwardVec.set(1, 0, 0);
-    forwardVec.normalize();
-    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), forwardVec).normalize();
     const lateralClamped = THREE.MathUtils.clamp(lateral, -smoothedSample.outerWidth, smoothedSample.outerWidth);
     const playerPos = smoothedSample.position.clone().add(right.clone().multiplyScalar(lateralClamped));
     const sampledHeight = terrainSampler?.sampleHeight(playerPos.x, playerPos.z);
