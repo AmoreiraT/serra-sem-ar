@@ -49,6 +49,9 @@ Esse arquivo e lido no frontend pelo hook `useCovidData`.
 pnpm run update:data
 ```
 
+![alt](./src/assets/jpg/docs/paisagem.png)
+
+
 ## Como a montanha e criada (tecnica)
 
 A geracao acontece em `src/components/Mountain3D.tsx`. O fluxo principal:
@@ -81,6 +84,8 @@ A geracao acontece em `src/components/Mountain3D.tsx`. O fluxo principal:
 - Smoothing reduz picos abruptos para manter o fluxo visual.
 - Ruido 3D garante variacao organica nas encostas.
 
+
+![alt](./src/assets/jpg/docs/memoria.jpeg)
 ## Memorial (backend simples)
 
 ### Fluxo
