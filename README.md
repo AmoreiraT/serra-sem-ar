@@ -1,6 +1,8 @@
-# SERRA SEM AR - Web Art Brasil
+# SERRA SEM AR - COVID-19 no Brasil
 
-Instalacao artistica interativa que transforma dados oficiais da COVID-19 no Brasil em uma montanha 3D navegavel. O usuario percorre uma estrada-tempo e pode registrar memoriais em datas especificas.
+![alt](./src/assets/jpg/docs/capa.png)
+
+Web Instalacao artistica interativa que transforma dados oficiais da COVID-19 no Brasil em uma montanha 3D navegavel. O usuario percorre uma estrada-tempo e pode registrar memoriais em datas especificas.
 
 ## Visao geral
 

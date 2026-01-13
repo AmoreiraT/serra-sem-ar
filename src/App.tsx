@@ -43,14 +43,16 @@ function AppContent() {
   }
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden">
-      <header className="z-10 flex flex-wrap items-center justify-between gap-3 bg-black/70 px-4 py-2 text-white backdrop-blur-md sm:gap-4 sm:px-6 sm:py-3">
-        <InfoPanel variant="compact" />
-        <ControlsHelp variant="header" />
+    <div className="relative h-screen w-full overflow-hidden bg-black">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
+        <div className="pointer-events-auto flex flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 sm:gap-4 sm:px-6 sm:py-3">
+          <InfoPanel variant="compact" />
+          <ControlsHelp variant="header" />
+        </div>
       </header>
       {/* 3D Scene with Error Boundary */}
       <ErrorBoundary>
-        <div className="relative flex-1">
+        <div className="relative h-full">
           <Scene3D enableControls showStats={false} />
           <EventCard />
           <MemorialPanel />

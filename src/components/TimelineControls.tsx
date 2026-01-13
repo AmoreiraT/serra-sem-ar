@@ -56,7 +56,10 @@ export const TimelineControls = () => {
   if (data.length === 0) return null;
 
   return (
-    <div className="absolute bottom-20 left-1/2 z-10 -translate-x-1/2 w-[min(92vw,480px)] rounded-xl border border-white/15 bg-black/80 p-4 text-white backdrop-blur-sm shadow-lg">
+    <div
+      className="absolute bottom-20 left-1/2 z-10 -translate-x-1/2 w-[min(92vw,480px)] rounded-xl border border-white/15 bg-black/80 p-4 text-white backdrop-blur-sm shadow-lg"
+      style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       <div className="space-y-4">
         {/* Current Date Display */}
         <div className="text-center">

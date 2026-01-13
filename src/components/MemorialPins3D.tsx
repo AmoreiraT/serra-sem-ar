@@ -1,4 +1,4 @@
-import { Html } from '@react-three/drei';
+import { Billboard, Html } from '@react-three/drei';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
@@ -11,6 +11,7 @@ const CROSS_THICKNESS = 0.12;
 const CROSS_ARM = 0.48;
 const CROSS_Y_OFFSET = 0.06;
 const LABEL_MAX = 160;
+const SPRITE_SCALE = 1.45;
 
 const clampLabel = (value: string) => {
   if (value.length <= LABEL_MAX) return value;
@@ -102,6 +103,44 @@ export const MemorialPins3D = () => {
 
   const crossGeometry = useMemo(() => new THREE.BoxGeometry(CROSS_THICKNESS, CROSS_HEIGHT, CROSS_THICKNESS), []);
   const armGeometry = useMemo(() => new THREE.BoxGeometry(CROSS_ARM, CROSS_THICKNESS, CROSS_THICKNESS), []);
+  const memorialSpriteMaterial = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    if (ctx) {
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = '#f5dcb8';
+      const stemWidth = size * 0.18;
+      const armHeight = size * 0.16;
+      ctx.fillRect((size - stemWidth) / 2, size * 0.18, stemWidth, size * 0.64);
+      ctx.fillRect(size * 0.28, (size - armHeight) / 2, size * 0.44, armHeight);
+      ctx.fillStyle = '#b98c5a';
+      ctx.fillRect((size - stemWidth) / 2, size * 0.18, stemWidth, size * 0.06);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.anisotropy = 4;
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    return new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      opacity: 0.95,
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      memorialSpriteMaterial?.map?.dispose();
+      memorialSpriteMaterial?.dispose();
+    };
+  }, [memorialSpriteMaterial]);
   const activeId = lockedId ?? hoveredId;
 
   const mappedMemorials = useMemo(() => {
@@ -149,6 +188,20 @@ export const MemorialPins3D = () => {
           : '';
         return (
           <group key={entry.id} position={entry.position.toArray()} rotation={[0, entry.rotationY, 0]}>
+            {memorialSpriteMaterial && (
+              <Billboard position={[0, 0.86, 0]} follow>
+                <sprite
+                  material={memorialSpriteMaterial}
+                  scale={[SPRITE_SCALE, SPRITE_SCALE, SPRITE_SCALE]}
+                  onPointerOver={() => setHoveredId(entry.id)}
+                  onPointerOut={() => setHoveredId((prev) => (prev === entry.id ? null : prev))}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                    setLockedId((prev) => (prev === entry.id ? null : entry.id));
+                  }}
+                />
+              </Billboard>
+            )}
             <mesh
               geometry={crossGeometry}
               castShadow

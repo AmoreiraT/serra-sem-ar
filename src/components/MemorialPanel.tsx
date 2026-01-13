@@ -72,7 +72,10 @@ export const MemorialPanel = () => {
   };
 
   return (
-    <div className="pointer-events-auto absolute bottom-36 left-1/2 z-10 w-[min(92vw,360px)] -translate-x-1/2 space-y-3 rounded-2xl border border-white/20 bg-black/85 p-4 text-white shadow-2xl backdrop-blur-md sm:bottom-6 sm:left-auto sm:right-6 sm:translate-x-0">
+    <div
+      className="pointer-events-auto absolute bottom-28 left-1/2 z-10 w-[min(94vw,380px)] -translate-x-1/2 space-y-3 overflow-auto rounded-2xl border border-white/20 bg-black/85 p-4 text-white shadow-2xl backdrop-blur-md max-h-[78vh] sm:bottom-6 sm:left-auto sm:right-6 sm:translate-x-0 sm:w-[min(420px,40vw)] sm:max-h-[82vh]"
+      style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-amber-200">
