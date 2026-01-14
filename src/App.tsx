@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, Bell, Pin, X } from 'lucide-react';
+import { AlertCircle, Bell, Info, Pin, X } from 'lucide-react';
 import { useState } from 'react';
 import './App.css';
 import { ControlsHelp } from './components/ControlsHelp';
@@ -20,12 +20,12 @@ import { QueryProvider } from './providers/QueryProvider';
 
 function AppContent() {
   const { isLoading, error } = useCovidData();
-  const [mobilePanel, setMobilePanel] = useState<'event' | 'memorial' | null>(null);
+  const [mobilePanel, setMobilePanel] = useState<'event' | 'memorial' | 'header' | null>(null);
 
   // Movement now handled by Player (PointerLockControls)
   // Temporal navigation via keyboard (comma/period or [ / ])
   useTemporalNavigation();
-  const toggleMobilePanel = (panel: 'event' | 'memorial') => {
+  const toggleMobilePanel = (panel: 'event' | 'memorial' | 'header') => {
     setMobilePanel((current) => (current === panel ? null : panel));
   };
   const closeMobilePanel = () => setMobilePanel(null);
@@ -54,9 +54,29 @@ function AppContent() {
   return (
     <div className="relative h-screen w-full overflow-hidden bg-black">
       <header className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
-        <div className="pointer-events-auto flex flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 sm:gap-4 sm:px-6 sm:py-3">
+        <div className="pointer-events-auto hidden flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 sm:flex sm:gap-4 sm:px-6 sm:py-3">
           <InfoPanel variant="compact" />
           <ControlsHelp variant="header" />
+        </div>
+        <div className="pointer-events-auto flex items-center gap-2 rounded-b-2xl bg-black/55 px-3 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 sm:hidden">
+          <InfoPanel variant="mini" />
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="outline"
+              aria-pressed={mobilePanel === 'header'}
+              onClick={() => toggleMobilePanel('header')}
+              title="Resumo"
+              className={cn(
+                'h-9 w-9 rounded-full border border-white/20 bg-black/75 text-white shadow-lg backdrop-blur-sm transition hover:bg-white/10',
+                mobilePanel === 'header' && 'border-amber-300 bg-amber-500 text-black hover:bg-amber-400'
+              )}
+            >
+              <Info className="h-4 w-4" />
+              <span className="sr-only">Resumo</span>
+            </Button>
+            <ControlsHelp variant="header" />
+          </div>
         </div>
       </header>
       {/* 3D Scene with Error Boundary */}
@@ -72,10 +92,7 @@ function AppContent() {
           <div className="md:hidden">
             <TimelineControls />
           </div>
-          <div
-            className="sm:hidden absolute bottom-28 right-4 z-20 flex flex-col gap-2"
-            style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
-          >
+          <div className="sm:hidden absolute bottom-28 right-4 z-20 flex flex-col gap-2 safe-bottom">
             <Button
               size="icon"
               variant="outline"
@@ -120,12 +137,11 @@ function AppContent() {
                   className="absolute inset-0 bg-black/55 backdrop-blur-sm"
                 />
                 <motion.div
-                  className="absolute inset-x-0 bottom-0 px-4 pb-5"
+                  className="absolute inset-x-0 bottom-0 px-4 pb-5 safe-bottom-pad"
                   initial={{ y: 40, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 40, opacity: 0 }}
                   transition={{ duration: 0.2, ease: 'easeOut' }}
-                  style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
                 >
                   <div className="flex justify-end pb-2">
                     <Button
@@ -140,8 +156,10 @@ function AppContent() {
                   </div>
                   {mobilePanel === 'event' ? (
                     <EventCard layout="sheet" />
-                  ) : (
+                  ) : mobilePanel === 'memorial' ? (
                     <MemorialPanel layout="sheet" />
+                  ) : (
+                    <InfoPanel variant="compact" />
                   )}
                 </motion.div>
               </motion.div>

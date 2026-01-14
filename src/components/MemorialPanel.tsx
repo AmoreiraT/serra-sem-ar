@@ -1,6 +1,7 @@
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { LogIn, LogOut, Pin } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../providers/AuthProvider';
 import { db } from '../services/firebaseConfig';
@@ -84,10 +85,9 @@ export const MemorialPanel = ({ layout = 'floating', className }: MemorialPanelP
         'pointer-events-auto space-y-3 overflow-auto rounded-2xl border border-white/20 bg-black/85 p-4 text-white shadow-2xl backdrop-blur-md',
         isSheet
           ? 'w-full max-h-[70vh]'
-          : 'absolute bottom-28 left-1/2 z-10 w-[min(94vw,380px)] -translate-x-1/2 max-h-[78vh] sm:bottom-6 sm:left-auto sm:right-6 sm:translate-x-0 sm:w-[min(420px,40vw)] sm:max-h-[82vh]',
+          : 'absolute bottom-28 left-1/2 z-10 w-[min(94vw,380px)] -translate-x-1/2 max-h-[78vh] sm:bottom-6 sm:left-auto sm:right-6 sm:translate-x-0 sm:w-[min(420px,40vw)] sm:max-h-[82vh] safe-bottom',
         className
       )}
-      style={isSheet ? undefined : { marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -141,14 +141,15 @@ export const MemorialPanel = ({ layout = 'floating', className }: MemorialPanelP
             Use a linha do tempo para escolher o dia e deixe uma mensagem em memoria.
           </div>
           <Input
+            type="text"
             value={name}
-            onChange={(event) => setName(event.target.value.slice(0, MAX_NAME_LENGTH))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setName(event.target.value.slice(0, MAX_NAME_LENGTH))}
             placeholder="Nome (opcional)"
             className="border-white/15 bg-white/5 text-sm text-white placeholder:text-white/40"
           />
           <Textarea
             value={message}
-            onChange={(event) => setMessage(event.target.value.slice(0, MAX_MESSAGE_LENGTH))}
+            onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setMessage(event.target.value.slice(0, MAX_MESSAGE_LENGTH))}
             placeholder="Mensagem memorial..."
             className="min-h-24 border-white/15 bg-white/5 text-sm text-white placeholder:text-white/40"
           />

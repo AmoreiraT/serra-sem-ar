@@ -2,8 +2,13 @@
   "compilerOptions": {
     "baseUrl": "./",
     "ignoreDeprecations": "6.0",
+    "typeRoots": ["./node_modules/@types"],
+    "types": [],
     "paths": {
       "@/*": ["src/*"]
     }
-  }
+  },
+  "typeAcquisition": { "enable": false },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "public"]
 }

@@ -118,3 +118,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .safe-bottom {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-bottom-pad {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+}

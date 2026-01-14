@@ -33,8 +33,9 @@ export const ControlsHelp = ({ variant = 'floating' }: ControlsHelpProps = {}) =
             : 'absolute top-4 right-4 z-10 bg-black/80 border-white/40 text-white shadow-md hover:bg-white/10'
         }
       >
-        <HelpCircle className="w-4 h-4 mr-2" />
-        Controles
+        <HelpCircle className="w-4 h-4 sm:mr-2" />
+        <span className="hidden sm:inline">Controles</span>
+        <span className="sr-only sm:hidden">Controles</span>
       </Button>
 
       {/* Help Modal */}

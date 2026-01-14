@@ -2,16 +2,20 @@ import { Billboard, Html } from '@react-three/drei';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
+import crossSpriteUrl from '../assets/png/cruz-serra.png';
 import { db } from '../services/firebaseConfig';
 import { useCovidStore, type WalkwaySample } from '../stores/covidStore';
 import type { MemorialEntry } from '../types/memorial';
 
-const CROSS_HEIGHT = 0.7;
-const CROSS_THICKNESS = 0.12;
-const CROSS_ARM = 0.48;
-const CROSS_Y_OFFSET = 0.06;
-const LABEL_MAX = 160;
-const SPRITE_SCALE = 1.45;
+const LABEL_MAX = 80;
+const SPRITE_HEIGHT = 1.7;
+const SPRITE_BASE_OFFSET = 0.18;
+const LABEL_Y_OFFSET = SPRITE_HEIGHT + SPRITE_BASE_OFFSET + 0.90;
+const LABEL_DISTANCE_FACTOR = 6;
+const PROXIMITY_RADIUS = 7;
+const SHADOW_RADIUS = 0.65;
+const SHADOW_OPACITY = 0.5;
+const SHADOW_Y_OFFSET = 0.01;
 
 const clampLabel = (value: string) => {
   if (value.length <= LABEL_MAX) return value;
@@ -71,10 +75,27 @@ const findWalkwaySample = (profile: WalkwaySample[], distance: number) => {
   };
 };
 
+const sampleGroundNormal = (
+  sampler: { sampleHeight: (x: number, z: number) => number } | null,
+  x: number,
+  z: number
+) => {
+  if (!sampler) return new THREE.Vector3(0, 1, 0);
+  const h = 0.5;
+  const hx1 = sampler.sampleHeight(x + h, z);
+  const hx0 = sampler.sampleHeight(x - h, z);
+  const hz1 = sampler.sampleHeight(x, z + h);
+  const hz0 = sampler.sampleHeight(x, z - h);
+  const normal = new THREE.Vector3(hx0 - hx1, 2 * h, hz0 - hz1);
+  if (normal.lengthSq() < 1e-6) return new THREE.Vector3(0, 1, 0);
+  return normal.normalize();
+};
+
 export const MemorialPins3D = () => {
   const data = useCovidStore((state) => state.data);
   const walkwayProfile = useCovidStore((state) => state.walkwayProfile);
   const terrainSampler = useCovidStore((state) => state.terrainSampler);
+  const cameraPosition = useCovidStore((state) => state.cameraPosition);
   const [memorials, setMemorials] = useState<MemorialEntry[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [lockedId, setLockedId] = useState<string | null>(null);
@@ -101,46 +122,73 @@ export const MemorialPins3D = () => {
     return () => unsubscribe();
   }, []);
 
-  const crossGeometry = useMemo(() => new THREE.BoxGeometry(CROSS_THICKNESS, CROSS_HEIGHT, CROSS_THICKNESS), []);
-  const armGeometry = useMemo(() => new THREE.BoxGeometry(CROSS_ARM, CROSS_THICKNESS, CROSS_THICKNESS), []);
-  const memorialSpriteMaterial = useMemo(() => {
+  const textureLoader = useMemo(() => new THREE.TextureLoader(), []);
+  const memorialTexture = useMemo(
+    () => textureLoader.load(crossSpriteUrl),
+    [textureLoader, crossSpriteUrl]
+  );
+  const spriteScale = useMemo(() => {
+    const image = memorialTexture.image as HTMLImageElement | undefined;
+    const aspect = image?.width && image?.height ? image.width / image.height : 1;
+    return [SPRITE_HEIGHT * aspect, SPRITE_HEIGHT, 1] as const;
+  }, [memorialTexture]);
+  const memorialSpriteMaterial = useMemo(
+    () =>
+      new THREE.SpriteMaterial({
+        map: memorialTexture,
+        transparent: true,
+        depthWrite: false,
+        alphaTest: 0.35,
+      }),
+    [memorialTexture]
+  );
+  const shadowTexture = useMemo(() => {
     if (typeof document === 'undefined') return null;
-
-    const size = 256;
+    const size = 128;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
 
-    if (ctx) {
-      ctx.clearRect(0, 0, size, size);
-      ctx.fillStyle = '#f5dcb8';
-      const stemWidth = size * 0.18;
-      const armHeight = size * 0.16;
-      ctx.fillRect((size - stemWidth) / 2, size * 0.18, stemWidth, size * 0.64);
-      ctx.fillRect(size * 0.28, (size - armHeight) / 2, size * 0.44, armHeight);
-      ctx.fillStyle = '#b98c5a';
-      ctx.fillRect((size - stemWidth) / 2, size * 0.18, stemWidth, size * 0.06);
-    }
+    const center = size / 2;
+    const gradient = ctx.createRadialGradient(center, center, size * 0.15, center, center, center);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.45)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
 
     const texture = new THREE.CanvasTexture(canvas);
-    texture.anisotropy = 4;
-    texture.colorSpace = THREE.SRGBColorSpace;
-
-    return new THREE.SpriteMaterial({
-      map: texture,
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    return texture;
+  }, []);
+  const shadowMaterial = useMemo(() => {
+    if (!shadowTexture) return null;
+    return new THREE.MeshBasicMaterial({
+      map: shadowTexture,
       transparent: true,
       depthWrite: false,
-      opacity: 0.95,
+      opacity: SHADOW_OPACITY,
+      color: new THREE.Color('#000000'),
     });
-  }, []);
+  }, [shadowTexture]);
+  const shadowGeometry = useMemo(() => new THREE.CircleGeometry(SHADOW_RADIUS, 32), []);
+
+  useEffect(() => {
+    memorialTexture.anisotropy = 8;
+    memorialTexture.colorSpace = THREE.SRGBColorSpace;
+    memorialTexture.needsUpdate = true;
+  }, [memorialTexture]);
 
   useEffect(() => {
     return () => {
-      memorialSpriteMaterial?.map?.dispose();
-      memorialSpriteMaterial?.dispose();
+      memorialSpriteMaterial.dispose();
+      memorialTexture.dispose();
+      shadowMaterial?.dispose();
+      shadowTexture?.dispose();
     };
-  }, [memorialSpriteMaterial]);
+  }, [memorialSpriteMaterial, memorialTexture, shadowMaterial, shadowTexture]);
   const activeId = lockedId ?? hoveredId;
 
   const mappedMemorials = useMemo(() => {
@@ -161,15 +209,21 @@ export const MemorialPins3D = () => {
         const position = sample.position.clone();
         position.z += side;
         const sampledHeight = terrainSampler?.sampleHeight(position.x, position.z);
-        position.y = (sampledHeight ?? sample.y) + CROSS_Y_OFFSET;
+        position.y = sampledHeight ?? sample.position.y;
         const rotationY = Math.atan2(sample.forward.x, sample.forward.z);
+        const groundNormal = sampleGroundNormal(terrainSampler, position.x, position.z);
+        const shadowQuaternion = new THREE.Quaternion().setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1),
+          groundNormal
+        );
         return {
           ...entry,
           position,
           rotationY,
+          shadowQuaternion,
         };
       })
-      .filter(Boolean) as Array<MemorialEntry & { position: THREE.Vector3; rotationY: number }>;
+      .filter(Boolean) as Array<MemorialEntry & { position: THREE.Vector3; rotationY: number; shadowQuaternion: THREE.Quaternion }>;
   }, [memorials, walkwayProfile, data, terrainSampler]);
 
   if (!mappedMemorials.length) return null;
@@ -177,63 +231,70 @@ export const MemorialPins3D = () => {
   return (
     <group>
       {mappedMemorials.map((entry) => {
+        const dx = cameraPosition[0] - entry.position.x;
+        const dz = cameraPosition[2] - entry.position.z;
+        const isNearby = Math.hypot(dx, dz) <= PROXIMITY_RADIUS;
         const isActive = activeId === entry.id;
         const label = entry.name ? `Em memoria de ${entry.name}` : 'Memorial';
         const dateLabel = entry.date
           ? new Date(`${entry.date}T00:00:00`).toLocaleDateString('pt-BR', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            })
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          })
           : '';
         return (
           <group key={entry.id} position={entry.position.toArray()} rotation={[0, entry.rotationY, 0]}>
-            {memorialSpriteMaterial && (
-              <Billboard position={[0, 0.86, 0]} follow>
-                <sprite
-                  material={memorialSpriteMaterial}
-                  scale={[SPRITE_SCALE, SPRITE_SCALE, SPRITE_SCALE]}
-                  onPointerOver={() => setHoveredId(entry.id)}
-                  onPointerOut={() => setHoveredId((prev) => (prev === entry.id ? null : prev))}
-                  onPointerDown={(event) => {
-                    event.stopPropagation();
-                    setLockedId((prev) => (prev === entry.id ? null : entry.id));
-                  }}
-                />
-              </Billboard>
+            {shadowMaterial && (
+              <mesh
+                geometry={shadowGeometry}
+                material={shadowMaterial}
+                position={[0, SHADOW_Y_OFFSET, 0]}
+                quaternion={entry.shadowQuaternion}
+                renderOrder={0}
+                raycast={() => null}
+              />
             )}
-            <mesh
-              geometry={crossGeometry}
-              castShadow
-              receiveShadow
-              onPointerOver={() => setHoveredId(entry.id)}
-              onPointerOut={() => setHoveredId((prev) => (prev === entry.id ? null : prev))}
-              onPointerDown={(event) => {
-                event.stopPropagation();
-                setLockedId((prev) => (prev === entry.id ? null : entry.id));
-              }}
-            >
-              <meshStandardMaterial color="#f1d8b5" emissive="#b98c5a" emissiveIntensity={0.25} />
-            </mesh>
-            <mesh geometry={armGeometry} position={[0, 0.16, 0]} castShadow receiveShadow>
-              <meshStandardMaterial color="#f1d8b5" emissive="#b98c5a" emissiveIntensity={0.25} />
-            </mesh>
+            <Billboard position={[0, SPRITE_BASE_OFFSET, 0]} follow>
+              <sprite
+                material={memorialSpriteMaterial}
+                scale={spriteScale}
+                center={[0.5, 0]}
+                renderOrder={1}
+                onPointerOver={() => setHoveredId(entry.id)}
+                onPointerOut={() => setHoveredId((prev) => (prev === entry.id ? null : prev))}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  setLockedId((prev) => (prev === entry.id ? null : entry.id));
+                }}
+              />
+            </Billboard>
 
-            {isActive && (
-              <Html
-                transform
-                position={[0, 0.55, 0.02]}
-                distanceFactor={18}
-                style={{ pointerEvents: 'auto' }}
-              >
-                <div className="w-[220px] space-y-1 rounded-lg border border-white/15 bg-black/85 p-2 text-[10px] text-white shadow-xl">
-                  <div className="text-[9px] uppercase tracking-[0.3em] text-amber-200">
-                    {label}
+            {(isActive || isNearby) && (
+              <Billboard position={[0, LABEL_Y_OFFSET, 0.02]} follow>
+                <Html
+                  transform
+                  center
+                  distanceFactor={LABEL_DISTANCE_FACTOR}
+                  className="pointer-events-none"
+                >
+                  <div className="relative w-[124px] space-y-0.5 rounded-lg border border-white/15 bg-black/88 px-2 py-[6px] text-[8px] text-white/80 shadow-2xl backdrop-blur-lg">
+                    <div className="absolute left-1/2 top-full h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-white/15 bg-black/88" />
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-200/85" />
+                      <span className="flex-1 whitespace-normal break-words text-[7.25px] font-semibold uppercase leading-tight tracking-[0.18em] text-amber-200">
+                        {label}
+                      </span>
+                    </div>
+                    {dateLabel && (
+                      <div className="break-words text-[7px] leading-tight text-white/60">{dateLabel}</div>
+                    )}
+                    <p className="whitespace-pre-line break-words text-[8px] leading-tight text-white/90">
+                      {clampLabel(entry.message)}
+                    </p>
                   </div>
-                  {dateLabel && <div className="text-[9px] text-white/60">{dateLabel}</div>}
-                  <p className="text-[11px] font-semibold">{clampLabel(entry.message)}</p>
-                </div>
-              </Html>
+                </Html>
+              </Billboard>
             )}
           </group>
         );

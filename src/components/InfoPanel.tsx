@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useCovidStore } from '../stores/covidStore';
 
 interface InfoPanelProps {
-  variant?: 'floating' | 'compact';
+  variant?: 'floating' | 'compact' | 'mini';
 }
 
 export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
@@ -25,6 +25,17 @@ export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
   }, [data]);
 
   if (!currentData) return null;
+
+  if (variant === 'mini') {
+    return (
+      <div className="flex min-w-0 flex-col">
+        <span className="text-[10px] uppercase tracking-[0.32em] text-amber-200">Serra Sem Ar</span>
+        <span className="text-[12px] text-white/70">
+          {currentData.date.toLocaleDateString('pt-BR')}
+        </span>
+      </div>
+    );
+  }
 
   if (variant === 'compact') {
     return (
