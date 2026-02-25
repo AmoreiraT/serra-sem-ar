@@ -59,7 +59,7 @@ export const EventCard = ({ layout = 'floating', className }: EventCardProps = {
           className={cn(
             isSheet
               ? 'w-full'
-              : 'pointer-events-none absolute bottom-6 left-6 z-10 w-[min(32vw,410px)] safe-bottom',
+              : 'desktop-event-card pointer-events-none absolute bottom-6 left-6 z-10 w-[min(32vw,410px)] safe-bottom',
             className
           )}
         >

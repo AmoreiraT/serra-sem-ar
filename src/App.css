@@ -127,3 +127,130 @@
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
   }
 }
+
+/* Height-based responsive map for better usability in short viewports */
+@media (max-height: 900px) {
+  .app-shell .hud-desktop-header {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+}
+
+@media (max-height: 820px) {
+  .app-shell .hud-mobile-header {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .app-shell .hud-fab {
+    bottom: 3.55rem;
+    right: 0.55rem;
+    gap: 0.45rem;
+  }
+
+  .app-shell .hud-fab button {
+    height: 2.55rem;
+    width: 2.55rem;
+  }
+
+  .app-shell .hud-joystick {
+    left: 0.45rem;
+    bottom: 0.4rem;
+    transform: scale(0.9);
+    transform-origin: left bottom;
+  }
+
+  .app-shell .hud-sheet {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+  }
+
+  .app-shell .desktop-event-card {
+    left: 0.9rem;
+    bottom: 3.8rem;
+    width: min(34vw, 390px);
+  }
+
+  .app-shell .desktop-memorial-card {
+    right: 0.9rem;
+    bottom: 3.8rem;
+    width: min(34vw, 380px);
+    max-height: 74vh;
+  }
+
+  .app-shell .hud-footer {
+    bottom: 0.4rem;
+    padding: 0.35rem 0.65rem;
+  }
+
+  .app-shell .hud-footer p {
+    font-size: 0.68rem;
+    line-height: 1.1;
+  }
+}
+
+@media (max-height: 700px) {
+  .app-shell .hud-mobile-header {
+    padding-top: 0.32rem;
+    padding-bottom: 0.32rem;
+  }
+
+  .app-shell .hud-fab {
+    bottom: 2.7rem;
+    right: 0.45rem;
+  }
+
+  .app-shell .hud-fab button {
+    height: 2.4rem;
+    width: 2.4rem;
+  }
+
+  .app-shell .hud-joystick {
+    transform: scale(0.82);
+  }
+
+  .app-shell .desktop-event-card {
+    left: 0.75rem;
+    bottom: 2.7rem;
+    width: min(36vw, 360px);
+  }
+
+  .app-shell .desktop-event-card > div {
+    max-height: 60vh;
+  }
+
+  .app-shell .desktop-memorial-card {
+    right: 0.75rem;
+    bottom: 2.7rem;
+    width: min(36vw, 350px);
+    max-height: 62vh;
+  }
+
+  .app-shell .hud-footer {
+    display: none;
+  }
+}
+
+@media (max-height: 620px) {
+  .app-shell .hud-fab {
+    bottom: 2.15rem;
+    right: 0.35rem;
+  }
+
+  .app-shell .hud-fab button {
+    height: 2.2rem;
+    width: 2.2rem;
+  }
+
+  .app-shell .hud-joystick {
+    left: 0.2rem;
+    bottom: 0.15rem;
+    transform: scale(0.74);
+  }
+
+  .app-shell .hud-sheet {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+  }
+}

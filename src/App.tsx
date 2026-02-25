@@ -46,13 +46,13 @@ function AppContent() {
   }
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-black">
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
-        <div className="pointer-events-auto hidden flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:flex xl:gap-4 xl:px-6 xl:py-3">
+    <div className="app-shell relative h-screen w-full overflow-hidden bg-black">
+      <header className="app-header pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
+        <div className="hud-desktop-header pointer-events-auto hidden flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:flex xl:gap-4 xl:px-6 xl:py-3">
           <InfoPanel variant="compact" />
           <ControlsHelp variant="header" />
         </div>
-        <div className="pointer-events-auto flex items-center gap-2 rounded-b-2xl bg-black/55 px-3 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:hidden">
+        <div className="hud-mobile-header pointer-events-auto flex items-center gap-2 rounded-b-2xl bg-black/55 px-3 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:hidden">
           <InfoPanel variant="mini" />
           <div className="ml-auto flex items-center gap-2">
             <Button
@@ -78,14 +78,14 @@ function AppContent() {
         <div className="relative h-full">
           <Scene3D enableControls showStats={false} />
 
-          <div className="hidden xl:block">
+          <div className="hud-desktop-left hidden xl:block">
             <EventCard />
           </div>
-          <div className="hidden xl:block">
+          <div className="hud-desktop-right hidden xl:block">
             <MemorialPanel />
           </div>
 
-          <div className="xl:hidden absolute bottom-20 right-3 z-20 flex flex-col gap-2 safe-bottom sm:bottom-6 sm:right-4">
+          <div className="hud-fab xl:hidden absolute bottom-20 right-3 z-20 flex flex-col gap-2 safe-bottom sm:bottom-6 sm:right-4">
             <Button
               size="icon"
               variant="outline"
@@ -118,7 +118,7 @@ function AppContent() {
 
           {isMobile && (
             <div
-              className="xl:hidden absolute bottom-4 left-3 z-20 safe-bottom max-[380px]:scale-90 max-[340px]:scale-75 sm:bottom-6 sm:left-4"
+              className="hud-joystick xl:hidden absolute bottom-4 left-3 z-20 safe-bottom max-[380px]:scale-90 max-[340px]:scale-75 sm:bottom-6 sm:left-4"
               data-joystick-control="true"
             >
               <MobileMoveJoystick />
@@ -140,7 +140,7 @@ function AppContent() {
                   className="absolute inset-0 bg-black/55 backdrop-blur-sm"
                 />
                 <motion.div
-                  className="absolute inset-x-0 bottom-0 px-4 pb-5 safe-bottom-pad"
+                  className="hud-sheet absolute inset-x-0 bottom-0 px-4 pb-5 safe-bottom-pad"
                   initial={{ y: 40, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 40, opacity: 0 }}
@@ -169,7 +169,7 @@ function AppContent() {
             )}
           </AnimatePresence>
 
-          <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 transform rounded-lg bg-black/70 px-3 py-2 text-white backdrop-blur-sm sm:px-4">
+          <div className="hud-footer pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 transform rounded-lg bg-black/70 px-3 py-2 text-white backdrop-blur-sm sm:px-4">
             <p className="text-xs text-center sm:text-sm">Web Art • AmoreiraT • Three.js - saude.gov.br</p>
           </div>
         </div>
