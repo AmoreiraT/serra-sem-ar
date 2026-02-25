@@ -74,6 +74,13 @@ const MIN_WALKWAY_HALF = 3.5;
 const SEGMENT_APPROACH = 2;
 const PROGRESS_EPSILON = 1e-3;
 const TARGET_EPSILON = 5e-3;
+const WALKWAY_WIGGLE_STRENGTH = 0.16;
+const WALKWAY_MAX_ASCENT = 2.4;
+const WALKWAY_MAX_DESCENT = 2.2;
+const WALKWAY_MAX_STEP = 1.3;
+const WALKWAY_FINAL_SMOOTH_PASSES = 10;
+const WALKWAY_FINAL_SMOOTH_INFLUENCE = 0.78;
+const WALKWAY_RIPPLE_STRENGTH = 0.07;
 
 const easeHeight = (t: number) => {
   const clamped = THREE.MathUtils.clamp(t, 0, 1);
@@ -254,13 +261,6 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
       profile.plateauRange = Math.max(profile.plateauHalf - profile.walkwayHalf, 0.001);
     });
 
-    const walkwayHeightsRaw = profiles.map((p) => p.walkwayHeight);
-    const walkwaySoft = smoothArray(walkwayHeightsRaw, WALKWAY_SMOOTH_PASSES, WALKWAY_SMOOTH_INFLUENCE);
-    const walkwayFinal = smoothArray(walkwaySoft, 3, WALKWAY_SMOOTH_INFLUENCE * 0.6);
-    walkwayFinal.forEach((value, idx) => {
-      profiles[idx].walkwayHeight = value;
-    });
-
     const ridgeHeights = profiles.map((p) => p.ridgeHeight);
     const ridgeSoft = smoothArray(ridgeHeights, RIDGE_SMOOTH_PASSES, RIDGE_SMOOTH_INFLUENCE);
     const ridgeFinal = smoothArray(ridgeSoft, 3, RIDGE_SMOOTH_INFLUENCE * 0.65);
@@ -269,8 +269,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
     });
 
     const walkwayScale = maxPeakHeight * 0.9 + baseRidgeHeight * 0.25;
-    const maxAscent = 6;
-    const maxDescent = 5;
+    const maxAscent = WALKWAY_MAX_ASCENT;
+    const maxDescent = WALKWAY_MAX_DESCENT;
     let previousHeight = 0;
 
     profiles.forEach((profile, index) => {
@@ -285,11 +285,38 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
         previousHeight = THREE.MathUtils.lerp(blended, target, 0.45);
       }
 
-      const pathWiggle = noise2D(profile.point.x * 0.08 + 10, index * 0.02) * 0.6;
+      const pathWiggle = noise2D(profile.point.x * 0.08 + 10, index * 0.02) * WALKWAY_WIGGLE_STRENGTH;
       const finalHeight = Math.max(previousHeight + pathWiggle, 0);
       profile.walkwayHeight = finalHeight;
       previousHeight = finalHeight;
     });
+
+    // Final pass: damp spikes and clamp local slope so the walk path is stable.
+    const stabilizedWalkway = smoothArray(
+      profiles.map((profile) => profile.walkwayHeight),
+      WALKWAY_FINAL_SMOOTH_PASSES,
+      WALKWAY_FINAL_SMOOTH_INFLUENCE
+    );
+    stabilizedWalkway.forEach((value, idx) => {
+      profiles[idx].walkwayHeight = Math.max(value, 0);
+    });
+
+    for (let i = 1; i < profiles.length; i++) {
+      const prev = profiles[i - 1].walkwayHeight;
+      profiles[i].walkwayHeight = THREE.MathUtils.clamp(
+        profiles[i].walkwayHeight,
+        prev - WALKWAY_MAX_STEP,
+        prev + WALKWAY_MAX_STEP
+      );
+    }
+    for (let i = profiles.length - 2; i >= 0; i--) {
+      const next = profiles[i + 1].walkwayHeight;
+      profiles[i].walkwayHeight = THREE.MathUtils.clamp(
+        profiles[i].walkwayHeight,
+        next - WALKWAY_MAX_STEP,
+        next + WALKWAY_MAX_STEP
+      );
+    }
 
     profiles.forEach((profile) => {
       profile.smoothedHeight = Math.max(profile.smoothedHeight, profile.walkwayHeight + 0.5);
@@ -317,7 +344,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
         let y = smoothFalloff * ridgeBlend;
 
         if (dist <= profile.walkwayHalf) {
-          const ripple = noise2D(point.x * 0.1, i * 0.022) * 0.18;
+          const ripple = noise2D(point.x * 0.1, i * 0.022) * WALKWAY_RIPPLE_STRENGTH;
           y = walkwayHeight - WALKWAY_GROOVE_DEPTH + ripple;
         } else if (dist <= profile.plateauHalf) {
           const centerT = (dist - profile.walkwayHalf) / profile.plateauRange;

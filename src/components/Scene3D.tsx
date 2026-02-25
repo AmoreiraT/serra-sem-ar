@@ -245,6 +245,8 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
   const forwardVelocityRef = useRef(0);
   const strafeVelocityRef = useRef(0);
   const skipNextIndexSyncRef = useRef(false);
+  const playerGroundYRef = useRef<number | null>(null);
+  const playerVerticalVelocityRef = useRef(0);
 
   const touchStateRef = useRef({
     active: false,
@@ -266,6 +268,8 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
   const forwardAlignedRef = useRef(new THREE.Vector3());
   const desiredCameraPosRef = useRef(new THREE.Vector3());
   const lookTargetRef = useRef(new THREE.Vector3());
+  const smoothedUpRef = useRef(new THREE.Vector3(0, 1, 0));
+  const lookDirRef = useRef(new THREE.Vector3(0, 0, -1));
 
   const walkwayLength = useMemo(() => {
     if (!walkwayProfile.length) return 0;
@@ -273,7 +277,7 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
   }, [walkwayProfile]);
 
   const distanceFromDataIndex = useMemo(() => {
-    if (!walkwayLength || dataLength <= 1) return (idx: number) => 0;
+    if (!walkwayLength || dataLength <= 1) return (_idx: number) => 0;
     return (idx: number) => walkwayLength * (idx / (dataLength - 1));
   }, [walkwayLength, dataLength]);
 
@@ -296,6 +300,9 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
 
     distanceRef.current = startDistance;
     targetDistanceRef.current = startDistance;
+    playerGroundYRef.current = null;
+    playerVerticalVelocityRef.current = 0;
+    smoothedUpRef.current.set(0, 1, 0);
 
     if (!hasInitialOrientationRef.current && walkwayProfile.length) {
       const baseSample = findWalkwaySample(walkwayProfile, startDistance);
@@ -454,6 +461,9 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
     const DECELERATION = 11;
     const POSITION_SMOOTH = 9;
     const LATERAL_MARGIN = 0.6;
+    const GRAVITY = -24;
+    const FLOOR_SNAP_UP = 0.26;
+    const FLOOR_STICK_FORCE = 18;
 
     const keyState = keyStateRef.current;
     const joystickForward = THREE.MathUtils.clamp(-(mobileMoveInput[1] ?? 0), -1, 1);
@@ -522,10 +532,39 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
 
     const lateralClamped = THREE.MathUtils.clamp(lateral, -smoothedSample.outerWidth, smoothedSample.outerWidth);
     const playerPos = playerPosRef.current.copy(smoothedSample.position).addScaledVector(right, lateralClamped);
-    const sampledHeight = terrainSampler?.sampleHeight(playerPos.x, playerPos.z);
-    playerPos.y = (sampledHeight ?? smoothedSample.baseY) + 0.05;
+    const sampledHeightRaw = terrainSampler?.sampleHeight(playerPos.x, playerPos.z);
+    const sampledHeight = Number.isFinite(sampledHeightRaw) ? sampledHeightRaw : smoothedSample.position.y;
+    const lateralRatio = smoothedSample.halfWidth > 1e-4
+      ? Math.min(Math.abs(lateralClamped) / smoothedSample.halfWidth, 1)
+      : 0;
+    const desiredGroundY = THREE.MathUtils.lerp(smoothedSample.position.y, sampledHeight, lateralRatio * 0.35);
+    if (playerGroundYRef.current === null || !Number.isFinite(playerGroundYRef.current)) {
+      playerGroundYRef.current = desiredGroundY;
+      playerVerticalVelocityRef.current = 0;
+    }
+    const currentGroundY = playerGroundYRef.current;
+    const groundRise = desiredGroundY - currentGroundY;
+    if (groundRise > 0 && groundRise <= FLOOR_SNAP_UP) {
+      // Small upward steps are absorbed smoothly to keep the walk stable.
+      playerGroundYRef.current = THREE.MathUtils.damp(currentGroundY, desiredGroundY, FLOOR_STICK_FORCE, delta);
+      playerVerticalVelocityRef.current = Math.max(0, playerVerticalVelocityRef.current);
+    } else {
+      playerVerticalVelocityRef.current += GRAVITY * delta;
+      playerGroundYRef.current += playerVerticalVelocityRef.current * delta;
+      if (playerGroundYRef.current <= desiredGroundY) {
+        playerGroundYRef.current = THREE.MathUtils.damp(
+          playerGroundYRef.current,
+          desiredGroundY,
+          FLOOR_STICK_FORCE,
+          delta
+        );
+        playerVerticalVelocityRef.current = 0;
+      }
+    }
+    playerPos.y = playerGroundYRef.current + 0.05;
 
-    const up = sampleGroundNormal(playerPos.x, playerPos.z, groundNormalRef.current);
+    const rawUp = sampleGroundNormal(playerPos.x, playerPos.z, groundNormalRef.current);
+    const up = smoothedUpRef.current.lerp(rawUp, 1 - Math.exp(-5.5 * delta)).normalize();
     const alignQuat = alignQuatRef.current.setFromUnitVectors(worldUpRef.current, up);
     const rightAligned = rightAlignedRef.current.set(1, 0, 0).applyQuaternion(alignQuat).applyAxisAngle(up, yawRef.current);
     const forwardAligned = forwardAlignedRef.current
@@ -536,18 +575,23 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
       .normalize();
 
     const gaitSpeed = Math.min(1, Math.sqrt(forwardVelocityRef.current ** 2 + strafeVelocityRef.current ** 2));
-    strideCycleRef.current += delta * (isRunning ? 10.5 : 7.2) * (0.35 + gaitSpeed * 0.9);
-    const bobAmplitude = isRunning ? 0.045 : 0.03;
+    strideCycleRef.current += delta * (isRunning ? 8.8 : 6.1) * (0.35 + gaitSpeed * 0.9);
+    const bobAmplitude = isRunning ? 0.022 : 0.012;
     const bobOffset = Math.sin(strideCycleRef.current) * bobAmplitude * gaitSpeed;
-    const swayOffset = Math.cos(strideCycleRef.current * 0.5) * 0.018 * gaitSpeed;
+    const swayOffset = Math.cos(strideCycleRef.current * 0.5) * 0.007 * gaitSpeed;
 
     const desiredCameraPos = desiredCameraPosRef.current
       .copy(playerPos)
       .addScaledVector(up, eyeHeight + bobOffset)
       .addScaledVector(rightAligned, swayOffset);
+    const cameraSurfaceRaw = terrainSampler?.sampleHeight(desiredCameraPos.x, desiredCameraPos.z);
+    const cameraSurfaceY = Number.isFinite(cameraSurfaceRaw) ? cameraSurfaceRaw : desiredGroundY;
+    const cameraMinY = cameraSurfaceY + Math.max(0.9, eyeHeight * 0.62);
+    if (desiredCameraPos.y < cameraMinY) desiredCameraPos.y = cameraMinY;
 
-    camera.position.lerp(desiredCameraPos, 1 - Math.exp(-12 * delta));
-    const lookTarget = lookTargetRef.current.copy(camera.position).add(forwardAligned);
+    camera.position.lerp(desiredCameraPos, 1 - Math.exp(-8.5 * delta));
+    const lookDir = lookDirRef.current.lerp(forwardAligned, 1 - Math.exp(-10 * delta)).normalize();
+    const lookTarget = lookTargetRef.current.copy(camera.position).add(lookDir);
     camera.up.copy(up);
     camera.lookAt(lookTarget);
 
