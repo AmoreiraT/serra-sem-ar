@@ -85,7 +85,7 @@ export const MemorialPanel = ({ layout = 'floating', className }: MemorialPanelP
         'pointer-events-auto space-y-3 overflow-auto rounded-2xl border border-white/20 bg-black/85 p-4 text-white shadow-2xl backdrop-blur-md',
         isSheet
           ? 'w-full max-h-[70vh]'
-          : 'absolute bottom-28 left-1/2 z-10 w-[min(94vw,380px)] -translate-x-1/2 max-h-[78vh] sm:bottom-6 sm:left-auto sm:right-6 sm:translate-x-0 sm:w-[min(420px,40vw)] sm:max-h-[82vh] safe-bottom',
+          : 'absolute bottom-6 right-6 z-10 w-[min(32vw,390px)] max-h-[82vh] safe-bottom',
         className
       )}
     >

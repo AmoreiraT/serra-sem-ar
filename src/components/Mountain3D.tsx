@@ -8,7 +8,6 @@ import pathRoughTexture from '@assets/textures/road/old_road_01_roughness_1k.png
 import rockDiffuseTexture from '@assets/textures/rock/GroundDirtRocky020_COL_2K.jpg';
 import rockRoughTexture from '@assets/textures/rock/GroundDirtRocky020_GLOSS_2K.jpg';
 import rockNormalTexture from '@assets/textures/rock/GroundDirtRocky020_NRM_2K.jpg';
-// import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody } from '@react-three/rapier';
 import { forwardRef, useEffect, useMemo, useRef } from 'react';
@@ -21,7 +20,10 @@ import { MountainPoint } from '../types/covid';
 import { createTerrainSampler } from '../utils/terrainSampler';
 
 const cyrb128 = (str: string) => {
-  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+  let h1 = 1779033703;
+  let h2 = 3144134277;
+  let h3 = 1013904242;
+  let h4 = 2773480762;
   for (let i = 0, k: number; i < str.length; i++) {
     k = str.charCodeAt(i);
     h1 = Math.imul(h1 ^ k, 597399067);
@@ -38,7 +40,10 @@ const cyrb128 = (str: string) => {
 
 const sfc32 = (a: number, b: number, c: number, d: number) => {
   return () => {
-    a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+    a >>>= 0;
+    b >>>= 0;
+    c >>>= 0;
+    d >>>= 0;
     const t = (a + b) | 0;
     a = b ^ (b >>> 9);
     b = (c + (c << 3)) | 0;
@@ -54,10 +59,6 @@ const makeRng = (seed: string) => {
   return sfc32(state[0], state[1], state[2], state[3]);
 };
 
-const TIME_SEGMENT_MULTIPLIER = 10;
-const MIN_TIME_SEGMENTS = 120;
-const MAX_TIME_SEGMENTS = 1000;
-const LATERAL_SEGMENTS = 620;
 const ACTIVE_RADIUS = 105;
 const FALLOFF_RADIUS = 55;
 const MIN_WALKWAY_BASE = -8.2;
@@ -69,11 +70,11 @@ const WALKWAY_GROOVE_DEPTH = 0.18;
 const WALKWAY_BEVEL_INNER = 2.8;
 const WALKWAY_BEVEL_OUTER = 4.2;
 const WALKWAY_TILE_U = 0.028;
-const WALKWAY_TILE_V = 0.7;
 const MIN_WALKWAY_HALF = 3.5;
 const SEGMENT_APPROACH = 2;
 const PROGRESS_EPSILON = 1e-3;
 const TARGET_EPSILON = 5e-3;
+
 const easeHeight = (t: number) => {
   const clamped = THREE.MathUtils.clamp(t, 0, 1);
   return clamped * clamped * (3 - 2 * clamped);
@@ -104,8 +105,50 @@ const smoothArray = (values: number[], iterations: number, influence: number) =>
   return next;
 };
 
-interface Mountain3DProps { }
-export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DProps, ref) => {
+type QualityMode = 'desktop' | 'mobile';
+
+type QualitySettings = {
+  timeMultiplier: number;
+  minTimeSegments: number;
+  maxTimeSegments: number;
+  lateralSegments: number;
+  maxHalfWidth: number;
+  maxPeakHeight: number;
+  baseRidgeHeight: number;
+  normalsInterval: number;
+  maxAnisotropy: number;
+};
+
+const qualityMap: Record<QualityMode, QualitySettings> = {
+  desktop: {
+    timeMultiplier: 7,
+    minTimeSegments: 96,
+    maxTimeSegments: 620,
+    lateralSegments: 360,
+    maxHalfWidth: 80,
+    maxPeakHeight: 48,
+    baseRidgeHeight: 6,
+    normalsInterval: 0.14,
+    maxAnisotropy: 10,
+  },
+  mobile: {
+    timeMultiplier: 4,
+    minTimeSegments: 72,
+    maxTimeSegments: 320,
+    lateralSegments: 180,
+    maxHalfWidth: 76,
+    maxPeakHeight: 44,
+    baseRidgeHeight: 5.4,
+    normalsInterval: 0.22,
+    maxAnisotropy: 4,
+  },
+};
+
+interface Mountain3DProps {
+  quality?: QualityMode;
+}
+
+export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'desktop' }, ref) => {
   const meshRef = (ref as React.RefObject<Mesh>) || useRef<Mesh>(null);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const setRevealedX = useCovidStore((state) => state.setRevealedX);
@@ -113,22 +156,26 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
   const setWalkwayProfile = useCovidStore((state) => state.setWalkwayProfile);
   const setTerrainSampler = useCovidStore((state) => state.setTerrainSampler);
   const cameraX = useCovidStore((state) => state.cameraPosition[0]);
-  // Parameters
+
+  const qualityConfig = qualityMap[quality];
+
   const timeSegments = useMemo(() => {
     if (mountainPoints.length === 0) return 0;
-    const candidate = mountainPoints.length * TIME_SEGMENT_MULTIPLIER;
-    return Math.min(Math.max(candidate, MIN_TIME_SEGMENTS), MAX_TIME_SEGMENTS);
-  }, [mountainPoints.length]);
-  const zSegments = LATERAL_SEGMENTS; // lateral detail across mountain width
-  const maxHalfWidth = 80; // maximum half-width of the mountain in Z
-  const maxPeakHeight = 48; // maximum contribution from deaths
-  const baseRidgeHeight = 6; // contribution from cases gives baseline rise without flattening valleys
+    const candidate = mountainPoints.length * qualityConfig.timeMultiplier;
+    return Math.min(Math.max(candidate, qualityConfig.minTimeSegments), qualityConfig.maxTimeSegments);
+  }, [mountainPoints.length, qualityConfig.maxTimeSegments, qualityConfig.minTimeSegments, qualityConfig.timeMultiplier]);
+
+  const zSegments = qualityConfig.lateralSegments;
+  const maxHalfWidth = qualityConfig.maxHalfWidth;
+  const maxPeakHeight = qualityConfig.maxPeakHeight;
+  const baseRidgeHeight = qualityConfig.baseRidgeHeight;
 
   const noise2D = useMemo(() => createNoise2D(makeRng('serra-sem-ar-2d')), []);
   const noise3D = useMemo(() => createNoise3D(makeRng('serra-sem-ar-3d')), []);
 
   const mountainData = useMemo(() => {
     if (mountainPoints.length === 0) return null;
+
     const geometry = new BufferGeometry();
     const vertices: number[] = [];
     const indices: number[] = [];
@@ -142,6 +189,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const maxCases = Math.max(1, ...mountainPoints.map((p) => p.cases));
     const maxDeaths = Math.max(1, ...mountainPoints.map((p) => p.deaths));
     const segmentXs: number[] = new Array(timeSegments);
+
     const firstPoint = mountainPoints[0];
     const lastPoint = mountainPoints[mountainPoints.length - 1] ?? firstPoint;
     const minPointX = firstPoint?.x ?? 0;
@@ -226,9 +274,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     let previousHeight = 0;
 
     profiles.forEach((profile, index) => {
-      const target =
-        profile.deathsNorm * walkwayScale +
-        profile.casesNorm * (baseRidgeHeight * 0.2);
+      const target = profile.deathsNorm * walkwayScale + profile.casesNorm * (baseRidgeHeight * 0.2);
 
       if (index === 0) {
         previousHeight = target;
@@ -245,14 +291,12 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       previousHeight = finalHeight;
     });
 
-    // Nudge ridge heights so they never fall below the walkway
     profiles.forEach((profile) => {
       profile.smoothedHeight = Math.max(profile.smoothedHeight, profile.walkwayHeight + 0.5);
       profile.ridgeHeight = Math.max(profile.ridgeHeight, profile.walkwayHeight + 0.25);
     });
 
     const baselineY = -4;
-
     let cumulativeDistance = 0;
 
     for (let i = 0; i < timeSegments; i++) {
@@ -266,7 +310,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         const z = THREE.MathUtils.lerp(-maxHalfWidth, maxHalfWidth, t);
         const dist = Math.abs(z);
         const outerT = THREE.MathUtils.clamp((dist - profile.plateauHalf) / profile.rampRange, 0, 1);
-        const smoothFalloff = 1 - (outerT * outerT * (3 - 2 * outerT));
+        const smoothFalloff = 1 - outerT * outerT * (3 - 2 * outerT);
         const primaryFold = noise3D(point.x * 0.035, z * 0.045, i * 0.02);
         const secondaryFold = noise3D(point.x * 0.12 + 50, z * 0.12, i * 0.05);
 
@@ -331,22 +375,41 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
         mapWidth(walkwayHalf),
         mapWidth(walkwayOuter),
       ];
+
       walkwayVertices.push(
-        x, walkwayOuterHeight, -walkwayOuter,
-        x, walkwayOuterHeight, -walkwayHalf,
-        x, walkwayInnerHeight, -walkwayInner,
-        x, walkwayInnerHeight, walkwayInner,
-        x, walkwayOuterHeight, walkwayHalf,
-        x, walkwayOuterHeight, walkwayOuter
+        x,
+        walkwayOuterHeight,
+        -walkwayOuter,
+        x,
+        walkwayOuterHeight,
+        -walkwayHalf,
+        x,
+        walkwayInnerHeight,
+        -walkwayInner,
+        x,
+        walkwayInnerHeight,
+        walkwayInner,
+        x,
+        walkwayOuterHeight,
+        walkwayHalf,
+        x,
+        walkwayOuterHeight,
+        walkwayOuter
       );
 
       walkwayUVs.push(
-        widthCoords[0], lengthCoord,
-        widthCoords[1], lengthCoord,
-        widthCoords[2], lengthCoord,
-        widthCoords[3], lengthCoord,
-        widthCoords[4], lengthCoord,
-        widthCoords[5], lengthCoord
+        widthCoords[0],
+        lengthCoord,
+        widthCoords[1],
+        lengthCoord,
+        widthCoords[2],
+        lengthCoord,
+        widthCoords[3],
+        lengthCoord,
+        widthCoords[4],
+        lengthCoord,
+        widthCoords[5],
+        lengthCoord
       );
 
       if (i < timeSegments - 1) {
@@ -362,6 +425,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       if (i > 0) {
         cumulativeDistance += Math.abs(segmentXs[i] - segmentXs[i - 1]);
       }
+
       walkwaySamples.push({
         x,
         y: walkwayInnerHeight,
@@ -374,6 +438,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
 
     const row = zSegments + 1;
     const topVertexCount = timeSegments * row;
+
     for (let i = 0; i < topVertexCount; i++) {
       const vx = vertices[i * 3 + 0];
       const vy = vertices[i * 3 + 1];
@@ -408,8 +473,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     }
 
     for (let i = 0; i < timeSegments - 1; i++) {
-      const aTop = i * row + 0;
-      const cTop = (i + 1) * row + 0;
+      const aTop = i * row;
+      const cTop = (i + 1) * row;
       const aBot = bottomOffset + aTop;
       const cBot = bottomOffset + cTop;
       indices.push(aTop, cTop, cBot);
@@ -426,7 +491,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     }
 
     for (let j = 0; j < zSegments; j++) {
-      const aTop = 0 * row + j;
+      const aTop = j;
       const bTop = aTop + 1;
       const aBot = bottomOffset + aTop;
       const bBot = bottomOffset + bTop;
@@ -454,7 +519,6 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     const walkwayBaselineArray = Float32Array.from(walkwayBaselines);
     const minX = segmentXs[0] ?? minPointX;
     const maxX = segmentXs[segmentXs.length - 1] ?? minX;
-    const range = Math.max(1e-3, maxX - minX);
 
     let walkwayGeometry: BufferGeometry | null = null;
     if (walkwayVertices.length >= 4) {
@@ -475,7 +539,6 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       segmentXs,
       minX,
       maxX,
-      range,
       walkwayBaselines: walkwayBaselineArray,
       walkwayGeometry,
       walkwaySamples,
@@ -483,7 +546,16 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       zMin: -maxHalfWidth,
       zMax: maxHalfWidth,
     };
-  }, [mountainPoints, timeSegments, zSegments, maxHalfWidth, maxPeakHeight, baseRidgeHeight]);
+  }, [
+    mountainPoints,
+    timeSegments,
+    zSegments,
+    maxHalfWidth,
+    maxPeakHeight,
+    baseRidgeHeight,
+    noise2D,
+    noise3D,
+  ]);
 
   if (!mountainData) return null;
 
@@ -585,9 +657,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
       const delta = segX - cameraX;
       let target = 0;
 
-      if (delta <= 0) {
-        target = 1;
-      } else if (delta <= ACTIVE_RADIUS) {
+      if (delta <= 0 || delta <= ACTIVE_RADIUS) {
         target = 1;
       } else if (delta <= ACTIVE_RADIUS + FALLOFF_RADIUS) {
         const t = (delta - ACTIVE_RADIUS) / Math.max(FALLOFF_RADIUS, 1e-3);
@@ -614,6 +684,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     if (!geometry) return;
     const positions = geometry.getAttribute('position') as Float32BufferAttribute;
     if (!positions) return;
+
     const original = originalPositionsRef.current;
     const walkwayBase = walkwayBaselinesRef.current;
     const progressArray = segmentProgressRef.current;
@@ -662,7 +733,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     if (changed) {
       positions.needsUpdate = true;
       normalsTimerRef.current += delta;
-      if (normalsTimerRef.current >= 0.12) {
+      if (normalsTimerRef.current >= qualityConfig.normalsInterval) {
         geometry.computeVertexNormals();
         normalsTimerRef.current = 0;
       }
@@ -681,7 +752,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     pathAO,
     pathRough,
     pathHeight,
-    pathMetallic
+    pathMetallic,
   } = useTextureLoader(
     rockDiffuseTexture,
     rockNormalTexture,
@@ -695,49 +766,71 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>((_props: Mountain3DP
     pathMetallicTexture
   );
 
+  const anisotropyCap = qualityConfig.maxAnisotropy;
 
-  diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
-  diffuseMap.repeat.set(6, 3);
-  diffuseMap.anisotropy = Math.max(diffuseMap.anisotropy, 8);
-  diffuseMap.colorSpace = THREE.SRGBColorSpace;
-  normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
-  normalMap.repeat.set(6, 3);
-  normalMap.anisotropy = Math.max(normalMap.anisotropy, 4);
-  aoMap.wrapS = aoMap.wrapT = THREE.RepeatWrapping;
-  aoMap.repeat.set(6, 3);
+  useEffect(() => {
+    diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
+    diffuseMap.repeat.set(6, 3);
+    diffuseMap.anisotropy = Math.max(diffuseMap.anisotropy, anisotropyCap);
+    diffuseMap.colorSpace = THREE.SRGBColorSpace;
 
-  if (roughnessMap) {
-    roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
-    roughnessMap.repeat.set(6, 3);
-  }
+    normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+    normalMap.repeat.set(6, 3);
+    normalMap.anisotropy = Math.max(normalMap.anisotropy, Math.max(2, anisotropyCap - 3));
 
-  if (pathDiffuse) {
-    pathDiffuse.wrapS = pathDiffuse.wrapT = THREE.RepeatWrapping;
-    pathDiffuse.repeat.set(1, 1);
-    pathDiffuse.anisotropy = Math.max(pathDiffuse.anisotropy ?? 0, 12);
-    pathDiffuse.colorSpace = THREE.SRGBColorSpace;
-  }
-  if (pathNormal) {
-    pathNormal.wrapS = pathNormal.wrapT = THREE.RepeatWrapping;
-    pathNormal.repeat.set(1, 1);
-    pathNormal.anisotropy = Math.max(pathNormal.anisotropy ?? 0, 6);
-  }
-  if (pathAO) {
-    pathAO.wrapS = pathAO.wrapT = THREE.RepeatWrapping;
-    pathAO.repeat.set(1, 1);
-  }
-  if (pathRough) {
-    pathRough.wrapS = pathRough.wrapT = THREE.RepeatWrapping;
-    pathRough.repeat.set(1, 1);
-  }
-  if (pathHeight) {
-    pathHeight.wrapS = pathHeight.wrapT = THREE.RepeatWrapping;
-    pathHeight.repeat.set(1, 1);
-  }
-  if (pathMetallic) {
-    pathMetallic.wrapS = pathMetallic.wrapT = THREE.RepeatWrapping;
-    pathMetallic.repeat.set(1, 1);
-  }
+    aoMap.wrapS = aoMap.wrapT = THREE.RepeatWrapping;
+    aoMap.repeat.set(6, 3);
+
+    if (roughnessMap) {
+      roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
+      roughnessMap.repeat.set(6, 3);
+    }
+
+    if (pathDiffuse) {
+      pathDiffuse.wrapS = pathDiffuse.wrapT = THREE.RepeatWrapping;
+      pathDiffuse.repeat.set(1, 1);
+      pathDiffuse.anisotropy = Math.max(pathDiffuse.anisotropy ?? 0, anisotropyCap);
+      pathDiffuse.colorSpace = THREE.SRGBColorSpace;
+    }
+
+    if (pathNormal) {
+      pathNormal.wrapS = pathNormal.wrapT = THREE.RepeatWrapping;
+      pathNormal.repeat.set(1, 1);
+      pathNormal.anisotropy = Math.max(pathNormal.anisotropy ?? 0, Math.max(2, anisotropyCap - 4));
+    }
+
+    if (pathAO) {
+      pathAO.wrapS = pathAO.wrapT = THREE.RepeatWrapping;
+      pathAO.repeat.set(1, 1);
+    }
+
+    if (pathRough) {
+      pathRough.wrapS = pathRough.wrapT = THREE.RepeatWrapping;
+      pathRough.repeat.set(1, 1);
+    }
+
+    if (pathHeight) {
+      pathHeight.wrapS = pathHeight.wrapT = THREE.RepeatWrapping;
+      pathHeight.repeat.set(1, 1);
+    }
+
+    if (pathMetallic) {
+      pathMetallic.wrapS = pathMetallic.wrapT = THREE.RepeatWrapping;
+      pathMetallic.repeat.set(1, 1);
+    }
+  }, [
+    anisotropyCap,
+    diffuseMap,
+    normalMap,
+    aoMap,
+    roughnessMap,
+    pathDiffuse,
+    pathNormal,
+    pathAO,
+    pathRough,
+    pathHeight,
+    pathMetallic,
+  ]);
 
   return (
     <RigidBody type="fixed" colliders="trimesh" name="mountain-body">

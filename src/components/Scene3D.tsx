@@ -9,12 +9,26 @@ import { MemorialPins3D } from './MemorialPins3D';
 import { MonthlyPlaques3D } from './MonthlyPlaques3D';
 import { Mountain3D } from './Mountain3D';
 
-
-
 interface Scene3DProps {
   enableControls?: boolean;
   showStats?: boolean;
 }
+
+type MovementState = {
+  forward: boolean;
+  backward: boolean;
+  left: boolean;
+  right: boolean;
+  run: boolean;
+};
+
+const defaultMoveState: MovementState = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  run: false,
+};
 
 export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DProps) => {
   const cameraPosition = useCovidStore((state) => state.cameraPosition);
@@ -22,9 +36,14 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
   const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
   const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
   const mountainRef = useRef<THREE.Mesh>(null) as React.RefObject<THREE.Mesh>;
+  const isMobile = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  }, []);
+
   const dpr = useMemo(() => {
-    if (typeof window === 'undefined') return [1, 1.5] as [number, number];
-    return window.innerWidth < 768 ? 1 : ([1, 1.5] as [number, number]);
+    if (typeof window === 'undefined') return [1, 1.4] as [number, number];
+    return window.innerWidth < 768 ? ([0.9, 1.15] as [number, number]) : ([1, 1.45] as [number, number]);
   }, []);
 
   return (
@@ -36,11 +55,10 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           near: 0.1,
           far: 1000,
         }}
-        shadows
+        shadows={!isMobile}
         dpr={dpr}
         className="bg-gradient-to-b from-orange-900 to-amber-700"
       >
-        {/* Sky and atmosphere */}
         <color attach="background" args={['#130a05']} />
         <Sky
           distance={450000}
@@ -52,82 +70,82 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           mieDirectionalG={0.85}
         />
         <fog attach="fog" args={['#5f3c26', 60, 320]} />
-        {/* Sync store updates into the actual three.js camera */}
-        <CameraSync cameraPosition={cameraPosition} cameraTarget={cameraTarget} onSync={(pos, tgt) => {
-          // make sure store and controls target stay coherent if needed
-          setCameraPosition(pos);
-          setCameraTarget(tgt);
-        }} />
+        <CameraSync
+          cameraPosition={cameraPosition}
+          cameraTarget={cameraTarget}
+          onSync={(pos, tgt) => {
+            setCameraPosition(pos);
+            setCameraTarget(tgt);
+          }}
+        />
         <CameraGroundClamp enabled={enableControls} clearance={1.2} />
-        {/* Lighting */}
-        <hemisphereLight color={"#fcc884"} groundColor={"#4c331e"} intensity={0.6} />
+
+        <hemisphereLight color="#fcc884" groundColor="#4c331e" intensity={0.6} />
         <directionalLight
           position={[80, 100, 50]}
           intensity={1.1}
           color="#ffd6a3"
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
+          castShadow={!isMobile}
+          shadow-mapSize-width={isMobile ? 512 : 1024}
+          shadow-mapSize-height={isMobile ? 512 : 1024}
           shadow-camera-far={240}
           shadow-camera-left={-110}
           shadow-camera-right={110}
           shadow-camera-top={110}
           shadow-camera-bottom={-110}
         />
-        <pointLight position={[-60, 40, -40]} intensity={0.6} color="#ff7a59" />
+        <pointLight position={[-60, 40, -40]} intensity={isMobile ? 0.4 : 0.6} color="#ff7a59" />
 
-        {/* Ground plane */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.2, 0]} receiveShadow>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.2, 0]} receiveShadow={!isMobile}>
           <planeGeometry args={[1600, 1600, 1, 1]} />
           <meshStandardMaterial color="#27170d" roughness={0.95} metalness={0.02} />
         </mesh>
 
-        {/* Grid for reference */}
-        <Grid
-          position={[0, -2.19, 0]}
-          args={[400, 400]}
-          cellSize={5}
-          cellThickness={0.5}
-          cellColor="#ffffff"
-          sectionSize={25}
-          sectionThickness={1}
-          sectionColor="#ffffff"
-          fadeDistance={100}
-          fadeStrength={1}
-          infiniteGrid
-        />
+        {!isMobile && (
+          <Grid
+            position={[0, -2.19, 0]}
+            args={[400, 400]}
+            cellSize={5}
+            cellThickness={0.5}
+            cellColor="#ffffff"
+            sectionSize={25}
+            sectionThickness={1}
+            sectionColor="#ffffff"
+            fadeDistance={100}
+            fadeStrength={1}
+            infiniteGrid
+          />
+        )}
 
         <Physics gravity={[0, -9.81, 0]} colliders="trimesh">
-          {/* Main mountain */}
           <Suspense fallback={null}>
-            <Mountain3D ref={mountainRef} />
+            <Mountain3D ref={mountainRef} quality={isMobile ? 'mobile' : 'desktop'} />
           </Suspense>
           <EventMarkers3D />
           <MonthlyPlaques3D />
           <MemorialPins3D />
 
-          {/* First-person camera walker (no model to keep it light) */}
           <Suspense fallback={null}>
-            <FirstPersonWalker eyeHeight={1.6} />
+            <FirstPersonWalker eyeHeight={1.6} isMobile={isMobile} />
           </Suspense>
         </Physics>
 
-        {/* Performance stats */}
         {showStats && <Stats />}
       </Canvas>
     </div>
   );
 };
 
-function CameraSync({ cameraPosition, cameraTarget, onSync }: { cameraPosition: [number, number, number]; cameraTarget: [number, number, number]; onSync?: (pos: [number, number, number], tgt: [number, number, number]) => void; }) {
-  const { camera, controls } = useThree() as unknown as { camera: THREE.PerspectiveCamera, controls?: any };
-  const controlsRef = useRef<any>(null);
-
-  // Try to get OrbitControls instance if present
-  useEffect(() => {
-    // three fiber injects default controls differently; we attempt to read from state
-    // but we can still set camera position/target directly
-  }, []);
+function CameraSync({
+  cameraPosition,
+  cameraTarget,
+  onSync,
+}: {
+  cameraPosition: [number, number, number];
+  cameraTarget: [number, number, number];
+  onSync?: (pos: [number, number, number], tgt: [number, number, number]) => void;
+}) {
+  const { camera, controls } = useThree() as unknown as { camera: THREE.PerspectiveCamera; controls?: any };
 
   useEffect(() => {
     camera.position.set(...cameraPosition);
@@ -158,7 +176,6 @@ function CameraGroundClamp({ enabled = true, clearance = 1.0 }: { enabled?: bool
   return null;
 }
 
-// Helper replicated from Player to sample along the walkway
 const findWalkwaySample = (profile: WalkwaySample[], distance: number) => {
   if (!profile.length) {
     return {
@@ -204,7 +221,7 @@ const findWalkwaySample = (profile: WalkwaySample[], distance: number) => {
   };
 };
 
-function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
+function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: number; isMobile?: boolean }) {
   const { camera, gl } = useThree();
   const walkwayProfile = useCovidStore((state) => state.walkwayProfile);
   const dataLength = useCovidStore((state) => state.data.length);
@@ -213,7 +230,9 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
   const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
   const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
   const terrainSampler = useCovidStore((state) => state.terrainSampler);
-  const keyStateRef = useRef({ forward: false, backward: false, left: false, right: false, run: false });
+  const mobileMoveInput = useCovidStore((state) => state.mobileMoveInput);
+
+  const keyStateRef = useRef<MovementState>({ ...defaultMoveState });
   const pointerLockedRef = useRef(false);
   const yawRef = useRef(Math.PI * 0.5);
   const pitchRef = useRef(THREE.MathUtils.degToRad(0));
@@ -221,14 +240,32 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
   const targetDistanceRef = useRef(0);
   const lateralOffsetRef = useRef(0);
   const lateralTargetRef = useRef(0);
-  const cameraCollisionRayRef = useRef(new THREE.Raycaster());
   const hasInitialOrientationRef = useRef(false);
+  const strideCycleRef = useRef(0);
+  const forwardVelocityRef = useRef(0);
+  const strafeVelocityRef = useRef(0);
+  const skipNextIndexSyncRef = useRef(false);
+
   const touchStateRef = useRef({
     active: false,
     pointerId: null as number | null,
     x: 0,
     y: 0,
   });
+
+  const worldUpRef = useRef(new THREE.Vector3(0, 1, 0));
+  const alignQuatRef = useRef(new THREE.Quaternion());
+  const moveDirRef = useRef(new THREE.Vector3());
+  const forwardVecRef = useRef(new THREE.Vector3());
+  const rightVecRef = useRef(new THREE.Vector3());
+  const groundNormalRef = useRef(new THREE.Vector3(0, 1, 0));
+  const planarForwardRef = useRef(new THREE.Vector3());
+  const planarRightRef = useRef(new THREE.Vector3());
+  const playerPosRef = useRef(new THREE.Vector3());
+  const rightAlignedRef = useRef(new THREE.Vector3());
+  const forwardAlignedRef = useRef(new THREE.Vector3());
+  const desiredCameraPosRef = useRef(new THREE.Vector3());
+  const lookTargetRef = useRef(new THREE.Vector3());
 
   const walkwayLength = useMemo(() => {
     if (!walkwayProfile.length) return 0;
@@ -240,11 +277,26 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
     return (idx: number) => walkwayLength * (idx / (dataLength - 1));
   }, [walkwayLength, dataLength]);
 
+  const distanceStep = useMemo(() => {
+    if (!walkwayLength || dataLength <= 1) return 0;
+    return walkwayLength / (dataLength - 1);
+  }, [walkwayLength, dataLength]);
+
   useEffect(() => {
     if (!walkwayLength) return;
+    if (skipNextIndexSyncRef.current) {
+      skipNextIndexSyncRef.current = false;
+      return;
+    }
+
     const startDistance = distanceFromDataIndex(currentDateIndex);
+    if (distanceStep > 0 && Math.abs(startDistance - targetDistanceRef.current) <= distanceStep * 0.55) {
+      return;
+    }
+
     distanceRef.current = startDistance;
     targetDistanceRef.current = startDistance;
+
     if (!hasInitialOrientationRef.current && walkwayProfile.length) {
       const baseSample = findWalkwaySample(walkwayProfile, startDistance);
       const aheadDistance = Math.min(startDistance + 1.4, walkwayLength);
@@ -257,7 +309,7 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
       pitchRef.current = THREE.MathUtils.degToRad(-6);
       hasInitialOrientationRef.current = true;
     }
-  }, [currentDateIndex, distanceFromDataIndex, walkwayLength, walkwayProfile]);
+  }, [currentDateIndex, distanceFromDataIndex, distanceStep, walkwayLength, walkwayProfile]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -268,6 +320,7 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
       if (key === 'd' || key === 'D' || key === 'ArrowRight') keyStateRef.current.right = true;
       if (key === 'Shift') keyStateRef.current.run = true;
     };
+
     const handleKeyUp = (event: KeyboardEvent) => {
       const key = event.key;
       if (key === 'w' || key === 'W' || key === 'ArrowUp') keyStateRef.current.forward = false;
@@ -276,6 +329,7 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
       if (key === 'd' || key === 'D' || key === 'ArrowRight') keyStateRef.current.right = false;
       if (key === 'Shift') keyStateRef.current.run = false;
     };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     return () => {
@@ -286,22 +340,38 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
 
   useEffect(() => {
     const canvas = gl.domElement;
-    const requestPointerLock = () => canvas.requestPointerLock?.();
+    const requestPointerLock = () => {
+      canvas.requestPointerLock?.();
+    };
+
     const handlePointerLockChange = () => {
       pointerLockedRef.current = document.pointerLockElement === canvas;
     };
-    const handlePointerMove = (event: MouseEvent) => {
-      if (!pointerLockedRef.current) return;
-      yawRef.current -= event.movementX * 0.0018;
+
+    const applyLookDelta = (dx: number, dy: number) => {
+      yawRef.current -= dx * 0.0018;
       pitchRef.current = THREE.MathUtils.clamp(
-        pitchRef.current - event.movementY * 0.0013,
+        pitchRef.current - dy * 0.0013,
         THREE.MathUtils.degToRad(-60),
         THREE.MathUtils.degToRad(70)
       );
     };
+
+    const handlePointerMove = (event: MouseEvent) => {
+      if (pointerLockedRef.current) {
+        applyLookDelta(event.movementX, event.movementY);
+        return;
+      }
+      // Desktop fallback: keep orbital look while dragging mouse without pointer lock.
+      if (event.buttons === 1) {
+        applyLookDelta(event.movementX, event.movementY);
+      }
+    };
+
     canvas.addEventListener('click', requestPointerLock);
     document.addEventListener('pointerlockchange', handlePointerLockChange);
     document.addEventListener('mousemove', handlePointerMove);
+
     return () => {
       canvas.removeEventListener('click', requestPointerLock);
       document.removeEventListener('pointerlockchange', handlePointerLockChange);
@@ -318,12 +388,15 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
 
     const handlePointerDown = (event: PointerEvent) => {
       if (event.pointerType === 'mouse') return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest?.('[data-joystick-control="true"]')) return;
       touchState.active = true;
       touchState.pointerId = event.pointerId;
       touchState.x = event.clientX;
       touchState.y = event.clientY;
       canvas.setPointerCapture?.(event.pointerId);
     };
+
     const handlePointerMove = (event: PointerEvent) => {
       if (!touchState.active || touchState.pointerId !== event.pointerId) return;
       const dx = event.clientX - touchState.x;
@@ -337,6 +410,7 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
         THREE.MathUtils.degToRad(70)
       );
     };
+
     const handlePointerUp = (event: PointerEvent) => {
       if (touchState.pointerId !== event.pointerId) return;
       touchState.active = false;
@@ -358,96 +432,83 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
     };
   }, [gl]);
 
-  useEffect(() => {
-    if (!walkwayLength) return;
-    const step = (walkwayLength / Math.max(dataLength - 1, 1)) * 1.2;
-    const onWheel = (event: WheelEvent) => {
-      if (!walkwayLength) return;
-      event.preventDefault();
-      const direction = event.deltaY < 0 ? -1 : 1;
-      targetDistanceRef.current = THREE.MathUtils.clamp(
-        targetDistanceRef.current + direction * step,
-        0,
-        walkwayLength
-      );
-    };
-    window.addEventListener('wheel', onWheel, { passive: false });
-    return () => window.removeEventListener('wheel', onWheel);
-  }, [walkwayLength, dataLength]);
-
-  const sampleGroundNormal = (x: number, z: number) => {
-    if (!terrainSampler) return new THREE.Vector3(0, 1, 0);
+  const sampleGroundNormal = (x: number, z: number, target: THREE.Vector3) => {
+    if (!terrainSampler) return target.set(0, 1, 0);
     const h = 0.6;
     const hx1 = terrainSampler.sampleHeight(x + h, z);
     const hx0 = terrainSampler.sampleHeight(x - h, z);
     const hz1 = terrainSampler.sampleHeight(x, z + h);
     const hz0 = terrainSampler.sampleHeight(x, z - h);
-    const normal = new THREE.Vector3(hx0 - hx1, 2 * h, hz0 - hz1);
-    if (normal.lengthSq() < 1e-6) return new THREE.Vector3(0, 1, 0);
-    return normal.normalize();
+    target.set(hx0 - hx1, 2 * h, hz0 - hz1);
+    if (target.lengthSq() < 1e-6) return target.set(0, 1, 0);
+    return target.normalize();
   };
 
   useFrame((_, delta) => {
     if (!walkwayLength || !walkwayProfile.length) return;
-    const MOVE_SPEED = 20;
-    const RUN_MULTIPLIER = 1.6;
-    const STRAFE_SPEED = 12;
+
+    const MOVE_SPEED = 18.5;
+    const RUN_MULTIPLIER = 1.55;
+    const STRAFE_SPEED = 10.5;
+    const ACCELERATION = 9;
+    const DECELERATION = 11;
     const POSITION_SMOOTH = 9;
     const LATERAL_MARGIN = 0.6;
-    const CAMERA_COLLISION_CLEARANCE = 0.25;
 
     const keyState = keyStateRef.current;
-    const moveIntent = (keyState.forward ? 1 : 0) - (keyState.backward ? 1 : 0);
-    const strafeIntent = (keyState.right ? 1 : 0) - (keyState.left ? 1 : 0);
+    const joystickForward = THREE.MathUtils.clamp(-(mobileMoveInput[1] ?? 0), -1, 1);
+    const joystickStrafe = THREE.MathUtils.clamp(mobileMoveInput[0] ?? 0, -1, 1);
 
-    const appliedSpeed = keyState.run ? MOVE_SPEED * RUN_MULTIPLIER : MOVE_SPEED;
-    const speed = appliedSpeed * delta;
-    const strafeSpeed = STRAFE_SPEED * delta;
+    const keyboardForward = (keyState.forward ? 1 : 0) - (keyState.backward ? 1 : 0);
+    const keyboardStrafe = (keyState.right ? 1 : 0) - (keyState.left ? 1 : 0);
+    const inputForward = THREE.MathUtils.clamp(keyboardForward + joystickForward, -1, 1);
+    const inputStrafe = THREE.MathUtils.clamp(keyboardStrafe + joystickStrafe, -1, 1);
+    const isRunning = keyState.run || (Math.abs(joystickForward) > 0.92 && isMobile);
+
+    const moveAccel = Math.abs(inputForward) > Math.abs(forwardVelocityRef.current) ? ACCELERATION : DECELERATION;
+    const strafeAccel = Math.abs(inputStrafe) > Math.abs(strafeVelocityRef.current) ? ACCELERATION : DECELERATION;
+    forwardVelocityRef.current = THREE.MathUtils.damp(forwardVelocityRef.current, inputForward, moveAccel, delta);
+    strafeVelocityRef.current = THREE.MathUtils.damp(strafeVelocityRef.current, inputStrafe, strafeAccel, delta);
 
     const baseSample = findWalkwaySample(walkwayProfile, distanceRef.current);
     let maxLateral = Math.max(baseSample.halfWidth - LATERAL_MARGIN, 0.3);
 
-    const groundNormalForMove = sampleGroundNormal(baseSample.position.x, baseSample.position.z);
-    const moveDir = new THREE.Vector3();
-    if (moveIntent !== 0 || strafeIntent !== 0) {
-      const alignQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), groundNormalForMove);
-      const planarForward = new THREE.Vector3(0, 0, -1)
-        .applyQuaternion(alignQuat)
-        .applyAxisAngle(groundNormalForMove, yawRef.current)
-        .normalize();
-      const planarRight = new THREE.Vector3().crossVectors(planarForward, groundNormalForMove).normalize();
-      moveDir.addScaledVector(planarForward, moveIntent);
-      moveDir.addScaledVector(planarRight, strafeIntent);
-      if (moveDir.lengthSq() > 1) moveDir.normalize();
-    }
-
     const aheadSample = findWalkwaySample(walkwayProfile, distanceRef.current + 1.2);
-    const forwardVec = aheadSample.position.clone().sub(baseSample.position);
+    const forwardVec = forwardVecRef.current.copy(aheadSample.position).sub(baseSample.position);
     forwardVec.y = 0;
     if (forwardVec.lengthSq() < 1e-4) forwardVec.set(1, 0, 0);
     forwardVec.normalize();
-    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), forwardVec).normalize();
 
+    const right = rightVecRef.current.crossVectors(worldUpRef.current, forwardVec).normalize();
+
+    const groundNormalForMove = sampleGroundNormal(baseSample.position.x, baseSample.position.z, groundNormalRef.current);
+    const moveDir = moveDirRef.current.set(0, 0, 0);
+    if (Math.abs(forwardVelocityRef.current) > 0.001 || Math.abs(strafeVelocityRef.current) > 0.001) {
+      const alignQuat = alignQuatRef.current.setFromUnitVectors(worldUpRef.current, groundNormalForMove);
+      const planarForward = planarForwardRef.current
+        .set(0, 0, -1)
+        .applyQuaternion(alignQuat)
+        .applyAxisAngle(groundNormalForMove, yawRef.current)
+        .normalize();
+      const planarRight = planarRightRef.current.crossVectors(planarForward, groundNormalForMove).normalize();
+      moveDir.addScaledVector(planarForward, forwardVelocityRef.current);
+      moveDir.addScaledVector(planarRight, strafeVelocityRef.current);
+      if (moveDir.lengthSq() > 1) moveDir.normalize();
+    }
     const alongIntent = moveDir.dot(forwardVec);
     const lateralIntent = moveDir.dot(right);
 
-    targetDistanceRef.current = THREE.MathUtils.clamp(
-      targetDistanceRef.current + alongIntent * speed,
-      0,
-      walkwayLength
-    );
+    const appliedSpeed = (isRunning ? MOVE_SPEED * RUN_MULTIPLIER : MOVE_SPEED) * delta;
+    const appliedStrafe = STRAFE_SPEED * delta;
+
+    targetDistanceRef.current = THREE.MathUtils.clamp(targetDistanceRef.current + alongIntent * appliedSpeed, 0, walkwayLength);
     lateralTargetRef.current = THREE.MathUtils.clamp(
-      lateralTargetRef.current + lateralIntent * strafeSpeed,
+      lateralTargetRef.current + lateralIntent * appliedStrafe,
       -maxLateral,
       maxLateral
     );
 
-    distanceRef.current = THREE.MathUtils.damp(
-      distanceRef.current,
-      targetDistanceRef.current,
-      POSITION_SMOOTH,
-      delta
-    );
+    distanceRef.current = THREE.MathUtils.damp(distanceRef.current, targetDistanceRef.current, POSITION_SMOOTH, delta);
 
     const smoothedSample = findWalkwaySample(walkwayProfile, distanceRef.current);
     maxLateral = Math.max(smoothedSample.halfWidth - LATERAL_MARGIN, 0.3);
@@ -458,37 +519,48 @@ function FirstPersonWalker({ eyeHeight = 1.6 }: { eyeHeight?: number }) {
       delta
     );
     lateralOffsetRef.current = lateral;
+
     const lateralClamped = THREE.MathUtils.clamp(lateral, -smoothedSample.outerWidth, smoothedSample.outerWidth);
-    const playerPos = smoothedSample.position.clone().add(right.clone().multiplyScalar(lateralClamped));
+    const playerPos = playerPosRef.current.copy(smoothedSample.position).addScaledVector(right, lateralClamped);
     const sampledHeight = terrainSampler?.sampleHeight(playerPos.x, playerPos.z);
     playerPos.y = (sampledHeight ?? smoothedSample.baseY) + 0.05;
 
-    // Camera orientation aligned to surface normal (simulated gravity)
-    const groundNormal = sampleGroundNormal(playerPos.x, playerPos.z);
-    const alignQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), groundNormal);
-    const up = groundNormal.clone();
-    const rightAligned = new THREE.Vector3(1, 0, 0).applyQuaternion(alignQuat).applyAxisAngle(up, yawRef.current);
-    const forwardAligned = new THREE.Vector3(0, 0, -1)
+    const up = sampleGroundNormal(playerPos.x, playerPos.z, groundNormalRef.current);
+    const alignQuat = alignQuatRef.current.setFromUnitVectors(worldUpRef.current, up);
+    const rightAligned = rightAlignedRef.current.set(1, 0, 0).applyQuaternion(alignQuat).applyAxisAngle(up, yawRef.current);
+    const forwardAligned = forwardAlignedRef.current
+      .set(0, 0, -1)
       .applyQuaternion(alignQuat)
       .applyAxisAngle(up, yawRef.current)
       .applyAxisAngle(rightAligned, pitchRef.current)
       .normalize();
 
-    const desiredCameraPos = playerPos.clone().add(up.clone().multiplyScalar(eyeHeight));
+    const gaitSpeed = Math.min(1, Math.sqrt(forwardVelocityRef.current ** 2 + strafeVelocityRef.current ** 2));
+    strideCycleRef.current += delta * (isRunning ? 10.5 : 7.2) * (0.35 + gaitSpeed * 0.9);
+    const bobAmplitude = isRunning ? 0.045 : 0.03;
+    const bobOffset = Math.sin(strideCycleRef.current) * bobAmplitude * gaitSpeed;
+    const swayOffset = Math.cos(strideCycleRef.current * 0.5) * 0.018 * gaitSpeed;
+
+    const desiredCameraPos = desiredCameraPosRef.current
+      .copy(playerPos)
+      .addScaledVector(up, eyeHeight + bobOffset)
+      .addScaledVector(rightAligned, swayOffset);
+
     camera.position.lerp(desiredCameraPos, 1 - Math.exp(-12 * delta));
-    const lookTarget = camera.position.clone().add(forwardAligned);
+    const lookTarget = lookTargetRef.current.copy(camera.position).add(forwardAligned);
     camera.up.copy(up);
     camera.lookAt(lookTarget);
+
     setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
     setCameraTarget([lookTarget.x, lookTarget.y, lookTarget.z]);
 
-    const newIndex = (() => {
-      if (!walkwayLength || dataLength <= 1) return 0;
+    if (walkwayLength && dataLength > 1) {
       const t = THREE.MathUtils.clamp(distanceRef.current / walkwayLength, 0, 1);
-      return Math.round(t * (dataLength - 1));
-    })();
-    if (newIndex !== currentDateIndex) {
-      setCurrentDateIndex(newIndex);
+      const newIndex = Math.round(t * (dataLength - 1));
+      if (newIndex !== currentDateIndex) {
+        skipNextIndexSyncRef.current = true;
+        setCurrentDateIndex(newIndex);
+      }
     }
   });
 

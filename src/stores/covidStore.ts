@@ -33,11 +33,13 @@ interface CovidStore {
   setRevealedX: (x: number) => void;
   setMountainMesh: (mesh: THREE.Object3D | null) => void;
 
-  // Navigation state
   cameraPosition: [number, number, number];
   cameraTarget: [number, number, number];
   setCameraPosition: (position: [number, number, number]) => void;
   setCameraTarget: (target: [number, number, number]) => void;
+
+  mobileMoveInput: [number, number];
+  setMobileMoveInput: (input: [number, number]) => void;
 }
 
 export const useCovidStore = create<CovidStore>((set) => ({
@@ -65,7 +67,6 @@ export const useCovidStore = create<CovidStore>((set) => ({
     }),
   setMountainMesh: (mesh) => set({ mountainMesh: mesh }),
 
-  // Default camera position - viewing the mountain from a distance
   cameraPosition: [50, 30, 50],
   cameraTarget: [0, 0, 0],
   setCameraPosition: (position) =>
@@ -91,5 +92,17 @@ export const useCovidStore = create<CovidStore>((set) => ({
         return state;
       }
       return { cameraTarget: target };
+    }),
+
+  mobileMoveInput: [0, 0],
+  setMobileMoveInput: (input) =>
+    set((state) => {
+      if (
+        Math.abs(state.mobileMoveInput[0] - input[0]) < 0.01 &&
+        Math.abs(state.mobileMoveInput[1] - input[1]) < 0.01
+      ) {
+        return state;
+      }
+      return { mobileMoveInput: input };
     }),
 }));

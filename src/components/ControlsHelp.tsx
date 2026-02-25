@@ -11,13 +11,11 @@ export const ControlsHelp = ({ variant = 'floating' }: ControlsHelpProps = {}) =
   const [isOpen, setIsOpen] = useState(false);
 
   const movement = [
-    { key: 'W / D', action: 'Seguir pela linha do tempo' },
-    { key: 'S / A', action: 'Retornar no tempo' },
+    { key: 'W / ↑', action: 'Frente (direção da câmera)' },
+    { key: 'S / ↓', action: 'Trás' },
+    { key: 'A / ←', action: 'Esquerda' },
+    { key: 'D / →', action: 'Direita' },
     { key: 'Shift', action: 'Correr' },
-  ];
-  const temporal = [
-    { key: ', / < / [', action: 'Dia anterior' },
-    { key: '. / > / ]', action: 'Próximo dia' },
   ];
 
   return (
@@ -59,27 +57,13 @@ export const ControlsHelp = ({ variant = 'floating' }: ControlsHelpProps = {}) =
                 <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/80 sm:hidden">
                   <p className="text-[10px] uppercase tracking-[0.3em] text-amber-300">Toque</p>
                   <p className="mt-2 text-[12px] leading-relaxed">
-                    Use o slider na base da tela para avançar ou voltar no tempo. Toque nas placas para abrir links.
+                    Use o joystick no canto inferior esquerdo para caminhar e arraste na cena para olhar em volta.
                   </p>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2 text-blue-400">Movimento (1ª pessoa)</h4>
                   <div className="grid grid-cols-1 gap-2 text-sm">
                     {movement.map((control, index) => (
-                      <div key={index} className="flex justify-between">
-                        <span className="font-mono bg-white/10 px-2 py-1 rounded text-xs">
-                          {control.key}
-                        </span>
-                        <span className="opacity-80">{control.action}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold mb-2 text-green-400">Navegação Temporal</h4>
-                  <div className="grid grid-cols-1 gap-2 text-sm">
-                    {temporal.map((control, index) => (
                       <div key={index} className="flex justify-between">
                         <span className="font-mono bg-white/10 px-2 py-1 rounded text-xs">
                           {control.key}

@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, Bell, Info, Pin, X } from 'lucide-react';
 import { useState } from 'react';
@@ -8,26 +9,23 @@ import { EventCard } from './components/EventCard';
 import { InfoPanel } from './components/InfoPanel';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MemorialPanel } from './components/MemorialPanel';
+import { MobileMoveJoystick } from './components/MobileMoveJoystick';
 import { Scene3D } from './components/Scene3D';
-import { TimelineControls } from './components/TimelineControls';
 import { Button } from './components/ui/button';
-import { cn } from '@/lib/utils';
 import { useCovidData } from './hooks/useCovidData';
-// import { useKeyboardControls } from './hooks/useKeyboardControls';
-import { useTemporalNavigation } from './hooks/useTemporalNavigation';
+import { useIsMobile } from './hooks/use-mobile';
 import { AuthProvider } from './providers/AuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
 
 function AppContent() {
   const { isLoading, error } = useCovidData();
   const [mobilePanel, setMobilePanel] = useState<'event' | 'memorial' | 'header' | null>(null);
+  const isMobile = useIsMobile();
 
-  // Movement now handled by Player (PointerLockControls)
-  // Temporal navigation via keyboard (comma/period or [ / ])
-  useTemporalNavigation();
   const toggleMobilePanel = (panel: 'event' | 'memorial' | 'header') => {
     setMobilePanel((current) => (current === panel ? null : panel));
   };
+
   const closeMobilePanel = () => setMobilePanel(null);
 
   if (isLoading) {
@@ -40,12 +38,8 @@ function AppContent() {
         <div className="text-center space-y-4">
           <AlertCircle className="w-16 h-16 mx-auto text-red-300" />
           <h2 className="text-2xl font-bold">Erro ao Carregar Dados</h2>
-          <p className="text-lg opacity-80">
-            Não foi possível carregar os dados da COVID-19.
-          </p>
-          <p className="text-sm opacity-60">
-            {error.message}
-          </p>
+          <p className="text-lg opacity-80">Não foi possível carregar os dados da COVID-19.</p>
+          <p className="text-sm opacity-60">{error.message}</p>
         </div>
       </div>
     );
@@ -54,11 +48,11 @@ function AppContent() {
   return (
     <div className="relative h-screen w-full overflow-hidden bg-black">
       <header className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
-        <div className="pointer-events-auto hidden flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 sm:flex sm:gap-4 sm:px-6 sm:py-3">
+        <div className="pointer-events-auto hidden flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:flex xl:gap-4 xl:px-6 xl:py-3">
           <InfoPanel variant="compact" />
           <ControlsHelp variant="header" />
         </div>
-        <div className="pointer-events-auto flex items-center gap-2 rounded-b-2xl bg-black/55 px-3 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 sm:hidden">
+        <div className="pointer-events-auto flex items-center gap-2 rounded-b-2xl bg-black/55 px-3 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:hidden">
           <InfoPanel variant="mini" />
           <div className="ml-auto flex items-center gap-2">
             <Button
@@ -79,20 +73,19 @@ function AppContent() {
           </div>
         </div>
       </header>
-      {/* 3D Scene with Error Boundary */}
+
       <ErrorBoundary>
         <div className="relative h-full">
           <Scene3D enableControls showStats={false} />
-          <div className="hidden sm:block">
+
+          <div className="hidden xl:block">
             <EventCard />
           </div>
-          <div className="hidden sm:block">
+          <div className="hidden xl:block">
             <MemorialPanel />
           </div>
-          <div className="md:hidden">
-            <TimelineControls />
-          </div>
-          <div className="sm:hidden absolute bottom-28 right-4 z-20 flex flex-col gap-2 safe-bottom">
+
+          <div className="xl:hidden absolute bottom-20 right-3 z-20 flex flex-col gap-2 safe-bottom sm:bottom-6 sm:right-4">
             <Button
               size="icon"
               variant="outline"
@@ -122,10 +115,20 @@ function AppContent() {
               <span className="sr-only">Memorial</span>
             </Button>
           </div>
+
+          {isMobile && (
+            <div
+              className="xl:hidden absolute bottom-4 left-3 z-20 safe-bottom max-[380px]:scale-90 max-[340px]:scale-75 sm:bottom-6 sm:left-4"
+              data-joystick-control="true"
+            >
+              <MobileMoveJoystick />
+            </div>
+          )}
+
           <AnimatePresence>
             {mobilePanel && (
               <motion.div
-                className="sm:hidden fixed inset-0 z-30"
+                className="xl:hidden fixed inset-0 z-30"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -165,15 +168,12 @@ function AppContent() {
               </motion.div>
             )}
           </AnimatePresence>
-          {/* Footer */}
+
           <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 transform rounded-lg bg-black/70 px-3 py-2 text-white backdrop-blur-sm sm:px-4">
-            <p className="text-xs text-center sm:text-sm">
-              Web Art • AmoreiraT • Three.js - saude.gov.br
-            </p>
+            <p className="text-xs text-center sm:text-sm">Web Art • AmoreiraT • Three.js - saude.gov.br</p>
           </div>
         </div>
       </ErrorBoundary>
-
     </div>
   );
 }
