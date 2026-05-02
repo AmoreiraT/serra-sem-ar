@@ -1,4 +1,4 @@
-import { Grid, Sky, Stats } from '@react-three/drei';
+import { Sky, Stats } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
@@ -208,26 +208,11 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           quality={environmentQuality}
         />
 
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.2, 0]} receiveShadow={shadows}>
-          <planeGeometry args={[1600, 1600, 1, 1]} />
-          <meshStandardMaterial color="#27170d" roughness={0.95} metalness={0.02} />
-        </mesh>
-
-        {!isMobile && (
-          <Grid
-            position={[0, -2.19, 0]}
-            args={[400, 400]}
-            cellSize={5}
-            cellThickness={0.5}
-            cellColor="#ffffff"
-            sectionSize={25}
-            sectionThickness={1}
-            sectionColor="#ffffff"
-            fadeDistance={100}
-            fadeStrength={1}
-            infiniteGrid
-          />
-        )}
+        <SurroundingTerrain
+          mountainRadius={calculatedRadius}
+          mountainCenter={mountainCenter}
+          quality={mountainQuality}
+        />
 
         <Physics gravity={[0, -9.81, 0]} colliders="trimesh">
           <Suspense fallback={null}>
@@ -247,6 +232,84 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
     </div>
   );
 };
+
+function SurroundingTerrain({
+  mountainRadius,
+  mountainCenter,
+  quality,
+}: {
+  mountainRadius: number;
+  mountainCenter: [number, number, number];
+  quality: 'desktop' | 'mobile';
+}) {
+  const geometry = useMemo(() => {
+    const segments = quality === 'mobile' ? 88 : 144;
+    const size = Math.max(1300, mountainRadius * 2.55);
+    const half = size / 2;
+    const positions: number[] = [];
+    const colors: number[] = [];
+    const indices: number[] = [];
+    const low = new THREE.Color('#120904');
+    const mid = new THREE.Color('#2a1409');
+    const high = new THREE.Color('#5a321c');
+    const color = new THREE.Color();
+
+    for (let zIndex = 0; zIndex <= segments; zIndex += 1) {
+      const zT = zIndex / segments;
+      const localZ = THREE.MathUtils.lerp(-half, half, zT);
+
+      for (let xIndex = 0; xIndex <= segments; xIndex += 1) {
+        const xT = xIndex / segments;
+        const localX = THREE.MathUtils.lerp(-half, half, xT);
+        const radial = Math.sqrt(localX * localX + localZ * localZ) / half;
+        const centralValley = Math.exp(-Math.abs(localZ) / Math.max(28, mountainRadius * 0.06));
+        const wave =
+          Math.sin(localX * 0.018 + localZ * 0.01) * 0.72 +
+          Math.cos(localX * 0.009 - localZ * 0.024) * 0.52 +
+          Math.sin((localX + localZ) * 0.006) * 0.9;
+        const y = -2.55 + wave * (0.55 + radial * 1.15) - centralValley * 0.42;
+
+        positions.push(mountainCenter[0] + localX, y, mountainCenter[2] + localZ);
+
+        const colorMix = THREE.MathUtils.clamp(0.26 + radial * 0.28 + wave * 0.08, 0, 1);
+        color.copy(low).lerp(mid, colorMix).lerp(high, Math.max(0, colorMix - 0.58) * 0.55);
+        colors.push(color.r, color.g, color.b);
+      }
+    }
+
+    const row = segments + 1;
+    for (let zIndex = 0; zIndex < segments; zIndex += 1) {
+      for (let xIndex = 0; xIndex < segments; xIndex += 1) {
+        const a = zIndex * row + xIndex;
+        const b = a + 1;
+        const c = (zIndex + 1) * row + xIndex;
+        const d = c + 1;
+        indices.push(a, c, b, b, c, d);
+      }
+    }
+
+    const terrainGeometry = new THREE.BufferGeometry();
+    terrainGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    terrainGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    terrainGeometry.setIndex(indices);
+    terrainGeometry.computeVertexNormals();
+    return terrainGeometry;
+  }, [mountainCenter, mountainRadius, quality]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  return (
+    <mesh geometry={geometry} receiveShadow={quality === 'desktop'} renderOrder={-20}>
+      <meshStandardMaterial
+        vertexColors
+        roughness={0.96}
+        metalness={0.02}
+        side={THREE.DoubleSide}
+        fog
+      />
+    </mesh>
+  );
+}
 
 function CameraSync({
   cameraPosition,
@@ -346,7 +409,7 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
 
   const keyStateRef = useRef<MovementState>({ ...defaultMoveState });
   const pointerLockedRef = useRef(false);
-  const yawRef = useRef(Math.PI * 0.5);
+  const yawRef = useRef(-Math.PI * 0.5);
   const pitchRef = useRef(THREE.MathUtils.degToRad(0));
   const distanceRef = useRef(0);
   const targetDistanceRef = useRef(0);
@@ -407,7 +470,11 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
     }
 
     const startDistance = distanceFromDataIndex(currentDateIndex);
-    if (distanceStep > 0 && Math.abs(startDistance - targetDistanceRef.current) <= distanceStep * 0.55) {
+    if (
+      hasInitialOrientationRef.current &&
+      distanceStep > 0 &&
+      Math.abs(startDistance - targetDistanceRef.current) <= distanceStep * 0.55
+    ) {
       return;
     }
 

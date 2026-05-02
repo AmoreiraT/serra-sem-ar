@@ -5,10 +5,11 @@ export const applyBackgroundMaterialConstraints = (material: THREE.MeshStandardM
   material.transparent = true;
   material.depthWrite = false;
   material.depthTest = true;
-  material.opacity = Math.min(material.opacity, 0.22);
+  material.opacity = Math.min(material.opacity, 0.92);
   material.toneMapped = false;
-  material.fog = true;
-  material.emissive.setRGB(0, 0, 0);
+  material.fog = false;
+  material.emissive.setRGB(0.28, 0.28, 0.28);
+  material.emissiveIntensity = 0.9;
 };
 
 export const applyDesaturationShader = (
@@ -19,7 +20,7 @@ export const applyDesaturationShader = (
 ): void => {
   const clampedDesaturation = Math.min(1, Math.max(0, desaturationAmount));
   const clampedContrast = Math.min(1, Math.max(0.6, contrast));
-  const clampedBrightness = Math.min(1, Math.max(0.72, brightness));
+  const clampedBrightness = Math.min(1.25, Math.max(0.72, brightness));
 
   material.onBeforeCompile = (shader: THREE.Shader) => {
     shader.uniforms.uDesaturationAmount = { value: clampedDesaturation };

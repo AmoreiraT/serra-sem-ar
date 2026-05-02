@@ -62,7 +62,7 @@ export const covidEvents: CovidEvent[] = [
       },
       {
         type: 'link',
-        url: 'https://www.who.int/director-general/speeches/detail/who-director-general-s-opening-remarks-at-the-media-briefing-on-covid-19---11-march-2020',
+        url: 'https://www.who.int/news-room/speeches/item/who-director-general-s-opening-remarks-at-the-media-briefing-on-covid-19---11-march-2020',
         label: 'Discurso da OMS',
       },
     ],
@@ -75,7 +75,7 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://www12.senado.leg.br/noticias/materias/2020/03/20/senado-aprova-decreto-de-calamidade-publica',
+        url: 'https://www12.senado.leg.br/noticias/materias/2020/03/20/em-sessao-historica-senado-aprova-calamidade-publica-contra-covid-19',
         label: 'Notícia do Senado',
       },
     ],
@@ -102,8 +102,8 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://agenciabrasil.ebc.com.br/politica/noticia/2020-04/mandetta-anuncia-que-foi-demisssionado-do-ministerio-da-saude',
-        label: 'Matéria da Agência Brasil',
+        url: 'https://www.cnnbrasil.com.br/politica/jair-bolsonaro-demite-luiz-henrique-mandetta-do-ministerio-da-saude/',
+        label: 'Matéria da CNN Brasil',
       },
     ],
   },
@@ -166,8 +166,8 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://portal.stf.jus.br/noticias/verNoticiaDetalhe.asp?idConteudo=447107',
-        label: 'Comunicado do STF',
+        url: 'https://www.oab.org.br/noticia/58567/com-acao-da-oab-stf-determina-que-ministerio-da-saude-volte-a-divulgar-dados-da-pandemia',
+        label: 'Registro da decisão do STF',
       },
     ],
   },
@@ -216,7 +216,7 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://www12.senado.leg.br/noticias/materias/2021/04/13/instalada-cpi-da-pandemia',
+        url: 'https://www12.senado.leg.br/noticias/materias/2021/04/13/senado-cria-cpi-da-covid',
         label: 'Notícia do Senado Federal',
       },
     ],
@@ -229,7 +229,7 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://portal.fiocruz.br/noticia/fiocruz-entrega-primeiras-dose-de-ifa-nacional-da-vacina-covid-19',
+        url: 'https://www.fiocruzbrasilia.fiocruz.br/fiocruz-libera-primeira-vacina-covid-19-nacional/',
         label: 'Portal Fiocruz',
       },
     ],
@@ -254,7 +254,7 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://www.gov.br/anvisa/pt-br/assuntos/noticias-anvisa/2021/anvisa-aprova-vacina-da-pfizer-para-criancas-de-5-a-11-anos',
+        url: 'https://www.gov.br/anvisa/pt-br/assuntos/noticias-anvisa/2021/anvisa-aprova-vacina-da-pfizer-contra-covid-para-criancas-de-5-a-11-anos',
         label: 'Nota da Anvisa',
       },
     ],
@@ -279,7 +279,7 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2022/julho/ministerio-da-saude-planeja-reforco-bivalente-contra-a-covid-19',
+        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/janeiro/covid-19-ministerio-da-saude-preve-comeco-de-reforco-bivalente-em-27-de-fevereiro',
         label: 'Plano de reforço bivalente',
       },
     ],
@@ -295,13 +295,13 @@ export const covidEvents: CovidEvent[] = [
     title: 'Início da vacinação bivalente',
     description:
       'Campanha nacional aplica doses bivalentes em idosos e imunocomprometidos, atualizando a proteção contra variantes.',
-      attachments: [
-        {
-          type: 'link',
-          url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/fevereiro/brasil-inicia-vacinacao-bivalente-contra-a-covid-19',
-          label: 'Notícia do Ministério da Saúde',
-        },
-      ],
+    attachments: [
+      {
+        type: 'link',
+        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/janeiro/ministerio-da-saude-divulga-cronograma-do-programa-nacional-de-vacinacao-de-2023',
+        label: 'Notícia do Ministério da Saúde',
+      },
+    ],
   },
   {
     date: '2023-03-27',
@@ -311,7 +311,7 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/marco/ministerio-da-saude-amplia-publico-alvo-para-vacinacao-bivalente-contra-a-covid-19',
+        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/marco/estados-e-municipios-ja-podem-vacinar-todo-o-publico-prioritario-com-as-vacinas-bivalentes-saiba-se-chegou-a-sua-vez',
         label: 'Ampliação oficial',
       },
     ],
@@ -324,7 +324,7 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://www.who.int/news/item/05-05-2023-statement-on-the-15th-meeting-of-the-ihr-(2005)-emergency-committee-on-the-covid-19-pandemic',
+        url: 'https://www.who.int/news/item/05-05-2023-statement-on-the-fifteenth-meeting-of-the-international-health-regulations-%282005%29-emergency-committee-regarding-the-coronavirus-disease-%28covid-19%29-pandemic',
         label: 'Comunicado da OMS',
       },
     ],
@@ -337,7 +337,7 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/julho/ministerio-da-saude-lanca-movimento-nacional-pela-vacinacao',
+        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2023/julho/novo-painel-digital-permite-acompanhamento-diario-da-vacinacao-contra-a-covid-19',
         label: 'Movimento Nacional pela Vacinação',
       },
     ],
@@ -350,7 +350,7 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'link',
-        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2024/fevereiro/ministerio-da-saude-inicia-vacinacao-de-reforco-contra-a-covid-19',
+        url: 'https://www.gov.br/saude/pt-br/assuntos/noticias/2024/fevereiro/alerta-mantenha-a-vacinacao-contra-covid-19-em-dia',
         label: 'Plano 2024',
       },
     ],

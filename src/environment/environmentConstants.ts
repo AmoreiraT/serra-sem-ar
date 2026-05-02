@@ -13,15 +13,15 @@ export const LAYER_COUNTS: Record<EnvironmentBand, number> = {
 };
 
 export const LAYER_OPACITY_RANGE: Record<EnvironmentBand, readonly [number, number]> = {
-  FAR: [0.08, 0.12],
-  MID: [0.1, 0.2],
-  GROUND: [0.08, 0.18],
+  FAR: [0.68, 0.82],
+  MID: [0.72, 0.9],
+  GROUND: [0.7, 0.88],
 };
 
 export const LAYER_SCALE_MULTIPLIER: Record<EnvironmentBand, number> = {
-  FAR: 1.75,
-  MID: 1.1,
-  GROUND: 0.6,
+  FAR: 1.15,
+  MID: 0.82,
+  GROUND: 0.58,
 };
 
 export const DESATURATION_BY_BAND: Record<EnvironmentBand, number> = {
@@ -37,9 +37,9 @@ export const CONTRAST_BY_BAND: Record<EnvironmentBand, number> = {
 };
 
 export const BRIGHTNESS_BY_BAND: Record<EnvironmentBand, number> = {
-  FAR: 0.9,
-  MID: 0.92,
-  GROUND: 0.94,
+  FAR: 1.08,
+  MID: 1.1,
+  GROUND: 1.06,
 };
 
 export const VIDEO_PLANES_MAX = 3;

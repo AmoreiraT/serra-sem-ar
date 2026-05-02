@@ -9,9 +9,21 @@ interface UrbanLayerProps {
   readonly textures: ReadonlyArray<PandemicTexture>;
   readonly alphaMasks: ReadonlyArray<THREE.Texture>;
   readonly videoByItemId?: Readonly<Record<string, string>>;
+  readonly focusedItemId?: string | null;
+  readonly mountainCenter: readonly [number, number, number];
+  readonly mountainSideClearance: number;
 }
 
-export const UrbanLayer = ({ band, items, textures, alphaMasks, videoByItemId = {} }: UrbanLayerProps) => {
+export const UrbanLayer = ({
+  band,
+  items,
+  textures,
+  alphaMasks,
+  videoByItemId = {},
+  focusedItemId = null,
+  mountainCenter,
+  mountainSideClearance,
+}: UrbanLayerProps) => {
   const layerItems = useMemo(() => {
     if (!textures.length || !items.length) return [];
 
@@ -39,6 +51,9 @@ export const UrbanLayer = ({ band, items, textures, alphaMasks, videoByItemId = 
           pandemicTexture={entry.texture}
           alphaMask={entry.alphaMask}
           videoUrl={entry.videoUrl}
+          isFocused={entry.item.id === focusedItemId}
+          mountainCenter={mountainCenter}
+          mountainSideClearance={mountainSideClearance}
         />
       ))}
     </group>
