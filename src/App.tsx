@@ -1,25 +1,28 @@
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, Bell, Info, Pin, X } from 'lucide-react';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import './App.css';
 import { ControlsHelp } from './components/ControlsHelp';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { EventCard } from './components/EventCard';
 import { InfoPanel } from './components/InfoPanel';
+import { IntroPresentation } from './components/IntroPresentation';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MemorialPanel } from './components/MemorialPanel';
 import { MobileMoveJoystick } from './components/MobileMoveJoystick';
-import { Scene3D } from './components/Scene3D';
 import { Button } from './components/ui/button';
 import { useCovidData } from './hooks/useCovidData';
 import { useIsMobile } from './hooks/use-mobile';
 import { AuthProvider } from './providers/AuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
 
+const Scene3D = lazy(() => import('./components/Scene3D').then((module) => ({ default: module.Scene3D })));
+
 function AppContent() {
   const { isLoading, error } = useCovidData();
   const [mobilePanel, setMobilePanel] = useState<'event' | 'memorial' | 'header' | null>(null);
+  const [hasEntered, setHasEntered] = useState(false);
   const isMobile = useIsMobile();
 
   const toggleMobilePanel = (panel: 'event' | 'memorial' | 'header') => {
@@ -43,6 +46,10 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  if (!hasEntered) {
+    return <IntroPresentation onEnter={() => setHasEntered(true)} />;
   }
 
   return (
@@ -76,7 +83,9 @@ function AppContent() {
 
       <ErrorBoundary>
         <div className="relative h-full">
-          <Scene3D enableControls showStats={false} />
+          <Suspense fallback={<LoadingScreen message="Preparando a serra 3D..." />}>
+            <Scene3D enableControls showStats={false} />
+          </Suspense>
 
           <div className="hud-desktop-left hidden xl:block">
             <EventCard />

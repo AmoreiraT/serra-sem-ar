@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ExternalLink, Info, PlayCircle, TextQuote } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { covidEvents, covidEventsByDate } from '../data/covidEvents';
+import type { CovidEventAttachment } from '../data/covidEvents';
 import { useCovidStore } from '../stores/covidStore';
 
 interface EventCardProps {
@@ -96,45 +97,9 @@ export const EventCard = ({ layout = 'floating', className }: EventCardProps = {
                         </div>
                       );
                     case 'image':
-                      return (
-                        <div key={idx} className="overflow-hidden rounded-lg border border-white/10 bg-white/5">
-                          {attachment.url && (
-                            <img
-                              src={attachment.url}
-                              alt={attachment.label ?? 'Imagem histórica'}
-                              className="h-36 w-full object-cover"
-                              loading="lazy"
-                            />
-                          )}
-                          {attachment.label && (
-                            <p className="px-2 py-1 text-[12px] text-white/65">{attachment.label}</p>
-                          )}
-                        </div>
-                      );
+                      return <HistoricalImage key={idx} attachment={attachment} />;
                     case 'video':
-                      return (
-                        <div key={idx} className="overflow-hidden rounded-lg border border-white/10 bg-white/5">
-                          {attachment.url?.includes('youtube.com') ? (
-                            <div className="aspect-video w-full">
-                              <iframe
-                                className="h-full w-full"
-                                src={attachment.url}
-                                title={attachment.label ?? 'Vídeo histórico'}
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                              />
-                            </div>
-                          ) : attachment.url ? (
-                            <video className="h-36 w-full object-cover" controls src={attachment.url} />
-                          ) : null}
-                          {attachment.label && (
-                            <p className="flex items-center gap-2 px-2 py-1 text-[12px] text-white/65">
-                              <PlayCircle className="h-4 w-4 text-amber-200" />
-                              {attachment.label}
-                            </p>
-                          )}
-                        </div>
-                      );
+                      return <HistoricalVideo key={idx} attachment={attachment} />;
                     case 'link':
                     default:
                       return (
@@ -171,5 +136,147 @@ export const EventCard = ({ layout = 'floating', className }: EventCardProps = {
     </AnimatePresence>
   );
 };
+
+const getYoutubeVideoId = (url?: string) => {
+  if (!url) return null;
+  const patterns = [
+    /youtube\.com\/embed\/([^?&#/]+)/i,
+    /youtube\.com\/watch\?v=([^?&#/]+)/i,
+    /youtu\.be\/([^?&#/]+)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return null;
+};
+
+const HistoricalImage = ({ attachment }: { attachment: CovidEventAttachment }) => {
+  const [hasError, setHasError] = useState(false);
+
+  if (!attachment.url || hasError) {
+    return (
+      <MediaFallback
+        label={attachment.label ?? 'Imagem histórica'}
+        url={attachment.url}
+        message="Imagem indisponível"
+      />
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5">
+      <img
+        src={attachment.url}
+        alt={attachment.label ?? 'Imagem histórica'}
+        className="h-36 w-full object-cover"
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => setHasError(true)}
+      />
+      {attachment.label && (
+        <p className="px-2 py-1 text-[12px] text-white/65">{attachment.label}</p>
+      )}
+    </div>
+  );
+};
+
+const HistoricalVideo = ({ attachment }: { attachment: CovidEventAttachment }) => {
+  const [hasError, setHasError] = useState(false);
+  const youtubeId = getYoutubeVideoId(attachment.url);
+
+  if (youtubeId) {
+    const watchUrl = `https://www.youtube.com/watch?v=${youtubeId}`;
+    const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
+
+    return (
+      <a
+        href={watchUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="group block overflow-hidden rounded-lg border border-white/10 bg-white/5 transition-colors hover:border-amber-200/40"
+      >
+        <div className="relative h-36 w-full bg-white/5">
+          {!hasError && (
+            <img
+              src={thumbnailUrl}
+              alt=""
+              className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100"
+              loading="lazy"
+              decoding="async"
+              onError={() => setHasError(true)}
+            />
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-400 text-black shadow-lg">
+              <PlayCircle className="h-6 w-6" />
+            </span>
+          </div>
+        </div>
+        <p className="flex items-center gap-2 px-2 py-1 text-[12px] text-amber-200">
+          <ExternalLink className="h-4 w-4" />
+          {attachment.label ?? 'Abrir vídeo'}
+        </p>
+      </a>
+    );
+  }
+
+  if (!attachment.url || hasError) {
+    return (
+      <MediaFallback
+        label={attachment.label ?? 'Vídeo histórico'}
+        url={attachment.url}
+        message="Vídeo indisponível"
+      />
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5">
+      <video
+        className="h-36 w-full object-cover"
+        controls
+        preload="metadata"
+        src={attachment.url}
+        onError={() => setHasError(true)}
+      />
+      {attachment.label && (
+        <p className="flex items-center gap-2 px-2 py-1 text-[12px] text-white/65">
+          <PlayCircle className="h-4 w-4 text-amber-200" />
+          {attachment.label}
+        </p>
+      )}
+    </div>
+  );
+};
+
+const MediaFallback = ({
+  label,
+  url,
+  message,
+}: {
+  label: string;
+  url?: string;
+  message: string;
+}) => (
+  <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-[12px] text-white/70">
+    <p className="font-semibold text-white/85">{message}</p>
+    <p className="mt-1">{label}</p>
+    {url && (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-2 inline-flex items-center gap-2 text-amber-200 transition-colors hover:text-amber-100"
+      >
+        Abrir fonte
+        <ExternalLink className="h-4 w-4" />
+      </a>
+    )}
+  </div>
+);
 
 export default EventCard;

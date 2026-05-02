@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist', 'out', '.firebase'] },
+  { ignores: ['dist', 'out', '.firebase', 'functions/lib', 'functions/.eslintrc.js'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {

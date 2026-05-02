@@ -1,8 +1,9 @@
 import { Grid, Sky, Stats } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import type { EnvironmentQuality } from '../environment/UrbanVoidEnvironment';
 import { UrbanVoidEnvironment } from '../environment/UrbanVoidEnvironment';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
 import { EventMarkers3D } from './EventMarkers3D';
@@ -31,22 +32,110 @@ const defaultMoveState: MovementState = {
   run: false,
 };
 
+type SceneProfile = {
+  isMobile: boolean;
+  isConstrained: boolean;
+  dpr: [number, number];
+  shadows: boolean;
+  mountainQuality: 'desktop' | 'mobile';
+  environmentQuality: EnvironmentQuality;
+};
+
+const getSceneProfile = (): SceneProfile => {
+  if (typeof window === 'undefined') {
+    return {
+      isMobile: false,
+      isConstrained: false,
+      dpr: [1, 1.4],
+      shadows: true,
+      mountainQuality: 'desktop',
+      environmentQuality: 'full',
+    };
+  }
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const pixelRatio = window.devicePixelRatio || 1;
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isMobile = width < 768;
+  const isTabletOrShort = width < 1100 || height < 760;
+  const isConstrained = isMobile || memory <= 4 || pixelRatio > 2 || height < 680;
+
+  if (isConstrained) {
+    return {
+      isMobile,
+      isConstrained: true,
+      dpr: [0.75, 1],
+      shadows: false,
+      mountainQuality: 'mobile',
+      environmentQuality: reducedMotion || memory <= 3 ? 'lean' : 'balanced',
+    };
+  }
+
+  if (isTabletOrShort) {
+    return {
+      isMobile,
+      isConstrained: false,
+      dpr: [0.9, 1.2],
+      shadows: false,
+      mountainQuality: 'mobile',
+      environmentQuality: 'balanced',
+    };
+  }
+
+  return {
+    isMobile,
+    isConstrained: false,
+    dpr: [1, 1.45],
+    shadows: true,
+    mountainQuality: 'desktop',
+    environmentQuality: 'full',
+  };
+};
+
 export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DProps) => {
-  const cameraPosition = useCovidStore((state) => state.cameraPosition);
-  const cameraTarget = useCovidStore((state) => state.cameraTarget);
-  const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
-  const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
   const mountainMesh = useCovidStore((state) => state.mountainMesh);
   const mountainRef = useRef<THREE.Mesh>(null) as React.RefObject<THREE.Mesh>;
-  const isMobile = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth < 768;
+  const [sceneProfile, setSceneProfile] = useState<SceneProfile>(() => getSceneProfile());
+  const initialCameraPosition = useMemo(() => useCovidStore.getState().cameraPosition, []);
+  const initialCameraTarget = useMemo(() => useCovidStore.getState().cameraTarget, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let frame = 0;
+    const updateProfile = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        setSceneProfile((current) => {
+          const next = getSceneProfile();
+          if (
+            current.isMobile === next.isMobile &&
+            current.isConstrained === next.isConstrained &&
+            current.shadows === next.shadows &&
+            current.mountainQuality === next.mountainQuality &&
+            current.environmentQuality === next.environmentQuality &&
+            current.dpr[0] === next.dpr[0] &&
+            current.dpr[1] === next.dpr[1]
+          ) {
+            return current;
+          }
+          return next;
+        });
+      });
+    };
+
+    window.addEventListener('resize', updateProfile);
+    window.addEventListener('orientationchange', updateProfile);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', updateProfile);
+      window.removeEventListener('orientationchange', updateProfile);
+    };
   }, []);
 
-  const dpr = useMemo(() => {
-    if (typeof window === 'undefined') return [1, 1.4] as [number, number];
-    return window.innerWidth < 768 ? ([0.9, 1.15] as [number, number]) : ([1, 1.45] as [number, number]);
-  }, []);
+  const { dpr, isMobile, shadows, mountainQuality, environmentQuality } = sceneProfile;
 
   const calculatedRadius = useMemo(() => {
     if (!mountainMesh) return 90;
@@ -70,12 +159,12 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
     <div className="w-full h-full">
       <Canvas
         camera={{
-          position: cameraPosition,
+          position: initialCameraPosition,
           fov: 60,
           near: 0.1,
           far: 1000,
         }}
-        shadows={!isMobile}
+        shadows={shadows}
         dpr={dpr}
         className="bg-gradient-to-b from-orange-900 to-amber-700"
       >
@@ -91,12 +180,8 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
         />
         <fogExp2 attach="fog" args={['#5f3c26', 0.0035]} />
         <CameraSync
-          cameraPosition={cameraPosition}
-          cameraTarget={cameraTarget}
-          onSync={(pos, tgt) => {
-            setCameraPosition(pos);
-            setCameraTarget(tgt);
-          }}
+          cameraPosition={initialCameraPosition}
+          cameraTarget={initialCameraTarget}
         />
         <CameraGroundClamp enabled={enableControls} clearance={1.2} />
 
@@ -105,7 +190,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           position={[80, 100, 50]}
           intensity={1.1}
           color="#ffd6a3"
-          castShadow={!isMobile}
+          castShadow={shadows}
           shadow-mapSize-width={isMobile ? 512 : 1024}
           shadow-mapSize-height={isMobile ? 512 : 1024}
           shadow-camera-far={240}
@@ -116,9 +201,14 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
         />
         <pointLight position={[-60, 40, -40]} intensity={isMobile ? 0.4 : 0.6} color="#ff7a59" />
 
-        <UrbanVoidEnvironment mountainRadius={calculatedRadius} mountainCenter={mountainCenter} seed={2020} />
+        <UrbanVoidEnvironment
+          mountainRadius={calculatedRadius}
+          mountainCenter={mountainCenter}
+          seed={2020}
+          quality={environmentQuality}
+        />
 
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.2, 0]} receiveShadow={!isMobile}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.2, 0]} receiveShadow={shadows}>
           <planeGeometry args={[1600, 1600, 1, 1]} />
           <meshStandardMaterial color="#27170d" roughness={0.95} metalness={0.02} />
         </mesh>
@@ -141,7 +231,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
 
         <Physics gravity={[0, -9.81, 0]} colliders="trimesh">
           <Suspense fallback={null}>
-            <Mountain3D ref={mountainRef} quality={isMobile ? 'mobile' : 'desktop'} />
+            <Mountain3D ref={mountainRef} quality={mountainQuality} />
           </Suspense>
           <EventMarkers3D />
           <MonthlyPlaques3D />
@@ -269,6 +359,7 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
   const skipNextIndexSyncRef = useRef(false);
   const playerGroundYRef = useRef<number | null>(null);
   const playerVerticalVelocityRef = useRef(0);
+  const storeSyncTimerRef = useRef(0);
 
   const touchStateRef = useRef({
     active: false,
@@ -617,8 +708,13 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
     camera.up.copy(up);
     camera.lookAt(lookTarget);
 
-    setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
-    setCameraTarget([lookTarget.x, lookTarget.y, lookTarget.z]);
+    storeSyncTimerRef.current += delta;
+    const storeSyncInterval = isMobile ? 0.12 : 0.08;
+    if (storeSyncTimerRef.current >= storeSyncInterval) {
+      storeSyncTimerRef.current = 0;
+      setCameraPosition([camera.position.x, camera.position.y, camera.position.z]);
+      setCameraTarget([lookTarget.x, lookTarget.y, lookTarget.z]);
+    }
 
     if (walkwayLength && dataLength > 1) {
       const t = THREE.MathUtils.clamp(distanceRef.current / walkwayLength, 0, 1);

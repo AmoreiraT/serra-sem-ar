@@ -39,8 +39,8 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'image',
-        url: 'https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/coronavirus_1_0.jpg',
-        label: 'Imagem de divulgação do Ministério da Saúde',
+        url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Minist%C3%A9rio_da_Sa%C3%BAde_%2849702074706%29.jpg/960px-Minist%C3%A9rio_da_Sa%C3%BAde_%2849702074706%29.jpg',
+        label: 'Fachada do Ministério da Saúde durante a pandemia',
       },
       {
         type: 'link',
@@ -192,13 +192,13 @@ export const covidEvents: CovidEvent[] = [
     attachments: [
       {
         type: 'image',
-        url: 'https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/17-01-2021_vacinacaosp_foto_gilberto_marques_govsp_1.jpg',
-        label: 'Primeira dose aplicada em São Paulo',
+        url: 'https://upload.wikimedia.org/wikipedia/commons/c/ce/COVID-19_vaccination_campaign_in_Brazil_%282021%29_F.jpg',
+        label: 'Campanha de vacinação contra COVID-19 em São Paulo',
       },
       {
-        type: 'video',
-        url: 'https://www.youtube.com/embed/lp2Sleqrs_g',
-        label: 'Transmissão oficial',
+        type: 'link',
+        url: 'https://www.gov.br/anvisa/pt-br/assuntos/noticias-anvisa/2021/confira-materiais-da-reuniao-extraordinaria-da-dicol',
+        label: 'Materiais oficiais da decisão da Anvisa',
       },
     ],
   },

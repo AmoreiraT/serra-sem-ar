@@ -23,9 +23,56 @@ interface UrbanVoidEnvironmentProps {
   readonly mountainRadius: number;
   readonly mountainCenter: readonly [number, number, number];
   readonly seed: number;
+  readonly quality?: EnvironmentQuality;
 }
 
 const EMPTY_SHA = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
+export type EnvironmentQuality = 'full' | 'balanced' | 'lean';
+
+type EnvironmentQualityConfig = {
+  layerCounts: Record<EnvironmentBand, number>;
+  imageLimit: number;
+  videoLimit: number;
+  assetMetadataLimit: number;
+  alphaMaskLimit: number;
+  anisotropy: number;
+};
+
+const environmentQualityMap: Record<EnvironmentQuality, EnvironmentQualityConfig> = {
+  full: {
+    layerCounts: LAYER_COUNTS,
+    imageLimit: IMAGE_PLANES_MAX,
+    videoLimit: VIDEO_PLANES_MAX,
+    assetMetadataLimit: 96,
+    alphaMaskLimit: 8,
+    anisotropy: 8,
+  },
+  balanced: {
+    layerCounts: {
+      FAR: 5,
+      MID: 8,
+      GROUND: 6,
+    },
+    imageLimit: 22,
+    videoLimit: 1,
+    assetMetadataLimit: 42,
+    alphaMaskLimit: 4,
+    anisotropy: 4,
+  },
+  lean: {
+    layerCounts: {
+      FAR: 3,
+      MID: 5,
+      GROUND: 3,
+    },
+    imageLimit: 12,
+    videoLimit: 0,
+    assetMetadataLimit: 24,
+    alphaMaskLimit: 2,
+    anisotropy: 2,
+  },
+};
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -141,9 +188,15 @@ const selectAssetVideoUrl = (asset: PandemicAssetMetadata): string | null => {
   return null;
 };
 
-export const UrbanVoidEnvironment = ({ mountainRadius, mountainCenter, seed }: UrbanVoidEnvironmentProps) => {
+export const UrbanVoidEnvironment = ({
+  mountainRadius,
+  mountainCenter,
+  seed,
+  quality = 'full',
+}: UrbanVoidEnvironmentProps) => {
   const setSeed = useEnvironmentStore((state) => state.setSeed);
   const setTextureAnisotropy = useEnvironmentStore((state) => state.setTextureAnisotropy);
+  const qualityConfig = environmentQualityMap[quality];
 
   const { indexA, indexB, indexAll, assetsById, loadAssetById } = usePandemicAssetIndexes();
 
@@ -152,9 +205,8 @@ export const UrbanVoidEnvironment = ({ mountainRadius, mountainCenter, seed }: U
 
   useEffect(() => {
     setSeed(seed);
-    const anisotropy = typeof window !== 'undefined' && window.innerWidth < 900 ? 4 : 8;
-    setTextureAnisotropy(anisotropy);
-  }, [seed, setSeed, setTextureAnisotropy]);
+    setTextureAnisotropy(qualityConfig.anisotropy);
+  }, [qualityConfig.anisotropy, seed, setSeed, setTextureAnisotropy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,11 +238,15 @@ export const UrbanVoidEnvironment = ({ mountainRadius, mountainCenter, seed }: U
   const markdownImageUrls = useMarkdownImageExtractor(markdownSource);
 
   const allIds = useMemo(() => dedupe([...indexAll, ...indexA, ...indexB]), [indexA, indexAll, indexB]);
+  const selectedAssetIds = useMemo(
+    () => pickBySeed(allIds, qualityConfig.assetMetadataLimit, hashBandSeed(seed, 72)),
+    [allIds, qualityConfig.assetMetadataLimit, seed]
+  );
 
   useEffect(() => {
-    if (!allIds.length) return;
-    void Promise.all(allIds.map((id) => loadAssetById(id)));
-  }, [allIds, loadAssetById]);
+    if (!selectedAssetIds.length) return;
+    void Promise.all(selectedAssetIds.map((id) => loadAssetById(id)));
+  }, [loadAssetById, selectedAssetIds]);
 
   const loadedAssets = useMemo(() => Object.values(assetsById), [assetsById]);
 
@@ -238,22 +294,22 @@ export const UrbanVoidEnvironment = ({ mountainRadius, mountainCenter, seed }: U
 
   const selectedVideoUrls = useMemo(() => {
     const source = videoUrlsFromAssets.length ? videoUrlsFromAssets : memoryVideoUrls;
-    return pickBySeed(source, VIDEO_PLANES_MAX, hashBandSeed(seed, 220));
-  }, [memoryVideoUrls, seed, videoUrlsFromAssets]);
+    return pickBySeed(source, qualityConfig.videoLimit, hashBandSeed(seed, 220));
+  }, [memoryVideoUrls, qualityConfig.videoLimit, seed, videoUrlsFromAssets]);
 
   const selectedImageUrls = useMemo(() => {
     const localAssetUrls = keepLocalPublicUrlsOnly(imageUrlsFromAssets);
     if (!localAssetUrls.length) return [];
-    return pickBySeed(localAssetUrls, IMAGE_PLANES_MAX, hashBandSeed(seed, 120));
-  }, [imageUrlsFromAssets, seed]);
+    return pickBySeed(localAssetUrls, qualityConfig.imageLimit, hashBandSeed(seed, 120));
+  }, [imageUrlsFromAssets, qualityConfig.imageLimit, seed]);
 
   const debugMarkdownImageCount = markdownImageUrls.length;
 
   const { textures, isLoading } = usePandemicTextures(selectedImageUrls);
 
   const selectedAlphaMaskUrls = useMemo(
-    () => pickBySeed(alphaMaskUrlsFromAssets, 8, hashBandSeed(seed, 420)),
-    [alphaMaskUrlsFromAssets, seed]
+    () => pickBySeed(alphaMaskUrlsFromAssets, qualityConfig.alphaMaskLimit, hashBandSeed(seed, 420)),
+    [alphaMaskUrlsFromAssets, qualityConfig.alphaMaskLimit, seed]
   );
 
   useEffect(() => {
@@ -313,36 +369,51 @@ export const UrbanVoidEnvironment = ({ mountainRadius, mountainCenter, seed }: U
     () =>
       mapToLayer(
         'FAR',
-        generateSpatialLayout(hashBandSeed(seed, 17), LAYER_COUNTS.FAR, mountainRadius * 1.15, mountainRadius * 4.8),
+        generateSpatialLayout(
+          hashBandSeed(seed, 17),
+          qualityConfig.layerCounts.FAR,
+          mountainRadius * 1.15,
+          mountainRadius * 4.8
+        ),
         LAYER_OPACITY_RANGE.FAR,
         LAYER_SCALE_MULTIPLIER.FAR,
         beyondOffset
       ),
-    [beyondOffset, mountainRadius, seed]
+    [beyondOffset, mountainRadius, qualityConfig.layerCounts.FAR, seed]
   );
 
   const midLayout = useMemo(
     () =>
       mapToLayer(
         'MID',
-        generateSpatialLayout(hashBandSeed(seed, 47), LAYER_COUNTS.MID, mountainRadius * 0.95, mountainRadius * 3.4),
+        generateSpatialLayout(
+          hashBandSeed(seed, 47),
+          qualityConfig.layerCounts.MID,
+          mountainRadius * 0.95,
+          mountainRadius * 3.4
+        ),
         LAYER_OPACITY_RANGE.MID,
         LAYER_SCALE_MULTIPLIER.MID,
         beyondOffset
       ),
-    [beyondOffset, mountainRadius, seed]
+    [beyondOffset, mountainRadius, qualityConfig.layerCounts.MID, seed]
   );
 
   const groundLayout = useMemo(
     () =>
       mapToLayer(
         'GROUND',
-        generateSpatialLayout(hashBandSeed(seed, 83), LAYER_COUNTS.GROUND, mountainRadius * 0.9, mountainRadius * 2.8),
+        generateSpatialLayout(
+          hashBandSeed(seed, 83),
+          qualityConfig.layerCounts.GROUND,
+          mountainRadius * 0.9,
+          mountainRadius * 2.8
+        ),
         LAYER_OPACITY_RANGE.GROUND,
         LAYER_SCALE_MULTIPLIER.GROUND,
         beyondOffset
       ),
-    [beyondOffset, mountainRadius, seed]
+    [beyondOffset, mountainRadius, qualityConfig.layerCounts.GROUND, seed]
   );
 
   const videoByItemId = useMemo(() => {
