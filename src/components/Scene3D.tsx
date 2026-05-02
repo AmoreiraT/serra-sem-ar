@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { UrbanVoidEnvironment } from '../environment/UrbanVoidEnvironment';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
 import { EventMarkers3D } from './EventMarkers3D';
 import { MemorialPins3D } from './MemorialPins3D';
@@ -35,6 +36,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
   const cameraTarget = useCovidStore((state) => state.cameraTarget);
   const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
   const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
+  const mountainMesh = useCovidStore((state) => state.mountainMesh);
   const mountainRef = useRef<THREE.Mesh>(null) as React.RefObject<THREE.Mesh>;
   const isMobile = useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -45,6 +47,24 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
     if (typeof window === 'undefined') return [1, 1.4] as [number, number];
     return window.innerWidth < 768 ? ([0.9, 1.15] as [number, number]) : ([1, 1.45] as [number, number]);
   }, []);
+
+  const calculatedRadius = useMemo(() => {
+    if (!mountainMesh) return 90;
+    const box = new THREE.Box3().setFromObject(mountainMesh);
+    if (box.isEmpty()) return 90;
+    const sphere = new THREE.Sphere();
+    box.getBoundingSphere(sphere);
+    return Number.isFinite(sphere.radius) && sphere.radius > 1 ? sphere.radius : 90;
+  }, [mountainMesh]);
+
+  const mountainCenter = useMemo<[number, number, number]>(() => {
+    if (!mountainMesh) return [0, 0, 0];
+    const box = new THREE.Box3().setFromObject(mountainMesh);
+    if (box.isEmpty()) return [0, 0, 0];
+    const sphere = new THREE.Sphere();
+    box.getBoundingSphere(sphere);
+    return [sphere.center.x, sphere.center.y, sphere.center.z];
+  }, [mountainMesh]);
 
   return (
     <div className="w-full h-full">
@@ -69,7 +89,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           mieCoefficient={0.015}
           mieDirectionalG={0.85}
         />
-        <fog attach="fog" args={['#5f3c26', 60, 320]} />
+        <fogExp2 attach="fog" args={['#5f3c26', 0.0035]} />
         <CameraSync
           cameraPosition={cameraPosition}
           cameraTarget={cameraTarget}
@@ -95,6 +115,8 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           shadow-camera-bottom={-110}
         />
         <pointLight position={[-60, 40, -40]} intensity={isMobile ? 0.4 : 0.6} color="#ff7a59" />
+
+        <UrbanVoidEnvironment mountainRadius={calculatedRadius} mountainCenter={mountainCenter} seed={2020} />
 
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.2, 0]} receiveShadow={!isMobile}>
           <planeGeometry args={[1600, 1600, 1, 1]} />

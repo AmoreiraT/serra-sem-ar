@@ -27,3 +27,4 @@ dist-ssr
 
 # Firebase service account credentials (keep local only)
 serrasemar-firebase-adminsdk-fbsvc-d312251472.json
+public/pandemic-assets/
