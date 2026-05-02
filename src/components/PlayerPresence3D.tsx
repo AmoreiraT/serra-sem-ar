@@ -1,7 +1,7 @@
+import { useFrame } from '@react-three/fiber';
 import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
 import { useAuth } from '../providers/AuthProvider';
 import { db } from '../services/firebaseConfig';
 import { useCovidStore } from '../stores/covidStore';
@@ -11,6 +11,16 @@ const PRESENCE_TTL_MS = 12_000;
 const WRITE_INTERVAL_MS = 1_600;
 const MAX_REMOTE_PLAYERS = 28;
 const LOCAL_SESSION_KEY = 'serra-sem-ar-presence-id';
+
+// Flame simulation constants matching the reference implementation
+// https://g7495x.gitlab.io/webgl-particle-flame-three.js/
+const SPHERE_RADIUS = 0.75;
+const PARTICLE_LIFETIME = 2.0;   // seconds per particle life cycle
+const PARTICLE_SPEED = 2.0;      // world-units/sec
+const CURLINESS = 0.65;          // how much position influences curl direction
+const REACTIVENESS = 0.15;       // how fast the noise field evolves over time
+const PARTICLE_OPACITY_SCALE = 0.875;
+const WIND_Y = 1.25;             // upward wind strength (dominant movement)
 
 type PresenceVector = {
   x: number;
@@ -51,10 +61,10 @@ const getSessionId = () => {
   if (typeof window === 'undefined') return `server-${Math.random().toString(36).slice(2)}`;
 
   try {
-    const current = window.localStorage.getItem(LOCAL_SESSION_KEY);
+    const current = window.sessionStorage.getItem(LOCAL_SESSION_KEY);
     if (current) return current;
   } catch {
-    // Private browsing can make localStorage unavailable.
+    // Private browsing can make sessionStorage unavailable.
   }
 
   const randomId =
@@ -64,7 +74,7 @@ const getSessionId = () => {
   const next = `presence-${randomId}`;
 
   try {
-    window.localStorage.setItem(LOCAL_SESSION_KEY, next);
+    window.sessionStorage.setItem(LOCAL_SESSION_KEY, next);
   } catch {
     // A non-persistent session id is still enough for the current visit.
   }
@@ -77,6 +87,109 @@ const vectorFromArray = ([x, y, z]: [number, number, number]): PresenceVector =>
 const isPresenceFresh = (presence: PresenceDoc, now: number) =>
   typeof presence.updatedAtMs === 'number' && now - presence.updatedAtMs <= PRESENCE_TTL_MS;
 
+// Evenly distributed points on unit sphere surface (Fibonacci sphere algorithm).
+// Matches the reference implementation's fibonacciSpherePoints().
+const fibonacciSphere = (count: number): Float32Array => {
+  const points = new Float32Array(count * 3);
+  const offset = 2 / count;
+  const increment = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < count; i++) {
+    const y = i * offset - 1 + offset / 2;
+    const dist = Math.sqrt(Math.max(0, 1 - y * y));
+    const phi = ((i + 1) % count) * increment;
+    points[i * 3] = Math.cos(phi) * dist;
+    points[i * 3 + 1] = y;
+    points[i * 3 + 2] = Math.sin(phi) * dist;
+  }
+  return points;
+};
+
+// Reusable output buffer — safe because JS is single-threaded and we consume
+// the result immediately before the next call in the same frame loop.
+const _dirBuf = new Float32Array(3);
+
+// Trig-based approximation of 4-D curl noise (matches reference gpuComputeDirection.glsl).
+// Returns a non-normalized vector: curl_direction (unit) + wind (0, WIND_Y, 0).
+const flameDirection = (px: number, py: number, pz: number, t: number): Float32Array => {
+  const cx = px * CURLINESS;
+  const cy = py * CURLINESS;
+  const cz = pz * CURLINESS;
+
+  // Six trig samples arranged as cross-partial derivatives of a smooth potential field,
+  // producing a divergence-free swirling field similar to the reference curl noise.
+  const s1 = Math.sin(cy * 2.5 + cz * 1.7 + t);
+  const c1 = Math.cos(cz * 2.3 + cx * 1.4 + t * 1.1);
+  const s2 = Math.sin(cx * 2.1 + cy * 1.8 + t * 0.9);
+  const c2 = Math.cos(cy * 2.6 + cz * 1.3 + t * 0.8);
+  const s3 = Math.sin(cz * 2.4 + cx * 1.6 + t * 1.2);
+  const c3 = Math.cos(cx * 2.2 + cy * 2.0 + t * 0.7);
+
+  const vx = s1 - c2;
+  const vy = s2 - c3;
+  const vz = s3 - c1;
+  const len = Math.sqrt(vx * vx + vy * vy + vz * vz) || 1;
+
+  _dirBuf[0] = vx / len;
+  _dirBuf[1] = vy / len + WIND_Y; // dominant upward wind added after normalisation
+  _dirBuf[2] = vz / len;
+  return _dirBuf;
+};
+
+const createSoulParticleTexture = () => {
+  if (typeof document === 'undefined') return null;
+
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  const center = size / 2;
+  const glow = ctx.createRadialGradient(center, center, 0, center, center, center);
+  glow.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+  glow.addColorStop(0.28, 'rgba(255, 255, 255, 0.65)');
+  glow.addColorStop(0.58, 'rgba(200, 240, 255, 0.18)');
+  glow.addColorStop(1, 'rgba(128, 225, 255, 0)');
+
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
+};
+
+const getLocalFlamePosition = (
+  cameraPosition: [number, number, number],
+  cameraTarget: [number, number, number]
+): [number, number, number] => {
+  const position = new THREE.Vector3(...cameraPosition);
+  const target = new THREE.Vector3(...cameraTarget);
+  const forward = target.sub(position);
+  forward.y *= 0.24;
+
+  if (forward.lengthSq() < 0.0001) {
+    forward.set(0, 0, -1);
+  } else {
+    forward.normalize();
+  }
+
+  const side = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), forward);
+  if (side.lengthSq() > 0.0001) side.normalize();
+
+  const flamePosition = position
+    .add(forward.multiplyScalar(1.35))
+    .add(side.multiplyScalar(-0.42));
+  flamePosition.y = cameraPosition[1] - 1.35;
+
+  return flamePosition.toArray() as [number, number, number];
+};
+
 export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' }) => {
   const { user } = useAuth();
   const sessionId = useMemo(getSessionId, []);
@@ -86,6 +199,15 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const latestStateRef = useRef({ cameraPosition, cameraTarget, currentDateIndex });
   const [remotePresences, setRemotePresences] = useState<FlamePresence[]>([]);
+  const localPresence = useMemo<FlamePresence>(
+    () => ({
+      id: `${sessionId}-local`,
+      color,
+      position: getLocalFlamePosition(cameraPosition, cameraTarget),
+      isLocal: true,
+    }),
+    [cameraPosition, cameraTarget, color, sessionId]
+  );
 
   useEffect(() => {
     latestStateRef.current = { cameraPosition, cameraTarget, currentDateIndex };
@@ -161,6 +283,7 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
 
   return (
     <group name="player-presence-flames">
+      <PlayerSoulFlame presence={localPresence} quality={quality} />
       {remotePresences.map((presence) => (
         <PlayerSoulFlame key={presence.id} presence={presence} quality={quality} />
       ))}
@@ -172,55 +295,70 @@ const PlayerSoulFlame = ({ presence, quality }: { presence: FlamePresence; quali
   const groupRef = useRef<THREE.Group>(null);
   const pointsRef = useRef<THREE.Points>(null);
   const targetRef = useRef(new THREE.Vector3(...presence.position));
-  const color = useMemo(() => new THREE.Color(presence.color), [presence.color]);
-  const particleCount = quality === 'mobile' ? 360 : 720;
 
-  const seeds = useMemo(() => {
-    const values = new Float32Array(particleCount * 4);
-    const base = hashString(presence.id);
-    let state = base || 1;
-    const random = () => {
-      state = Math.imul(1664525, state) + 1013904223;
-      return ((state >>> 0) / 4294967296);
-    };
+  // Total particles: equivalent to spherePointCount × batchCount (lifetime × emitFrequency).
+  // Staggering ages across [0, PARTICLE_LIFETIME) gives the same steady-state distribution
+  // as the reference GPGPU batch system.
+  const particleCount = presence.isLocal
+    ? (quality === 'mobile' ? 1536 : 3072)
+    : (quality === 'mobile' ? 1024 : 2048);
 
-    for (let i = 0; i < particleCount; i += 1) {
-      values[i * 4] = random();
-      values[i * 4 + 1] = random();
-      values[i * 4 + 2] = random();
-      values[i * 4 + 3] = random();
-    }
+  // One unique Fibonacci sphere spawn position per particle.
+  const spherePoints = useMemo(() => fibonacciSphere(particleCount), [particleCount]);
 
-    return values;
-  }, [particleCount, presence.id]);
+  // Simulation state stored outside React rendering — updated every frame.
+  const particlePos = useRef<Float32Array | null>(null);
+  const particleAge = useRef<Float32Array | null>(null);
 
+  // Pre-extract linear RGB so per-frame math avoids Color object allocation.
+  const [baseR, baseG, baseB] = useMemo(() => {
+    const c = new THREE.Color(presence.color);
+    return [c.r, c.g, c.b];
+  }, [presence.color]);
+
+  const particleTexture = useMemo(createSoulParticleTexture, []);
+
+  // BufferGeometry with position + per-vertex colour (opacity encoded as brightness).
   const geometry = useMemo(() => {
-    const positions = new Float32Array(particleCount * 3);
-    const sizes = new Float32Array(particleCount);
-    for (let i = 0; i < particleCount; i += 1) {
-      sizes[i] = 1;
-    }
-
-    const nextGeometry = new THREE.BufferGeometry();
-    nextGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    nextGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    return nextGeometry;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(particleCount * 3), 3));
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(particleCount * 3), 3));
+    return g;
   }, [particleCount]);
 
+  // vertexColors + additive blending: encoding opacity as colour brightness fades
+  // particles to black (invisible) while the glow texture provides the soft disc shape.
   const material = useMemo(
     () =>
       new THREE.PointsMaterial({
-        color,
-        size: presence.isLocal ? 0.065 : 0.09,
+        vertexColors: true,
+        map: particleTexture ?? undefined,
+        alphaTest: 0.01,
+        size: presence.isLocal ? 0.022 : 0.034,
         transparent: true,
-        opacity: presence.isLocal ? 0.55 : 0.88,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         sizeAttenuation: true,
         fog: false,
       }),
-    [color, presence.isLocal]
+    [particleTexture, presence.isLocal]
   );
+
+  // Initialise particles at sphere surface with uniformly staggered ages so the
+  // full lifecycle (dense sphere → rising plume → fade-out) is visible from frame 1.
+  useEffect(() => {
+    const count = particleCount;
+    const pos = new Float32Array(count * 3);
+    const age = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = spherePoints[i * 3] * SPHERE_RADIUS;
+      pos[i * 3 + 1] = spherePoints[i * 3 + 1] * SPHERE_RADIUS;
+      pos[i * 3 + 2] = spherePoints[i * 3 + 2] * SPHERE_RADIUS;
+      age[i] = (i / count) * PARTICLE_LIFETIME;
+    }
+    particlePos.current = pos;
+    particleAge.current = age;
+  }, [particleCount, spherePoints]);
 
   useEffect(() => {
     targetRef.current.set(...presence.position);
@@ -230,64 +368,76 @@ const PlayerSoulFlame = ({ presence, quality }: { presence: FlamePresence; quali
     return () => {
       geometry.dispose();
       material.dispose();
+      particleTexture?.dispose();
     };
-  }, [geometry, material]);
+  }, [geometry, material, particleTexture]);
 
   useFrame(({ clock }, delta) => {
     const group = groupRef.current;
-    const points = pointsRef.current;
-    const positionAttribute = geometry.getAttribute('position') as THREE.BufferAttribute;
-    if (!group || !points || !positionAttribute) return;
+    if (!group) return;
+
+    const pos = particlePos.current;
+    const age = particleAge.current;
+    if (!pos || !age) return;
 
     group.position.lerp(targetRef.current, 1 - Math.exp(-5.5 * delta));
 
-    const elapsed = clock.getElapsedTime();
-    const positions = positionAttribute.array as Float32Array;
-    for (let i = 0; i < particleCount; i += 1) {
-      const a = seeds[i * 4];
-      const b = seeds[i * 4 + 1];
-      const c = seeds[i * 4 + 2];
-      const d = seeds[i * 4 + 3];
-      const isCore = a < 0.42;
-      const phase = elapsed * (1.15 + d * 0.65) + b * Math.PI * 2;
-      const angle = b * Math.PI * 2 + elapsed * (0.45 + c * 0.55);
+    const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
+    const colorAttr = geometry.getAttribute('color') as THREE.BufferAttribute;
+    const positions = posAttr.array as Float32Array;
+    const colors = colorAttr.array as Float32Array;
 
-      if (isCore) {
-        const radius = 0.25 + c * 0.42;
-        const y = 0.2 + Math.sin(phase) * 0.08 + d * 0.42;
-        positions[i * 3] = Math.cos(angle) * radius * Math.sin(a * Math.PI);
-        positions[i * 3 + 1] = y;
-        positions[i * 3 + 2] = Math.sin(angle) * radius * Math.sin(a * Math.PI);
-      } else {
-        const plume = (a - 0.42) / 0.58;
-        const lift = plume * 1.95;
-        const radius = (1 - plume) ** 1.7 * (0.72 + c * 0.32) + 0.035;
-        const twist = Math.sin(phase * 0.8) * 0.22 * plume;
-        positions[i * 3] = Math.cos(angle + twist) * radius + Math.sin(phase * 1.7) * 0.1 * plume;
-        positions[i * 3 + 1] = 0.42 + lift + Math.sin(phase) * 0.14;
-        positions[i * 3 + 2] = Math.sin(angle + twist) * radius + Math.cos(phase * 1.35) * 0.1 * plume;
+    const elapsed = clock.getElapsedTime();
+    // Mirror reference oscillating noise-time: uTime = 168.5 + 1.5·sin(t/5)
+    const noiseT = (168.5 + 1.5 * Math.sin(elapsed / 5)) * REACTIVENESS;
+    const dt = Math.min(delta, 0.05);
+    const fadeAge = PARTICLE_LIFETIME * 0.75; // opacity → 0 at 75 % of lifetime
+
+    const count = particleCount;
+    for (let i = 0; i < count; i++) {
+      let a = age[i] + dt;
+
+      // Respawn at fibonacci sphere surface when lifetime expires.
+      if (a >= PARTICLE_LIFETIME) {
+        a -= PARTICLE_LIFETIME;
+        pos[i * 3] = spherePoints[i * 3] * SPHERE_RADIUS;
+        pos[i * 3 + 1] = spherePoints[i * 3 + 1] * SPHERE_RADIUS;
+        pos[i * 3 + 2] = spherePoints[i * 3 + 2] * SPHERE_RADIUS;
       }
+      age[i] = a;
+
+      const px = pos[i * 3];
+      const py = pos[i * 3 + 1];
+      const pz = pos[i * 3 + 2];
+
+      // Advance position along curl-noise + wind direction.
+      const dir = flameDirection(px, py, pz, noiseT);
+      const npx = px + dir[0] * dt * PARTICLE_SPEED;
+      const npy = py + dir[1] * dt * PARTICLE_SPEED;
+      const npz = pz + dir[2] * dt * PARTICLE_SPEED;
+
+      pos[i * 3] = npx;
+      pos[i * 3 + 1] = npy;
+      pos[i * 3 + 2] = npz;
+
+      positions[i * 3] = npx;
+      positions[i * 3 + 1] = npy;
+      positions[i * 3 + 2] = npz;
+
+      // Linear fade: full brightness at birth → 0 at fadeAge.
+      const opacity = Math.max(0, 1 - a / fadeAge) * PARTICLE_OPACITY_SCALE;
+      colors[i * 3] = baseR * opacity;
+      colors[i * 3 + 1] = baseG * opacity;
+      colors[i * 3 + 2] = baseB * opacity;
     }
 
-    positionAttribute.needsUpdate = true;
-    points.rotation.y = elapsed * 0.18;
+    posAttr.needsUpdate = true;
+    colorAttr.needsUpdate = true;
   });
 
   return (
-    <group ref={groupRef} position={presence.position} renderOrder={18}>
+    <group ref={groupRef} position={presence.position} scale={presence.isLocal ? 0.46 : 0.68} renderOrder={18}>
       <points ref={pointsRef} geometry={geometry} material={material} frustumCulled={false} />
-      {!presence.isLocal && (
-        <mesh position={[0, 0.45, 0]} renderOrder={17}>
-          <sphereGeometry args={[0.26, 20, 16]} />
-          <meshBasicMaterial color={color} transparent opacity={0.42} blending={THREE.AdditiveBlending} depthWrite={false} />
-        </mesh>
-      )}
-      {!presence.isLocal && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]} renderOrder={16}>
-          <circleGeometry args={[0.68, 32]} />
-          <meshBasicMaterial color={color} transparent opacity={0.14} blending={THREE.AdditiveBlending} depthWrite={false} />
-        </mesh>
-      )}
     </group>
   );
 };

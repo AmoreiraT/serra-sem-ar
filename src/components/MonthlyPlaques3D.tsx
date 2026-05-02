@@ -89,8 +89,32 @@ const createPlaqueTexture = (
   const footerSize = Math.round(height * 0.065);
   const leftX = Math.round(width * 0.12);
   const rightX = width - leftX;
+  const headerText = monthLabel.toUpperCase();
+  const headerY = height * 0.08;
+  const footerText = 'Horizonte Mensal';
+  const footerY = height - frameInset;
 
-  drawText(monthLabel.toUpperCase(), width / 2, height * 0.08, {
+  ctx.save();
+  ctx.font = `600 ${headerSize}px "Serra Sans", "Helvetica Neue", sans-serif`;
+  const headerMaskWidth = Math.min(
+    width - frameInset * 1.35,
+    Math.ceil(ctx.measureText(headerText).width + headerSize * 0.9)
+  );
+  const headerMaskHeight = Math.ceil(headerSize * 1.28);
+  const headerMaskY = Math.round(headerY - headerSize * 0.18);
+  const headerMaskGradient = ctx.createLinearGradient(0, headerMaskY, 0, headerMaskY + headerMaskHeight);
+  headerMaskGradient.addColorStop(0, '#5a371e');
+  headerMaskGradient.addColorStop(1, '#4b2b18');
+  ctx.fillStyle = headerMaskGradient;
+  ctx.fillRect(
+    Math.round(width / 2 - headerMaskWidth / 2),
+    headerMaskY,
+    headerMaskWidth,
+    headerMaskHeight
+  );
+  ctx.restore();
+
+  drawText(headerText, width / 2, headerY, {
     size: headerSize,
     weight: 600,
     color: '#f6ddb7',
@@ -131,10 +155,28 @@ const createPlaqueTexture = (
     stroke: true,
   });
 
-  drawText('Horizonte Mensal', width / 2, height * 0.84, {
+  ctx.save();
+  ctx.font = `500 ${footerSize}px "Serra Sans", "Helvetica Neue", sans-serif`;
+  const footerMaskWidth = Math.ceil(ctx.measureText(footerText).width + footerSize * 1.7);
+  const footerMaskHeight = Math.ceil(footerSize * 1.45);
+  const footerMaskY = Math.round(footerY - footerMaskHeight / 2);
+  const footerMaskGradient = ctx.createLinearGradient(0, footerMaskY, 0, footerMaskY + footerMaskHeight);
+  footerMaskGradient.addColorStop(0, '#392112');
+  footerMaskGradient.addColorStop(1, '#251309');
+  ctx.fillStyle = footerMaskGradient;
+  ctx.fillRect(
+    Math.round(width / 2 - footerMaskWidth / 2),
+    footerMaskY,
+    footerMaskWidth,
+    footerMaskHeight
+  );
+  ctx.restore();
+
+  drawText(footerText, width / 2, footerY, {
     size: footerSize,
     weight: 500,
     color: '#f4dcb3',
+    baseline: 'middle',
   });
 
   const texture = new THREE.CanvasTexture(canvas);

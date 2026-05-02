@@ -14,6 +14,7 @@ type Runtime = {
   context: AudioContext;
   master: GainNode;
   movementTimer: number;
+  highAltitudeTimer: number;
   windSource: AudioBufferSourceNode;
   teardown: () => void;
 };
@@ -113,6 +114,125 @@ const playEventAccent = (context: AudioContext, destination: AudioNode) => {
   highTone.stop(startAt + 1.05);
 };
 
+const playCough = (context: AudioContext, destination: AudioNode, intensity: number, panValue: number) => {
+  const startAt = context.currentTime;
+  const panner = context.createStereoPanner();
+  const filter = context.createBiquadFilter();
+  const gain = context.createGain();
+  const noise = context.createBufferSource();
+
+  noise.buffer = createNoiseBuffer(context, 0.42, 0.95);
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(520 + intensity * 220, startAt);
+  filter.Q.value = 1.8;
+  panner.pan.value = panValue;
+
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(0.11 * intensity, startAt + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.018 * intensity, startAt + 0.12);
+  gain.gain.exponentialRampToValueAtTime(0.08 * intensity, startAt + 0.19);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.36);
+
+  noise.connect(filter);
+  filter.connect(panner);
+  panner.connect(gain);
+  gain.connect(destination);
+  noise.start(startAt);
+  noise.stop(startAt + 0.42);
+};
+
+const playSneeze = (context: AudioContext, destination: AudioNode, intensity: number, panValue: number) => {
+  const startAt = context.currentTime;
+  const panner = context.createStereoPanner();
+  const filter = context.createBiquadFilter();
+  const gain = context.createGain();
+  const noise = context.createBufferSource();
+
+  noise.buffer = createNoiseBuffer(context, 0.65, 0.85);
+  filter.type = 'highpass';
+  filter.frequency.setValueAtTime(1050 + intensity * 650, startAt);
+  filter.Q.value = 0.85;
+  panner.pan.value = panValue;
+
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(0.02 * intensity, startAt + 0.045);
+  gain.gain.exponentialRampToValueAtTime(0.13 * intensity, startAt + 0.11);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.58);
+
+  noise.connect(filter);
+  filter.connect(panner);
+  panner.connect(gain);
+  gain.connect(destination);
+  noise.start(startAt);
+  noise.stop(startAt + 0.65);
+};
+
+const playAmbulanceSiren = (context: AudioContext, destination: AudioNode, intensity: number, panValue: number) => {
+  const startAt = context.currentTime;
+  const panner = context.createStereoPanner();
+  const filter = context.createBiquadFilter();
+  const gain = context.createGain();
+  const siren = context.createOscillator();
+  const overtone = context.createOscillator();
+
+  siren.type = 'sine';
+  overtone.type = 'triangle';
+  filter.type = 'bandpass';
+  filter.frequency.value = 1450;
+  filter.Q.value = 2.2;
+  panner.pan.setValueAtTime(panValue, startAt);
+  panner.pan.linearRampToValueAtTime(-panValue * 0.65, startAt + 2.6);
+
+  for (let i = 0; i < 5; i += 1) {
+    const t = startAt + i * 0.48;
+    const high = 940 + intensity * 180;
+    const low = 620 + intensity * 120;
+    siren.frequency.setValueAtTime(i % 2 === 0 ? high : low, t);
+    siren.frequency.linearRampToValueAtTime(i % 2 === 0 ? low : high, t + 0.42);
+    overtone.frequency.setValueAtTime((i % 2 === 0 ? high : low) * 1.52, t);
+    overtone.frequency.linearRampToValueAtTime((i % 2 === 0 ? low : high) * 1.52, t + 0.42);
+  }
+
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(0.095 * intensity, startAt + 0.18);
+  gain.gain.setValueAtTime(0.095 * intensity, startAt + 1.9);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 2.8);
+
+  siren.connect(filter);
+  overtone.connect(filter);
+  filter.connect(panner);
+  panner.connect(gain);
+  gain.connect(destination);
+  siren.start(startAt);
+  overtone.start(startAt);
+  siren.stop(startAt + 2.9);
+  overtone.stop(startAt + 2.9);
+};
+
+const getHighAltitudeIntensity = (
+  mountainPoints: Array<{ y: number }>,
+  currentDateIndex: number,
+  cameraY: number
+) => {
+  if (!mountainPoints.length) return 0;
+  const current = mountainPoints[Math.min(Math.max(currentDateIndex, 0), mountainPoints.length - 1)];
+  if (!current) return 0;
+
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const point of mountainPoints) {
+    minY = Math.min(minY, point.y);
+    maxY = Math.max(maxY, point.y);
+  }
+
+  const range = Math.max(1, maxY - minY);
+  const pathAltitude = (current.y - minY) / range;
+  const cameraAltitude = (cameraY - minY) / range;
+  const altitude = Math.max(pathAltitude, cameraAltitude * 0.75);
+  if (altitude < 0.56) return 0;
+  return Math.min(1, (altitude - 0.56) / 0.38);
+};
+
 const dateToIso = (date: Date | undefined) => date?.toISOString().slice(0, 10) ?? '';
 
 export const CinematicAudio = () => {
@@ -121,15 +241,27 @@ export const CinematicAudio = () => {
   const runtimeRef = useRef<Runtime | null>(null);
   const pressedKeysRef = useRef(new Set<string>());
   const mobileMoveInputRef = useRef<[number, number]>([0, 0]);
+  const currentDateIndexRef = useRef(0);
+  const cameraYRef = useRef(0);
+  const mountainPointsRef = useRef<Array<{ y: number }>>([]);
   const lastStepAtRef = useRef(0);
+  const lastHighAltitudeCueAtRef = useRef(0);
   const lastEventIndexRef = useRef<number | null>(null);
   const mobileMoveInput = useCovidStore((state) => state.mobileMoveInput);
   const data = useCovidStore((state) => state.data);
+  const mountainPoints = useCovidStore((state) => state.mountainPoints);
+  const cameraPosition = useCovidStore((state) => state.cameraPosition);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
 
   useEffect(() => {
     mobileMoveInputRef.current = mobileMoveInput;
   }, [mobileMoveInput]);
+
+  useEffect(() => {
+    currentDateIndexRef.current = currentDateIndex;
+    cameraYRef.current = cameraPosition[1];
+    mountainPointsRef.current = mountainPoints;
+  }, [cameraPosition, currentDateIndex, mountainPoints]);
 
   const stopAudio = useCallback(() => {
     runtimeRef.current?.teardown();
@@ -199,8 +331,39 @@ export const CinematicAudio = () => {
         playFootstep(runtime.context, runtime.master, Math.max(0.65, Math.min(1, joystickMagnitude || 0.8)));
       }, 80);
 
+      const highAltitudeTimer = window.setInterval(() => {
+        const runtime = runtimeRef.current;
+        if (!runtime) return;
+
+        const intensity = getHighAltitudeIntensity(
+          mountainPointsRef.current,
+          currentDateIndexRef.current,
+          cameraYRef.current
+        );
+        if (intensity <= 0) return;
+
+        const now = runtime.context.currentTime;
+        const cooldown = 7.5 - intensity * 3.2;
+        if (now - lastHighAltitudeCueAtRef.current < cooldown) return;
+        if (Math.random() > 0.28 + intensity * 0.42) return;
+
+        lastHighAltitudeCueAtRef.current = now;
+        const pan = Math.sin(now * 1.73) * 0.72;
+        const cueIntensity = 0.58 + intensity * 0.72;
+        const roll = Math.random();
+
+        if (roll < 0.38) {
+          playCough(runtime.context, runtime.master, cueIntensity, pan);
+        } else if (roll < 0.68) {
+          playSneeze(runtime.context, runtime.master, cueIntensity, -pan);
+        } else {
+          playAmbulanceSiren(runtime.context, runtime.master, cueIntensity, pan);
+        }
+      }, 950);
+
       const teardown = () => {
         window.clearInterval(movementTimer);
+        window.clearInterval(highAltitudeTimer);
         thunder.pause();
         crowd.pause();
         thunder.removeAttribute('src');
@@ -219,6 +382,7 @@ export const CinematicAudio = () => {
         context,
         master,
         movementTimer,
+        highAltitudeTimer,
         windSource,
         teardown,
       };
