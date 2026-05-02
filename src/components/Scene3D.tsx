@@ -10,6 +10,7 @@ import { EventMarkers3D } from './EventMarkers3D';
 import { MemorialPins3D } from './MemorialPins3D';
 import { MonthlyPlaques3D } from './MonthlyPlaques3D';
 import { Mountain3D } from './Mountain3D';
+import { PlayerPresence3D } from './PlayerPresence3D';
 
 interface Scene3DProps {
   enableControls?: boolean;
@@ -213,6 +214,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           mountainCenter={mountainCenter}
           quality={mountainQuality}
         />
+        <PlayerPresence3D quality={mountainQuality} />
 
         <Physics gravity={[0, -9.81, 0]} colliders="trimesh">
           <Suspense fallback={null}>

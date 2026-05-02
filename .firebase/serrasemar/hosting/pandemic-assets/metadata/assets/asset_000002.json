@@ -1,0 +1,62 @@
+{
+  "id": "asset_000002",
+  "type": "image",
+  "source_name": "commons.wikimedia.org",
+  "source_page_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Playground_in_Rio_de_Janeiro.jpg",
+  "original_media_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Playground_in_Rio_de_Janeiro.jpg",
+  "original_filename": "Playground_in_Rio_de_Janeiro.jpg",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/Playground_in_Rio_de_Janeiro.jpg",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000002.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000002.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000002_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000002_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000002_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000002_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": "não especificado"
+  },
+  "resolution": {
+    "width": 8000,
+    "height": 6000
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "Boaventuravinicius Own work",
+  "date_published": "não especificado",
+  "date_captured": "2020-05-10",
+  "caption": "não especificado",
+  "city_region": "não especificado",
+  "license": {
+    "status": "free_use",
+    "name": "CC BY-SA 4.0",
+    "url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "text_snippet": "Creative Commons Attribution-Share Alike 4.0",
+    "verified": true
+  },
+  "hashes": {
+    "sha256": "5198974ea89541b5e4fbf72a2b690546ebdacbc6814bf488f0d34624157e42f3"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:03.249Z",
+    "http_status": 200,
+    "content_type": "image/jpeg",
+    "final_url": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Playground_in_Rio_de_Janeiro.jpg",
+    "http_headers": {
+      "content-type": "image/jpeg",
+      "content-length": "10687276",
+      "last-modified": "Mon, 11 May 2020 01:38:00 GMT"
+    },
+    "content_length": "10687276",
+    "last_modified": "Mon, 11 May 2020 01:38:00 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "não especificado"
+  }
+}

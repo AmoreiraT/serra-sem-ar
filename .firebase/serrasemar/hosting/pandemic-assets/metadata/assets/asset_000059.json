@@ -1,0 +1,62 @@
+{
+  "id": "asset_000059",
+  "type": "image",
+  "source_name": "amazoniareal.com.br",
+  "source_page_url": "https://amazoniareal.com.br/a-dupla-catastrofe-sanitaria-em-manaus-durante-a-pandemia-de-covid-19/",
+  "original_media_url": "https://amazoniareal.com.br/wp-content/uploads/2025/12/MULHERE-VIVAS-DEUSIANE.jpg",
+  "original_filename": "MULHERE-VIVAS-DEUSIANE.jpg",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/MULHERE-VIVAS-DEUSIANE.jpg",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000059.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000059.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000059_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000059_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000059_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000059_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": "não especificado"
+  },
+  "resolution": {
+    "width": 1920,
+    "height": 1080
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "Jesem Orellana",
+  "date_published": "2021-01-28T21:36:36+00:00",
+  "date_captured": "não especificado",
+  "caption": "Dupla-catástrofe-sanitária-em-Manaus",
+  "city_region": "não especificado",
+  "license": {
+    "status": "license_unspecified",
+    "name": "não especificado",
+    "url": "não especificado",
+    "text_snippet": "Amazônia Real <iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-N6HQ95L\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe> × Como doar Editorias CRISE CLIMÁTICA-COP30 MEIO AMBIENTE POVOS INDÍGENAS QUESTÃO AGRÁRIA POLÍTICA ECONOMIA E NEGÓCIOS CULTURA ESPECIAIS Redes Sociais Política A dupla Catástrofe Sanitária em Manaus, durante a pandemia de Covid-19 Sepultamentos e",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "15cb19e85bbb8032f280229967cd41f03a9bed2569134e6ee117457af55b7cda"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:50.695Z",
+    "http_status": 200,
+    "content_type": "image/jpeg",
+    "final_url": "https://amazoniareal.com.br/wp-content/uploads/2025/12/MULHERE-VIVAS-DEUSIANE.jpg",
+    "http_headers": {
+      "content-type": "image/jpeg",
+      "content-length": "328913",
+      "last-modified": "Mon, 08 Dec 2025 19:45:36 GMT"
+    },
+    "content_length": "328913",
+    "last_modified": "Mon, 08 Dec 2025 19:45:36 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "não especificado"
+  }
+}

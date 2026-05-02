@@ -1,0 +1,62 @@
+{
+  "id": "asset_000056",
+  "type": "image",
+  "source_name": "amazoniareal.com.br",
+  "source_page_url": "https://amazoniareal.com.br/a-dupla-catastrofe-sanitaria-em-manaus-durante-a-pandemia-de-covid-19/",
+  "original_media_url": "https://amazoniareal.com.br/wp-content/uploads/2020/09/20200601_insulae-49-1170x750.jpg",
+  "original_filename": "20200601_insulae-49-1170x750.jpg",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/20200601_insulae-49-1170x750.jpg",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000056.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000056.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000056_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000056_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000056_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000056_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": "não especificado"
+  },
+  "resolution": {
+    "width": 1170,
+    "height": 750
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "Jesem Orellana",
+  "date_published": "2021-01-28T21:36:36+00:00",
+  "date_captured": "não especificado",
+  "caption": "Dupla-catástrofe-sanitária-em-Manaus",
+  "city_region": "não especificado",
+  "license": {
+    "status": "license_unspecified",
+    "name": "não especificado",
+    "url": "não especificado",
+    "text_snippet": "Amazônia Real <iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-N6HQ95L\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe> × Como doar Editorias CRISE CLIMÁTICA-COP30 MEIO AMBIENTE POVOS INDÍGENAS QUESTÃO AGRÁRIA POLÍTICA ECONOMIA E NEGÓCIOS CULTURA ESPECIAIS Redes Sociais Política A dupla Catástrofe Sanitária em Manaus, durante a pandemia de Covid-19 Sepultamentos e",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "15c53e8b75c43267c723e02421377f3254885b1a70e244620c6c0b998f7ba746"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:49.177Z",
+    "http_status": 200,
+    "content_type": "image/jpeg",
+    "final_url": "https://amazoniareal.com.br/wp-content/uploads/2020/09/20200601_insulae-49-1170x750.jpg",
+    "http_headers": {
+      "content-type": "image/jpeg",
+      "content-length": "86091",
+      "last-modified": "Sat, 29 Apr 2023 22:37:22 GMT"
+    },
+    "content_length": "86091",
+    "last_modified": "Sat, 29 Apr 2023 22:37:22 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "não especificado"
+  }
+}

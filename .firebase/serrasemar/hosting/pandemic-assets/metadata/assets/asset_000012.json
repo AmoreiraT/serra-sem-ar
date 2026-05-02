@@ -1,0 +1,59 @@
+{
+  "id": "asset_000012",
+  "type": "image",
+  "source_name": "commons.wikimedia.org",
+  "source_page_url": "https://commons.wikimedia.org/wiki/File:Playground_in_Rio_de_Janeiro.jpg",
+  "original_media_url": "https://commons.wikimedia.org/wiki/File:Playground_in_Rio_de_Janeiro.jpg",
+  "original_filename": "File_Playground_in_Rio_de_Janeiro.jpg",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/File_Playground_in_Rio_de_Janeiro.jpg",
+    "texture_2k": "não especificado",
+    "texture_4k": "não especificado",
+    "normal": "não especificado",
+    "roughness": "não especificado",
+    "alpha_masks": [],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": "não especificado"
+  },
+  "resolution": {
+    "width": 0,
+    "height": 0
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "Boaventuravinicius Own work",
+  "date_published": "não especificado",
+  "date_captured": "2020-05-10",
+  "caption": "não especificado",
+  "city_region": "não especificado",
+  "license": {
+    "status": "free_use",
+    "name": "CC BY-SA 4.0",
+    "url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "text_snippet": "Creative Commons Attribution-Share Alike 4.0",
+    "verified": true
+  },
+  "hashes": {
+    "sha256": "1760888c78dea84fc9f0dce2077fc0783655d2eded64cf3f59a90ac4ffd9aef6"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:22.372Z",
+    "http_status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "final_url": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Playground_in_Rio_de_Janeiro.jpg",
+    "http_headers": {
+      "content-type": "text/html; charset=UTF-8",
+      "content-length": "22601",
+      "last-modified": "Wed, 11 Feb 2026 01:22:36 GMT"
+    },
+    "content_length": "22601",
+    "last_modified": "Wed, 11 Feb 2026 01:22:36 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "não especificado"
+  }
+}

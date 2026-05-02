@@ -1,0 +1,59 @@
+{
+  "id": "asset_000001",
+  "type": "image",
+  "source_name": "cdn.exemplo.com",
+  "source_page_url": "https://cdn.exemplo.com/media.jpg",
+  "original_media_url": "https://cdn.exemplo.com/media.jpg",
+  "original_filename": "media.jpg",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/media.jpg",
+    "texture_2k": "não especificado",
+    "texture_4k": "não especificado",
+    "normal": "não especificado",
+    "roughness": "não especificado",
+    "alpha_masks": [],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": "não especificado"
+  },
+  "resolution": {
+    "width": 0,
+    "height": 0
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "não especificado",
+  "date_published": "não especificado",
+  "date_captured": "não especificado",
+  "caption": "não especificado",
+  "city_region": "não especificado",
+  "license": {
+    "status": "license_unspecified",
+    "name": "não especificado",
+    "url": "não especificado",
+    "text_snippet": "não especificado",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:01.992Z",
+    "http_status": 410,
+    "content_type": "não especificado",
+    "final_url": "https://cdn.exemplo.com/media.jpg",
+    "http_headers": {
+      "content-type": "não especificado",
+      "content-length": "0",
+      "last-modified": "não especificado"
+    },
+    "content_length": "0",
+    "last_modified": "não especificado"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "não especificado"
+  }
+}

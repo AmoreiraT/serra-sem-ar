@@ -1,0 +1,62 @@
+{
+  "id": "asset_000023",
+  "type": "image",
+  "source_name": "www.saude.rj.gov.br",
+  "source_page_url": "https://www.saude.rj.gov.br/noticias/2020/05/governo-do-rio-inaugura-hospital-de-campanha-do-parque-dos-atletas-nesta-segunda",
+  "original_media_url": "https://www.saude.rj.gov.br/site/img/rede_sauderj.jpg",
+  "original_filename": "rede_sauderj.jpg",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/rede_sauderj.jpg",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000023.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000023.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000023_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000023_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000023_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000023_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": "não especificado"
+  },
+  "resolution": {
+    "width": 119,
+    "height": 107
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "não especificado",
+  "date_published": "não especificado",
+  "date_captured": "não especificado",
+  "caption": "Unidade, que contou com recursos da iniciativa privada, é a terceira aberta pelo estado no combate à Covid-19",
+  "city_region": "não especificado",
+  "license": {
+    "status": "editorial_rights_managed",
+    "name": "não especificado",
+    "url": "https://creativecommons.org/licenses/by/3.0/br/",
+    "text_snippet": "Conexão Saúde Viver melhor Cidadão Profissional de saúde Gestor Pesquisador Setores da Saúde Assessoria de Regionalização Atendimento Atenção Especializada, Controle e Avaliação Atenção Psicossocial e Populações em Situação de Vulnerabilidade Atenção Primária à Saúde Auditoria Design em Saúde Contratações Educação e Formação em Saúde Humanização Informação SUS LACENRJ Licitações Medicamentos Organ",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "be62c6fdd7380c276fc2934074c95df8663bf32c9a244d05c6eb0f66204a3792"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:30.465Z",
+    "http_status": 200,
+    "content_type": "image/jpeg",
+    "final_url": "https://www.saude.rj.gov.br/site/img/rede_sauderj.jpg",
+    "http_headers": {
+      "content-type": "image/jpeg",
+      "content-length": "3499",
+      "last-modified": "Tue, 01 Feb 2022 19:49:04 GMT"
+    },
+    "content_length": "3499",
+    "last_modified": "Tue, 01 Feb 2022 19:49:04 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "não especificado"
+  }
+}

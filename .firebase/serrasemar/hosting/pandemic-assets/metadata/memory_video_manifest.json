@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-02-25T03:15:05.002Z",
+  "entries": [
+    {
+      "id": "memory_asset_000002",
+      "source_asset_id": "asset_000002",
+      "video_mp4": "/pandemic-assets/processed/videos/mp4/memory_asset_000002.mp4",
+      "video_webm": "/pandemic-assets/processed/videos/webm/memory_asset_000002.webm",
+      "thumb": "/pandemic-assets/processed/videos/thumbs/memory_asset_000002.jpg",
+      "duration_seconds": 6,
+      "fps": 30
+    },
+    {
+      "id": "memory_asset_000005",
+      "source_asset_id": "asset_000005",
+      "video_mp4": "/pandemic-assets/processed/videos/mp4/memory_asset_000005.mp4",
+      "video_webm": "/pandemic-assets/processed/videos/webm/memory_asset_000005.webm",
+      "thumb": "/pandemic-assets/processed/videos/thumbs/memory_asset_000005.jpg",
+      "duration_seconds": 6,
+      "fps": 30
+    },
+    {
+      "id": "memory_asset_000017",
+      "source_asset_id": "asset_000017",
+      "video_mp4": "/pandemic-assets/processed/videos/mp4/memory_asset_000017.mp4",
+      "video_webm": "/pandemic-assets/processed/videos/webm/memory_asset_000017.webm",
+      "thumb": "/pandemic-assets/processed/videos/thumbs/memory_asset_000017.jpg",
+      "duration_seconds": 6,
+      "fps": 30
+    }
+  ]
+}

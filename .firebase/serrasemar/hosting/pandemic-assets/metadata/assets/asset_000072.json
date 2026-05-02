@@ -1,0 +1,69 @@
+{
+  "id": "asset_000072",
+  "type": "image",
+  "source_name": "bancodeimagens.portoalegre.rs.gov.br",
+  "source_page_url": "https://bancodeimagens.portoalegre.rs.gov.br/imagem/43663",
+  "original_media_url": "https://bancodeimagens.portoalegre.rs.gov.br/themes/banco/images/logo.png",
+  "original_filename": "logo.png",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/logo.png",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000072.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000072.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000072_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000072_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000072_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000072_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": [
+      "/pandemic-assets/processed/cubemaps/asset_000072/px.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000072/nx.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000072/py.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000072/ny.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000072/pz.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000072/nz.jpg"
+    ]
+  },
+  "resolution": {
+    "width": 212,
+    "height": 71
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "não especificado",
+  "date_published": "não especificado",
+  "date_captured": "não especificado",
+  "caption": "não especificado",
+  "city_region": "não especificado",
+  "license": {
+    "status": "license_unspecified",
+    "name": "não especificado",
+    "url": "não especificado",
+    "text_snippet": "Pular para o conteúdo principal Buscar Buscar por secretaria, assunto ou palavra-chave Buscar por secretaria, assunto ou palavra-chave Secretaria Administração e Patrimônio Copa do Mundo Feminina Cultura Defesa Civil Demhab Desenvolvimento Econômico, Turismo e Eventos Dmae DMLU Educação EPTC Esporte e Lazer Fazenda Gabinete da Causa Animal Gabinete da Primeira-Dama Gabinete da Vice-Prefeita Gabine",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "2140a783601e5b496830ec53428eb19db2d9f8e983d52c111835682bcb8a6f53"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:54:30.874Z",
+    "http_status": 200,
+    "content_type": "image/png",
+    "final_url": "https://bancodeimagens.portoalegre.rs.gov.br/themes/banco/images/logo.png",
+    "http_headers": {
+      "content-type": "image/png",
+      "content-length": "7713",
+      "last-modified": "Wed, 12 Apr 2017 21:13:23 GMT"
+    },
+    "content_length": "7713",
+    "last_modified": "Wed, 12 Apr 2017 21:13:23 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "generated"
+  }
+}

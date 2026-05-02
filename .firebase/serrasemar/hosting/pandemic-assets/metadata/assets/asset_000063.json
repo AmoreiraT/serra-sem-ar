@@ -1,0 +1,62 @@
+{
+  "id": "asset_000063",
+  "type": "image",
+  "source_name": "amazoniareal.com.br",
+  "source_page_url": "https://amazoniareal.com.br/a-dupla-catastrofe-sanitaria-em-manaus-durante-a-pandemia-de-covid-19/",
+  "original_media_url": "https://amazoniareal.com.br/wp-content/themes/amazonia-real-2019/assets/img/apoiadores-amazonia-real.png",
+  "original_filename": "apoiadores-amazonia-real.png",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/apoiadores-amazonia-real.png",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000063.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000063.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000063_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000063_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000063_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000063_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": "não especificado"
+  },
+  "resolution": {
+    "width": 536,
+    "height": 546
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "Jesem Orellana",
+  "date_published": "2021-01-28T21:36:36+00:00",
+  "date_captured": "não especificado",
+  "caption": "Dupla-catástrofe-sanitária-em-Manaus",
+  "city_region": "não especificado",
+  "license": {
+    "status": "license_unspecified",
+    "name": "não especificado",
+    "url": "não especificado",
+    "text_snippet": "Amazônia Real <iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-N6HQ95L\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe> × Como doar Editorias CRISE CLIMÁTICA-COP30 MEIO AMBIENTE POVOS INDÍGENAS QUESTÃO AGRÁRIA POLÍTICA ECONOMIA E NEGÓCIOS CULTURA ESPECIAIS Redes Sociais Política A dupla Catástrofe Sanitária em Manaus, durante a pandemia de Covid-19 Sepultamentos e",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "cd8f6846679a4b70b70fa5174d7dbc30a7da508522c7f925cf0ddc5985e622b5"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:52.692Z",
+    "http_status": 200,
+    "content_type": "image/png",
+    "final_url": "https://amazoniareal.com.br/wp-content/themes/amazonia-real-2019/assets/img/apoiadores-amazonia-real.png",
+    "http_headers": {
+      "content-type": "image/png",
+      "content-length": "90527",
+      "last-modified": "Wed, 24 Sep 2025 18:04:13 GMT"
+    },
+    "content_length": "90527",
+    "last_modified": "Wed, 24 Sep 2025 18:04:13 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "não especificado"
+  }
+}

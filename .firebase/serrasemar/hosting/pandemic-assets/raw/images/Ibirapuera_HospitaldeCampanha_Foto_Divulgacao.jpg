@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />		<script>(function(html){html.className = html.className.replace(/\bno-js\b/,'js')})(document.documentElement);</script>
+<meta name='robots' content='index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' />
+	<style>img:is([sizes="auto" i], [sizes^="auto," i]) { contain-intrinsic-size: 3000px 1500px }</style>
+	
+	<!-- This site is optimized with the Yoast SEO plugin v22.6 - https://yoast.com/wordpress/plugins/seo/ -->
+	<title>São Paulo Turismo - SPTuris - São Paulo Turismo (SPTuris)</title>
+	<meta name="description" content="Portal da São Paulo Turismo (SPTuris), empresa oficial de turismo e eventos da cidade de São Paulo." />
+	<link rel="canonical" href="https://spturis.com/" />
+	<meta property="og:locale" content="pt_BR" />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="São Paulo Turismo - SPTuris - São Paulo Turismo (SPTuris)" />
+	<meta property="og:description" content="Portal da São Paulo Turismo (SPTuris), empresa oficial de turismo e eventos da cidade de São Paulo." />
+	<meta property="og:url" content="https://spturis.com/" />
+	<meta property="og:site_name" content="São Paulo Turismo (SPTuris)" />
+	<meta property="article:publisher" content="https://facebook.com/spturis" />
+	<meta property="article:modified_time" content="2026-02-23T13:19:19+00:00" />
+	<meta property="og:image" content="https://spturis.com/wp-content/uploads/2022/02/StockSnap_M6D1GS9PSL.jpg" />
+	<meta property="og:image:width" content="2300" />
+	<meta property="og:image:height" content="1515" />
+	<meta property="og:image:type" content="image/jpeg" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:site" content="@spturis" />
+	<script type="application/ld+json" class="yoast-schema-graph">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://spturis.com/","url":"https://spturis.com/","name":"São Paulo Turismo - SPTuris - São Paulo Turismo (SPTuris)","isPartOf":{"@id":"https://spturis.com/#website"},"about":{"@id":"https://spturis.com/#organization"},"primaryImageOfPage":{"@id":"https://spturis.com/#primaryimage"},"image":{"@id":"https://spturis.com/#primaryimage"},"thumbnailUrl":"https://spturis.com/wp-content/uploads/2022/02/StockSnap_M6D1GS9PSL.jpg","datePublished":"2022-02-03T19:21:00+00:00","dateModified":"2026-02-23T13:19:19+00:00","description":"Portal da São Paulo Turismo (SPTuris), empresa oficial de turismo e eventos da cidade de São Paulo.","breadcrumb":{"@id":"https://spturis.com/#breadcrumb"},"inLanguage":"pt-BR","potentialAction":[{"@type":"ReadAction","target":["https://spturis.com/"]}]},{"@type":"ImageObject","inLanguage":"pt-BR","@id":"https://spturis.com/#primaryimage","url":"https://spturis.com/wp-content/uploads/2022/02/StockSnap_M6D1GS9PSL.jpg","contentUrl":"https://spturis.com/wp-content/uploads/2022/02/StockSnap_M6D1GS9PSL.jpg","width":2300,"height":1515},{"@type":"BreadcrumbList","@id":"https://spturis.com/#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"São Paulo Turismo &#8211; SPTuris"}]},{"@type":"WebSite","@id":"https://spturis.com/#website","url":"https://spturis.com/","name":"São Paulo Turismo (SPTuris)","description":"Empresa oficial de turismo e eventos da cidade de São Paulo","publisher":{"@id":"https://spturis.com/#organization"},"potentialAction":[{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://spturis.com/?s={search_term_string}"},"query-input":"required name=search_term_string"}],"inLanguage":"pt-BR"},{"@type":"Organization","@id":"https://spturis.com/#organization","name":"São Paulo Turismo (SPTuris)","url":"https://spturis.com/","logo":{"@type":"ImageObject","inLanguage":"pt-BR","@id":"https://spturis.com/#/schema/logo/image/","url":"https://spturis.com/wp-content/uploads/2025/02/cropped-FUNDO-ESCURO@4x.png","contentUrl":"https://spturis.com/wp-content/uploads/2025/02/cropped-FUNDO-ESCURO@4x.png","width":1253,"height":340,"caption":"São Paulo Turismo (SPTuris)"},"image":{"@id":"https://spturis.com/#/schema/logo/image/"},"sameAs":["https://facebook.com/spturis","https://x.com/spturis"]}]}</script>
+	<!-- / Yoast SEO plugin. -->
+
+
+<link rel="alternate" type="application/rss+xml" title="Feed para São Paulo Turismo (SPTuris) &raquo;" href="https://spturis.com/feed/" />
+<link rel="alternate" type="application/rss+xml" title="Feed de comentários para São Paulo Turismo (SPTuris) &raquo;" href="https://spturis.com/comments/feed/" />
+<script>
+window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/15.0.3\/72x72\/","ext":".png","svgUrl":"https:\/\/s.w.org\/images\/core\/emoji\/15.0.3\/svg\/","svgExt":".svg","source":{"concatemoji":"https:\/\/spturis.com\/wp-includes\/js\/wp-emoji-release.min.js?ver=6.7.4"}};
+/*! This file is auto-generated */
+!function(i,n){var o,s,e;function c(e){try{var t={supportTests:e,timestamp:(new Date).valueOf()};sessionStorage.setItem(o,JSON.stringify(t))}catch(e){}}function p(e,t,n){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);var t=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data),r=(e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(n,0,0),new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data));return t.every(function(e,t){return e===r[t]})}function u(e,t,n){switch(t){case"flag":return n(e,"\ud83c\udff3\ufe0f\u200d\u26a7\ufe0f","\ud83c\udff3\ufe0f\u200b\u26a7\ufe0f")?!1:!n(e,"\ud83c\uddfa\ud83c\uddf3","\ud83c\uddfa\u200b\ud83c\uddf3")&&!n(e,"\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f","\ud83c\udff4\u200b\udb40\udc67\u200b\udb40\udc62\u200b\udb40\udc65\u200b\udb40\udc6e\u200b\udb40\udc67\u200b\udb40\udc7f");case"emoji":return!n(e,"\ud83d\udc26\u200d\u2b1b","\ud83d\udc26\u200b\u2b1b")}return!1}function f(e,t,n){var r="undefined"!=typeof WorkerGlobalScope&&self instanceof WorkerGlobalScope?new OffscreenCanvas(300,150):i.createElement("canvas"),a=r.getContext("2d",{willReadFrequently:!0}),o=(a.textBaseline="top",a.font="600 32px Arial",{});return e.forEach(function(e){o[e]=t(a,e,n)}),o}function t(e){var t=i.createElement("script");t.src=e,t.defer=!0,i.head.appendChild(t)}"undefined"!=typeof Promise&&(o="wpEmojiSettingsSupports",s=["flag","emoji"],n.supports={everything:!0,everythingExceptFlag:!0},e=new Promise(function(e){i.addEventListener("DOMContentLoaded",e,{once:!0})}),new Promise(function(t){var n=function(){try{var e=JSON.parse(sessionStorage.getItem(o));if("object"==typeof e&&"number"==typeof e.timestamp&&(new Date).valueOf()<e.timestamp+604800&&"object"==typeof e.supportTests)return e.supportTests}catch(e){}return null}();if(!n){if("undefined"!=typeof Worker&&"undefined"!=typeof OffscreenCanvas&&"undefined"!=typeof URL&&URL.createObjectURL&&"undefined"!=typeof Blob)try{var e="postMessage("+f.toString()+"("+[JSON.stringify(s),u.toString(),p.toString()].join(",")+"));",r=new Blob([e],{type:"text/javascript"}),a=new Worker(URL.createObjectURL(r),{name:"wpTestEmojiSupports"});return void(a.onmessage=function(e){c(n=e.data),a.terminate(),t(n)})}catch(e){}c(n=f(s,u,p))}t(n)}).then(function(e){for(var t in e)n.supports[t]=e[t],n.supports.everything=n.supports.everything&&n.supports[t],"flag"!==t&&(n.supports.everythingExceptFlag=n.supports.everythingExceptFlag&&n.supports[t]);n.supports.everythingExceptFlag=n.supports.everythingExceptFlag&&!n.supports.flag,n.DOMReady=!1,n.readyCallback=function(){n.DOMReady=!0}}).then(function(){return e}).then(function(){var e;n.supports.everything||(n.readyCallback(),(e=n.source||{}).concatemoji?t(e.concatemoji):e.wpemoji&&e.twemoji&&(t(e.twemoji),t(e.wpemoji)))}))}((window,document),window._wpemojiSettings);
+</script>
+<link rel='stylesheet' id='mapp-sso-css-css' href='https://spturis.com/wp-content/plugins/mapp/auth/login.css?ver=445' type='text/css' media='all' />
+<style id='wp-emoji-styles-inline-css' type='text/css'>
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+</style>
+<link rel='stylesheet' id='wpzoom-blocks-css-style-portfolio_layouts-css' href='https://spturis.com/wp-content/plugins/wpzoom-portfolio/build/blocks/portfolio-layouts/style.css?ver=b36636c79ecf064b97f60be61e440b0f' type='text/css' media='' />
+<link rel='stylesheet' id='wpzoom-blocks-css-style-portfolio-css' href='https://spturis.com/wp-content/plugins/wpzoom-portfolio/build/blocks/portfolio/style.css?ver=578a82eeb8447d037713e8ae74cf217a' type='text/css' media='' />
+<style id='classic-theme-styles-inline-css' type='text/css'>
+/*! This file is auto-generated */
+.wp-block-button__link{color:#fff;background-color:#32373c;border-radius:9999px;box-shadow:none;text-decoration:none;padding:calc(.667em + 2px) calc(1.333em + 2px);font-size:1.125em}.wp-block-file__button{background:#32373c;color:#fff;text-decoration:none}
+</style>
+<style id='global-styles-inline-css' type='text/css'>
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgba(6,147,227,1) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgba(252,185,0,1) 0%,rgba(255,105,0,1) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgba(255,105,0,1) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: 20px;--wp--preset--font-size--large: 36px;--wp--preset--font-size--x-large: 42px;--wp--preset--spacing--20: 0.44rem;--wp--preset--spacing--30: 0.67rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2.25rem;--wp--preset--spacing--70: 3.38rem;--wp--preset--spacing--80: 5.06rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgba(255, 255, 255, 1), 6px 6px rgba(0, 0, 0, 1);--wp--preset--shadow--crisp: 6px 6px 0px rgba(0, 0, 0, 1);}:where(.is-layout-flex){gap: 0.5em;}:where(.is-layout-grid){gap: 0.5em;}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}:where(.wp-block-columns.is-layout-flex){gap: 2em;}:where(.wp-block-columns.is-layout-grid){gap: 2em;}:where(.wp-block-post-template.is-layout-flex){gap: 1.25em;}:where(.wp-block-post-template.is-layout-grid){gap: 1.25em;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}
+:where(.wp-block-post-template.is-layout-flex){gap: 1.25em;}:where(.wp-block-post-template.is-layout-grid){gap: 1.25em;}
+:where(.wp-block-columns.is-layout-flex){gap: 2em;}:where(.wp-block-columns.is-layout-grid){gap: 2em;}
+:root :where(.wp-block-pullquote){font-size: 1.5em;line-height: 1.6;}
+</style>
+<link rel='stylesheet' id='contact-form-7-css' href='https://spturis.com/wp-content/plugins/contact-form-7/includes/css/styles.css?ver=6.1.1' type='text/css' media='all' />
+<link rel='stylesheet' id='css_newsletter-css' href='https://spturis.com/wp-content/plugins/simple-newsletter/asset/css/newsletter.css?ver=1.0.0' type='text/css' media='all' />
+<link rel='stylesheet' id='inspiro-google-fonts-css' href='https://spturis.com/wp-content/fonts/c91d840ee5a5e9bc44d41737d91e2eaf.css?ver=1.7.12' type='text/css' media='all' />
+<link rel='stylesheet' id='inspiro-style-css' href='https://spturis.com/wp-content/themes/inspiro/assets/css/minified/style.min.css?ver=1.7.12' type='text/css' media='all' />
+<style id='inspiro-style-inline-css' type='text/css'>
+body, button, input, select, textarea {
+font-family: 'Inter', sans-serif;
+font-weight: 400;
+}
+@media screen and (min-width: 782px) {
+body, button, input, select, textarea {
+font-size: 16px;
+line-height: 1.8;
+} }
+body:not(.wp-custom-logo) a.custom-logo-text {
+font-family: 'Montserrat', sans-serif;
+font-weight: 700;
+text-transform: uppercase;
+}
+@media screen and (min-width: 782px) {
+body:not(.wp-custom-logo) a.custom-logo-text {
+font-size: 26px;
+line-height: 1.8;
+} }
+h1, h2, h3, h4, h5, h6, .home.blog .entry-title, .page .entry-title, .page-title, #comments>h3, #respond>h3, .entry-footer {
+font-weight: 700;
+line-height: 1.4;
+}
+.site-title {
+font-family: 'Inter', sans-serif;
+font-weight: 700;
+line-height: 1.25;
+}
+@media screen and (min-width: 782px) {
+.site-title {
+font-size: 80px;
+} }
+.site-description {
+font-family: 'Inter', sans-serif;
+line-height: 1.8;
+}
+@media screen and (min-width: 782px) {
+.site-description {
+font-size: 20px;
+} }
+.custom-header-button {
+font-family: 'Inter', sans-serif;
+line-height: 1.8;
+}
+@media screen and (min-width: 782px) {
+.custom-header-button {
+font-size: 16px;
+} }
+.navbar-nav a {
+font-family: 'Montserrat', sans-serif;
+font-weight: 500;
+line-height: 1.8;
+}
+@media screen and (min-width: 782px) {
+.navbar-nav a {
+font-size: 16px;
+} }
+@media screen and (max-width: 64em) {
+.navbar-nav li a {
+font-family: 'Montserrat', sans-serif;
+font-size: 16px;
+font-weight: 600;
+text-transform: uppercase;
+line-height: 1.8;
+} }
+
+</style>
+<link rel='stylesheet' id='elementor-frontend-css' href='https://spturis.com/wp-content/plugins/elementor/assets/css/frontend.min.css?ver=3.28.4' type='text/css' media='all' />
+<link rel='stylesheet' id='widget-image-css' href='https://spturis.com/wp-content/plugins/elementor/assets/css/widget-image.min.css?ver=3.28.4' type='text/css' media='all' />
+<link rel='stylesheet' id='widget-nav-menu-css' href='https://spturis.com/wp-content/plugins/elementor-pro/assets/css/widget-nav-menu.min.css?ver=3.28.4' type='text/css' media='all' />
+<link rel='stylesheet' id='widget-menu-anchor-css' href='https://spturis.com/wp-content/plugins/elementor/assets/css/widget-menu-anchor.min.css?ver=3.28.4' type='text/css' media='all' />
+<link rel='stylesheet' id='widget-spacer-css' href='https://spturis.com/wp-content/plugins/elementor/assets/css/widget-spacer.min.css?ver=3.28.4' type='text/css' media='all' />
+<link rel='stylesheet' id='widget-heading-css' href='https://spturis.com/wp-content/plugins/elementor/assets/css/widget-heading.min.css?ver=3.28.4' type='text/css' media='all' />
+<link rel='stylesheet' id='widget-divider-css' href='https://spturis.com/wp-content/plugins/elementor/assets/css/widget-divider.min.css?ver=3.28.4' type='text/css' media='all' />
+<link rel='stylesheet' id='elementor-post-7-css' href='https://spturis.com/wp-content/uploads/elementor/css/post-7.css?ver=1767795958' type='text/css' media='all' />
+<link rel='stylesheet' id='e-shapes-css' href='https://spturis.com/wp-content/plugins/elementor/assets/css/conditionals/shapes.min.css?ver=3.28.4' type='text/css' media='all' />
+<link rel='stylesheet' id='elementor-post-9-css' href='https://spturis.com/wp-content/uploads/elementor/css/post-9.css?ver=1771852759' type='text/css' media='all' />
+<link rel='stylesheet' id='elementor-post-12253-css' href='https://spturis.com/wp-content/uploads/elementor/css/post-12253.css?ver=1767795958' type='text/css' media='all' />
+<link rel='stylesheet' id='elementor-post-12250-css' href='https://spturis.com/wp-content/uploads/elementor/css/post-12250.css?ver=1768582747' type='text/css' media='all' />
+<link rel='stylesheet' id='dashicons-css' href='https://spturis.com/wp-includes/css/dashicons.min.css?ver=6.7.4' type='text/css' media='all' />
+<link rel='stylesheet' id='elementor-gf-local-leaguespartan-css' href='https://spturis.com/wp-content/uploads/elementor/google-fonts/css/leaguespartan.css?ver=1747399073' type='text/css' media='all' />
+<script src="https://spturis.com/wp-includes/js/jquery/jquery.min.js?ver=3.7.1" id="jquery-core-js"></script>
+<script src="https://spturis.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1" id="jquery-migrate-js"></script>
+<script id="newsletter-js-js-extra">
+var the_ajax_script = {"ajaxurl":"https:\/\/spturis.com\/wp-admin\/admin-ajax.php"};
+</script>
+<script src="https://spturis.com/wp-content/plugins/simple-newsletter/asset/js/newsletter_ajax.js?ver=6.7.4" id="newsletter-js-js"></script>
+<script src="https://spturis.com/wp-content/plugins/mapp/load.js?ver=496" id="mapp-plugin-js"></script>
+<link rel="https://api.w.org/" href="https://spturis.com/wp-json/" /><link rel="alternate" title="JSON" type="application/json" href="https://spturis.com/wp-json/wp/v2/pages/9" /><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://spturis.com/xmlrpc.php?rsd" />
+<meta name="generator" content="WordPress 6.7.4" />
+<link rel='shortlink' href='https://spturis.com/' />
+<link rel="alternate" title="oEmbed (JSON)" type="application/json+oembed" href="https://spturis.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fspturis.com%2F" />
+<link rel="alternate" title="oEmbed (XML)" type="text/xml+oembed" href="https://spturis.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fspturis.com%2F&#038;format=xml" />
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "010842e8f08342228208116a659f09b7"}'></script><noscript>spturis.com</noscript>
+<link rel="stylesheet" id="css-spturis" href="/mapp/spturis.css" type="text/css" media="all"><noscript>spturis.com</noscript>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<style>
+  a:focus,
+  a:hover {
+    border: 1px solid #ffffff !important;
+	  outline: 1px solid #ffffff !important;
+	  outline-offset: 0px;
+  }
+	
+	@media screen and (max-width: 767px) {
+    .accesskey-top {
+          top: 152px !important;
+    }
+		
+	body.side-nav-open .accesskey-top {
+          top: 64px !important;
+    }
+
+}
+</style>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MPY9X4SEFH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-MPY9X4SEFH');
+</script><meta name="generator" content="Elementor 3.28.4; features: e_font_icon_svg, additional_custom_breakpoints, e_local_google_fonts; settings: css_print_method-external, google_font-enabled, font_display-auto">
+<meta name="redi-version" content="1.1.6" />			<style>
+				.e-con.e-parent:nth-of-type(n+4):not(.e-lazyloaded):not(.e-no-lazyload),
+				.e-con.e-parent:nth-of-type(n+4):not(.e-lazyloaded):not(.e-no-lazyload) * {
+					background-image: none !important;
+				}
+				@media screen and (max-height: 1024px) {
+					.e-con.e-parent:nth-of-type(n+3):not(.e-lazyloaded):not(.e-no-lazyload),
+					.e-con.e-parent:nth-of-type(n+3):not(.e-lazyloaded):not(.e-no-lazyload) * {
+						background-image: none !important;
+					}
+				}
+				@media screen and (max-height: 640px) {
+					.e-con.e-parent:nth-of-type(n+2):not(.e-lazyloaded):not(.e-no-lazyload),
+					.e-con.e-parent:nth-of-type(n+2):not(.e-lazyloaded):not(.e-no-lazyload) * {
+						background-image: none !important;
+					}
+				}
+			</style>
+					<style id="inspiro-custom-header-styles" type="text/css">
+					.site-title a,
+			.colors-dark .site-title a,
+			.colors-custom .site-title a,
+			body.has-header-image .site-title a,
+			body.has-header-video .site-title a,
+			body.has-header-image.colors-dark .site-title a,
+			body.has-header-video.colors-dark .site-title a,
+			body.has-header-image.colors-custom .site-title a,
+			body.has-header-video.colors-custom .site-title a,
+			.site-description,
+			.colors-dark .site-description,
+			.colors-custom .site-description,
+			body.has-header-image .site-description,
+			body.has-header-video .site-description,
+			body.has-header-image.colors-dark .site-description,
+			body.has-header-video.colors-dark .site-description,
+			body.has-header-image.colors-custom .site-description,
+			body.has-header-video.colors-custom .site-description {
+				color: ;
+			}
+		
+					.custom-header-button {
+				color: #ffffff;
+				border-color: #ffffff;
+			}
+		
+					.custom-header-button:hover {
+				color: #ffffff;
+			}
+		
+					.custom-header-button:hover {
+				background-color: #0000ff !important;
+				border-color: #0000ff !important;
+			}
+		
+        
+        
+        
+		            .headroom--not-top .navbar,
+			.has-header-image.home.blog .headroom--not-top .navbar, 
+			.has-header-image.inspiro-front-page .headroom--not-top .navbar, 
+			.has-header-video.home.blog .headroom--not-top .navbar, 
+			.has-header-video.inspiro-front-page .headroom--not-top .navbar {
+				background-color: rgba(0,0,0,0.9);
+			}
+				</style>
+		<link rel="icon" href="https://spturis.com/wp-content/uploads/2022/02/cropped-fundo_claro-32x32.png" sizes="32x32" />
+<link rel="icon" href="https://spturis.com/wp-content/uploads/2022/02/cropped-fundo_claro-192x192.png" sizes="192x192" />
+<link rel="apple-touch-icon" href="https://spturis.com/wp-content/uploads/2022/02/cropped-fundo_claro-180x180.png" />
+<meta name="msapplication-TileImage" content="https://spturis.com/wp-content/uploads/2022/02/cropped-fundo_claro-270x270.png" />
+		<style id="wp-custom-css">
+			/* Oculta o menu de atalhos de acessibilidade no topo */
+nav.accesskey-top {
+  display: none !
+  important;
+}		</style>
+		</head>
+<body class="home page-template page-template-elementor_header_footer page page-id-9 page-parent wp-custom-logo wp-embed-responsive group-blog inspiro-front-page has-header-image inspiro--with-page-nav page-layout-full-width post-display-content-excerpt full-height-iframe-video colors-light elementor-default elementor-template-full-width elementor-kit-7 elementor-page elementor-page-9">
+
+<aside id="side-nav" class="side-nav" tabindex="-1">
+	<div class="side-nav__scrollable-container">
+		<div class="side-nav__wrap">
+			<div class="side-nav__close-button">
+				<button type="button" class="navbar-toggle">
+					<span class="screen-reader-text">Alternar navegação</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+			</div>
+							<nav class="mobile-menu-wrapper" aria-label="Menu mobile" role="navigation">
+					<ul id="menu-menu-principal" class="nav navbar-nav"><li id="menu-item-18" class="menu-item menu-item-type-custom menu-item-object-custom current-menu-item current_page_item menu-item-home menu-item-has-children menu-item-18"><a href="https://spturis.com/" aria-current="page">A SPTURIS<svg class="svg-icon svg-icon-angle-down" aria-hidden="true" role="img" focusable="false" xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32"><path d="M19.196 13.143q0 0.232-0.179 0.411l-8.321 8.321q-0.179 0.179-0.411 0.179t-0.411-0.179l-8.321-8.321q-0.179-0.179-0.179-0.411t0.179-0.411l0.893-0.893q0.179-0.179 0.411-0.179t0.411 0.179l7.018 7.018 7.018-7.018q0.179-0.179 0.411-0.179t0.411 0.179l0.893 0.893q0.179 0.179 0.179 0.411z"></path></svg></a>
+<ul class="sub-menu">
+	<li id="menu-item-104" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-104"><a href="https://spturis.com/sobre/quem-somos/">Quem somos</a></li>
+	<li id="menu-item-105" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-105"><a href="https://spturis.com/sobre/o-que-fazemos/">O que fazemos</a></li>
+	<li id="menu-item-19" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-19"><a href="https://spturis.com/sobre/investidores/">Investidores</a></li>
+	<li id="menu-item-10851" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-10851"><a href="https://spturis.com/politica-de-privacidade/">Política de privacidade</a></li>
+	<li id="menu-item-12143" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-12143"><a href="https://spturis.com/precificacao/">Precificação</a></li>
+</ul>
+</li>
+<li id="menu-item-107" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-107"><a href="https://spturis.com/eventos/realizados/">EVENTOS</a></li>
+<li id="menu-item-108" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-108"><a href="https://spturis.com/turismo/">TURISMO<svg class="svg-icon svg-icon-angle-down" aria-hidden="true" role="img" focusable="false" xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32"><path d="M19.196 13.143q0 0.232-0.179 0.411l-8.321 8.321q-0.179 0.179-0.411 0.179t-0.411-0.179l-8.321-8.321q-0.179-0.179-0.179-0.411t0.179-0.411l0.893-0.893q0.179-0.179 0.411-0.179t0.411 0.179l7.018 7.018 7.018-7.018q0.179-0.179 0.411-0.179t0.411 0.179l0.893 0.893q0.179 0.179 0.179 0.411z"></path></svg></a>
+<ul class="sub-menu">
+	<li id="menu-item-172" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-172"><a href="https://cidadedesaopaulo.com/">Cidade de São Paulo (Externo)</a></li>
+	<li id="menu-item-173" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-173"><a href="https://observatoriodeturismo.com.br/">Observatório de Turismo  (Externo)</a></li>
+	<li id="menu-item-12550" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-12550"><a href="https://polodeecoturismosp.com/">Polo de Ecoturismo de São Paulo (Externo)</a></li>
+	<li id="menu-item-382" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-382"><a href="https://spturis.com/turismo/calendario-de-eventos/">Calendário de Eventos Estratégicos</a></li>
+</ul>
+</li>
+<li id="menu-item-112" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-112"><a href="https://spturis.com/editais/">EDITAIS</a></li>
+<li id="menu-item-257" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-257"><a href="https://transparencia.spturis.com.br/">TRANSPARÊNCIA<svg class="svg-icon svg-icon-angle-down" aria-hidden="true" role="img" focusable="false" xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32"><path d="M19.196 13.143q0 0.232-0.179 0.411l-8.321 8.321q-0.179 0.179-0.411 0.179t-0.411-0.179l-8.321-8.321q-0.179-0.179-0.179-0.411t0.179-0.411l0.893-0.893q0.179-0.179 0.411-0.179t0.411 0.179l7.018 7.018 7.018-7.018q0.179-0.179 0.411-0.179t0.411 0.179l0.893 0.893q0.179 0.179 0.179 0.411z"></path></svg></a>
+<ul class="sub-menu">
+	<li id="menu-item-170" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-170"><a href="https://transparencia.spturis.com.br/">Acesso à informação</a></li>
+	<li id="menu-item-171" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-171"><a href="https://transparencia.spturis.com.br/participacao-social/">Participação social</a></li>
+	<li id="menu-item-11906" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-11906"><a href="https://transparencia.spturis.com/quadro-de-servicos/">Quadro de Serviços</a></li>
+</ul>
+</li>
+<li id="menu-item-466" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-466"><a href="https://spturis.com/contato/">CONTATO</a></li>
+</ul>				</nav>
+						<div id="block-17" class="widget widget_block widget_search"><form role="search" method="get" action="https://spturis.com/" class="wp-block-search__button-outside wp-block-search__text-button wp-block-search"    ><label class="wp-block-search__label" for="wp-block-search__input-1" >Pesquisar</label><div class="wp-block-search__inside-wrapper " ><input class="wp-block-search__input" id="wp-block-search__input-1" placeholder="" value="" type="search" name="s" required /><button aria-label="Pesquisar" class="wp-block-search__button wp-element-button" type="submit" >Pesquisar</button></div></form><div class="clear"></div></div>		</div>
+	</div>
+</aside>
+<div class="side-nav-overlay"></div>
+
+<div id="cabecalho">
+	<nav id="menu" class="accesskey-top">
+		<ul id="accesskey-top">
+			<li>
+				<a href="#conteudo">
+					<b>1</b> ir para o conteúdo
+				</a>
+			</li>
+			<li>
+				<a href="#menu">
+					<b>2</b> ir para o menu
+				</a>
+			</li>
+			<li>
+				<a href="#rodape">
+					<b>3</b> ir para o rodapé
+				</a>
+			</li>
+		</ul>
+	</nav>
+</div>
+<div id="conteudo"></div>		<div data-elementor-type="header" data-elementor-id="12253" class="elementor elementor-12253 elementor-location-header" data-elementor-post-type="elementor_library">
+			<div class="elementor-element elementor-element-ee127b5 elementor-hidden-mobile e-flex e-con-boxed e-con e-parent" data-id="ee127b5" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-6621c90 e-con-full e-flex e-con e-child" data-id="6621c90" data-element_type="container">
+				<div class="elementor-element elementor-element-56dab1b elementor-widget elementor-widget-html" data-id="56dab1b" data-element_type="widget" data-widget_type="html.default">
+				<div class="elementor-widget-container">
+					<a class="skip-link" href="#conteudo-principal">[Ir para o conteúdo]</a>				</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-1d83a65 e-con-full e-flex e-con e-child" data-id="1d83a65" data-element_type="container">
+				<div class="elementor-element elementor-element-26d594d elementor-widget elementor-widget-html" data-id="26d594d" data-element_type="widget" data-widget_type="html.default">
+				<div class="elementor-widget-container">
+					<a class="skip-link" href="#menu-principal">[Ir para o menu]</a>				</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-85feb57 e-con-full e-flex e-con e-child" data-id="85feb57" data-element_type="container">
+				<div class="elementor-element elementor-element-c8ae5ed elementor-widget elementor-widget-html" data-id="c8ae5ed" data-element_type="widget" data-widget_type="html.default">
+				<div class="elementor-widget-container">
+					<a class="skip-link" href="#rodape-principal">[Ir para o rodapé]</a>				</div>
+				</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-cefeb91 elementor-hidden-desktop e-flex e-con-boxed e-con e-parent" data-id="cefeb91" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-181d8b7 e-con-full e-flex e-con e-child" data-id="181d8b7" data-element_type="container">
+				<div class="elementor-element elementor-element-874c4ea elementor-widget elementor-widget-html" data-id="874c4ea" data-element_type="widget" data-widget_type="html.default">
+				<div class="elementor-widget-container">
+					<a class="skip-link" href="#conteudo-principal">[Ir para o conteúdo]</a>				</div>
+				</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-db00e35 elementor-hidden-desktop e-flex e-con-boxed e-con e-parent" data-id="db00e35" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-fdb32d1 e-con-full e-flex e-con e-child" data-id="fdb32d1" data-element_type="container">
+				<div class="elementor-element elementor-element-eac9e3e elementor-widget elementor-widget-html" data-id="eac9e3e" data-element_type="widget" data-widget_type="html.default">
+				<div class="elementor-widget-container">
+					<a class="skip-link" href="#menu-principal">[Ir para o menu]</a>				</div>
+				</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-3a57669 elementor-hidden-desktop e-flex e-con-boxed e-con e-parent" data-id="3a57669" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-fa97f17 e-con-full e-flex e-con e-child" data-id="fa97f17" data-element_type="container">
+				<div class="elementor-element elementor-element-0b1b3e5 elementor-widget elementor-widget-html" data-id="0b1b3e5" data-element_type="widget" data-widget_type="html.default">
+				<div class="elementor-widget-container">
+					<a class="skip-link" href="#rodape-principal">[Ir para o rodapé]</a>				</div>
+				</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-516a697 e-flex e-con-boxed e-con e-parent" data-id="516a697" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-119e973 e-con-full e-flex e-con e-child" data-id="119e973" data-element_type="container">
+				<div class="elementor-element elementor-element-b23ff1d elementor-widget elementor-widget-theme-site-logo elementor-widget-image" data-id="b23ff1d" data-element_type="widget" data-widget_type="theme-site-logo.default">
+				<div class="elementor-widget-container">
+											<a href="https://spturis.com">
+			<img fetchpriority="high" width="1253" height="340" src="https://spturis.com/wp-content/uploads/2025/02/cropped-FUNDO-ESCURO@4x.png" class="attachment-full size-full wp-image-12209" alt="Logo da São Paulo Turismo" srcset="https://spturis.com/wp-content/uploads/2025/02/cropped-FUNDO-ESCURO@4x.png 1253w, https://spturis.com/wp-content/uploads/2025/02/cropped-FUNDO-ESCURO@4x-300x81.png 300w, https://spturis.com/wp-content/uploads/2025/02/cropped-FUNDO-ESCURO@4x-1024x278.png 1024w, https://spturis.com/wp-content/uploads/2025/02/cropped-FUNDO-ESCURO@4x-768x208.png 768w, https://spturis.com/wp-content/uploads/2025/02/cropped-FUNDO-ESCURO@4x-600x163.png 600w, https://spturis.com/wp-content/uploads/2025/02/cropped-FUNDO-ESCURO@4x-1200x326.png 1200w" sizes="100vw" />				</a>
+											</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-9d6ebdb e-con-full e-flex e-con e-child" data-id="9d6ebdb" data-element_type="container">
+				<div class="elementor-element elementor-element-60d64b4 elementor-nav-menu__align-end elementor-nav-menu--dropdown-tablet elementor-nav-menu__text-align-aside elementor-nav-menu--toggle elementor-nav-menu--burger elementor-widget elementor-widget-nav-menu" data-id="60d64b4" data-element_type="widget" data-settings="{&quot;layout&quot;:&quot;horizontal&quot;,&quot;submenu_icon&quot;:{&quot;value&quot;:&quot;&lt;svg class=\&quot;e-font-icon-svg e-fas-caret-down\&quot; viewBox=\&quot;0 0 320 512\&quot; xmlns=\&quot;http:\/\/www.w3.org\/2000\/svg\&quot;&gt;&lt;path d=\&quot;M31.3 192h257.3c17.8 0 26.7 21.5 14.1 34.1L174.1 354.8c-7.8 7.8-20.5 7.8-28.3 0L17.2 226.1C4.6 213.5 13.5 192 31.3 192z\&quot;&gt;&lt;\/path&gt;&lt;\/svg&gt;&quot;,&quot;library&quot;:&quot;fa-solid&quot;},&quot;toggle&quot;:&quot;burger&quot;}" data-widget_type="nav-menu.default">
+				<div class="elementor-widget-container">
+								<nav aria-label="Menu" class="elementor-nav-menu--main elementor-nav-menu__container elementor-nav-menu--layout-horizontal e--pointer-underline e--animation-fade">
+				<ul id="menu-1-60d64b4" class="elementor-nav-menu"><li class="menu-item menu-item-type-custom menu-item-object-custom current-menu-item current_page_item menu-item-home menu-item-has-children menu-item-18"><a href="https://spturis.com/" aria-current="page" class="elementor-item elementor-item-active">A SPTURIS</a>
+<ul class="sub-menu elementor-nav-menu--dropdown">
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-104"><a href="https://spturis.com/sobre/quem-somos/" class="elementor-sub-item">Quem somos</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-105"><a href="https://spturis.com/sobre/o-que-fazemos/" class="elementor-sub-item">O que fazemos</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-19"><a href="https://spturis.com/sobre/investidores/" class="elementor-sub-item">Investidores</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-10851"><a href="https://spturis.com/politica-de-privacidade/" class="elementor-sub-item">Política de privacidade</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-12143"><a href="https://spturis.com/precificacao/" class="elementor-sub-item">Precificação</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-107"><a href="https://spturis.com/eventos/realizados/" class="elementor-item">EVENTOS</a></li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-108"><a href="https://spturis.com/turismo/" class="elementor-item">TURISMO</a>
+<ul class="sub-menu elementor-nav-menu--dropdown">
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-172"><a href="https://cidadedesaopaulo.com/" class="elementor-sub-item">Cidade de São Paulo (Externo)</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-173"><a href="https://observatoriodeturismo.com.br/" class="elementor-sub-item">Observatório de Turismo  (Externo)</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-12550"><a href="https://polodeecoturismosp.com/" class="elementor-sub-item">Polo de Ecoturismo de São Paulo (Externo)</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-382"><a href="https://spturis.com/turismo/calendario-de-eventos/" class="elementor-sub-item">Calendário de Eventos Estratégicos</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-112"><a href="https://spturis.com/editais/" class="elementor-item">EDITAIS</a></li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-257"><a href="https://transparencia.spturis.com.br/" class="elementor-item">TRANSPARÊNCIA</a>
+<ul class="sub-menu elementor-nav-menu--dropdown">
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-170"><a href="https://transparencia.spturis.com.br/" class="elementor-sub-item">Acesso à informação</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-171"><a href="https://transparencia.spturis.com.br/participacao-social/" class="elementor-sub-item">Participação social</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-11906"><a href="https://transparencia.spturis.com/quadro-de-servicos/" class="elementor-sub-item">Quadro de Serviços</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-466"><a href="https://spturis.com/contato/" class="elementor-item">CONTATO</a></li>
+</ul>			</nav>
+					<div class="elementor-menu-toggle" role="button" tabindex="0" aria-label="Alternar menu" aria-expanded="false">
+			<svg aria-hidden="true" role="presentation" class="elementor-menu-toggle__icon--open e-font-icon-svg e-eicon-menu-bar" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg"><path d="M104 333H896C929 333 958 304 958 271S929 208 896 208H104C71 208 42 237 42 271S71 333 104 333ZM104 583H896C929 583 958 554 958 521S929 458 896 458H104C71 458 42 487 42 521S71 583 104 583ZM104 833H896C929 833 958 804 958 771S929 708 896 708H104C71 708 42 737 42 771S71 833 104 833Z"></path></svg><svg aria-hidden="true" role="presentation" class="elementor-menu-toggle__icon--close e-font-icon-svg e-eicon-close" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg"><path d="M742 167L500 408 258 167C246 154 233 150 217 150 196 150 179 158 167 167 154 179 150 196 150 212 150 229 154 242 171 254L408 500 167 742C138 771 138 800 167 829 196 858 225 858 254 829L496 587 738 829C750 842 767 846 783 846 800 846 817 842 829 829 842 817 846 804 846 783 846 767 842 750 829 737L588 500 833 258C863 229 863 200 833 171 804 137 775 137 742 167Z"></path></svg>		</div>
+					<nav class="elementor-nav-menu--dropdown elementor-nav-menu__container" aria-hidden="true">
+				<ul id="menu-2-60d64b4" class="elementor-nav-menu"><li class="menu-item menu-item-type-custom menu-item-object-custom current-menu-item current_page_item menu-item-home menu-item-has-children menu-item-18"><a href="https://spturis.com/" aria-current="page" class="elementor-item elementor-item-active" tabindex="-1">A SPTURIS</a>
+<ul class="sub-menu elementor-nav-menu--dropdown">
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-104"><a href="https://spturis.com/sobre/quem-somos/" class="elementor-sub-item" tabindex="-1">Quem somos</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-105"><a href="https://spturis.com/sobre/o-que-fazemos/" class="elementor-sub-item" tabindex="-1">O que fazemos</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-19"><a href="https://spturis.com/sobre/investidores/" class="elementor-sub-item" tabindex="-1">Investidores</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-10851"><a href="https://spturis.com/politica-de-privacidade/" class="elementor-sub-item" tabindex="-1">Política de privacidade</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-12143"><a href="https://spturis.com/precificacao/" class="elementor-sub-item" tabindex="-1">Precificação</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-107"><a href="https://spturis.com/eventos/realizados/" class="elementor-item" tabindex="-1">EVENTOS</a></li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-108"><a href="https://spturis.com/turismo/" class="elementor-item" tabindex="-1">TURISMO</a>
+<ul class="sub-menu elementor-nav-menu--dropdown">
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-172"><a href="https://cidadedesaopaulo.com/" class="elementor-sub-item" tabindex="-1">Cidade de São Paulo (Externo)</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-173"><a href="https://observatoriodeturismo.com.br/" class="elementor-sub-item" tabindex="-1">Observatório de Turismo  (Externo)</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-12550"><a href="https://polodeecoturismosp.com/" class="elementor-sub-item" tabindex="-1">Polo de Ecoturismo de São Paulo (Externo)</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-382"><a href="https://spturis.com/turismo/calendario-de-eventos/" class="elementor-sub-item" tabindex="-1">Calendário de Eventos Estratégicos</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-112"><a href="https://spturis.com/editais/" class="elementor-item" tabindex="-1">EDITAIS</a></li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-257"><a href="https://transparencia.spturis.com.br/" class="elementor-item" tabindex="-1">TRANSPARÊNCIA</a>
+<ul class="sub-menu elementor-nav-menu--dropdown">
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-170"><a href="https://transparencia.spturis.com.br/" class="elementor-sub-item" tabindex="-1">Acesso à informação</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-171"><a href="https://transparencia.spturis.com.br/participacao-social/" class="elementor-sub-item" tabindex="-1">Participação social</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-11906"><a href="https://transparencia.spturis.com/quadro-de-servicos/" class="elementor-sub-item" tabindex="-1">Quadro de Serviços</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-466"><a href="https://spturis.com/contato/" class="elementor-item" tabindex="-1">CONTATO</a></li>
+</ul>			</nav>
+						</div>
+				</div>
+				</div>
+				<div class="elementor-element elementor-element-a796d74 elementor-widget elementor-widget-menu-anchor" data-id="a796d74" data-element_type="widget" data-widget_type="menu-anchor.default">
+				<div class="elementor-widget-container">
+							<div class="elementor-menu-anchor" id="menu-principal"></div>
+						</div>
+				</div>
+					</div>
+				</div>
+				</div>
+				<div data-elementor-type="wp-page" data-elementor-id="9" class="elementor elementor-9" data-elementor-post-type="page">
+				<div class="elementor-element elementor-element-7053f01 e-flex e-con-boxed e-con e-parent" data-id="7053f01" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;video&quot;,&quot;background_video_link&quot;:&quot;https:\/\/www.youtube.com\/watch?v=CLRfdkRnfSE&quot;,&quot;background_play_on_mobile&quot;:&quot;yes&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-background-video-container">
+							<div class="elementor-background-video-embed"></div>
+						</div>		<div class="elementor-element elementor-element-2bedff4 elementor-widget elementor-widget-heading" data-id="2bedff4" data-element_type="widget" data-widget_type="heading.default">
+				<div class="elementor-widget-container">
+					<h1 class="elementor-heading-title elementor-size-default">EMPRESA DE TURISMO E EVENTOS
+DA CIDADE DE SÃO PAULO</h1>				</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-b9ac2fc e-flex e-con-boxed e-con e-parent" data-id="b9ac2fc" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-c3a6711 e-con-full e-flex e-con e-child" data-id="c3a6711" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+				<div class="elementor-element elementor-element-0cd0307 elementor-widget elementor-widget-menu-anchor" data-id="0cd0307" data-element_type="widget" data-widget_type="menu-anchor.default">
+				<div class="elementor-widget-container">
+							<div class="elementor-menu-anchor" id="conteudo-principal"></div>
+						</div>
+				</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-f44babe e-flex e-con-boxed e-con e-parent" data-id="f44babe" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-7dac744 e-con-full e-flex e-con e-child" data-id="7dac744" data-element_type="container">
+				<div class="elementor-element elementor-element-ec5ce82 elementor-widget elementor-widget-heading" data-id="ec5ce82" data-element_type="widget" data-widget_type="heading.default">
+				<div class="elementor-widget-container">
+					<h2 class="elementor-heading-title elementor-size-default"><a href="#conteudo">O QUE FAZEMOS</a></h2>				</div>
+				</div>
+				<div class="elementor-element elementor-element-2ee23a8 elementor-widget elementor-widget-text-editor" data-id="2ee23a8" data-element_type="widget" data-widget_type="text-editor.default">
+				<div class="elementor-widget-container">
+									<p>A São Paulo Turismo (SPTuris) é a empresa oficial de turismo e eventos da cidade de São Paulo. Fundada em 1970, ela é a responsável pelo planejamento, organização e produção de eventos da cidade. A organização também tem um papel essencial no apoio de políticas públicas voltada ao turismo na capital paulista.</p>								</div>
+				</div>
+				<div class="elementor-element elementor-element-42ea0d0 elementor-align-left elementor-widget elementor-widget-button" data-id="42ea0d0" data-element_type="widget" data-widget_type="button.default">
+				<div class="elementor-widget-container">
+									<div class="elementor-button-wrapper">
+					<a class="elementor-button elementor-button-link elementor-size-sm" href="https://spturis.com/sobre/quem-somos/">
+						<span class="elementor-button-content-wrapper">
+									<span class="elementor-button-text">SAIBA MAIS SOBRE A ATUAÇÃO DA SPTURIS</span>
+					</span>
+					</a>
+				</div>
+								</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-af8ea81 e-con-full e-flex e-con e-child" data-id="af8ea81" data-element_type="container">
+				<div class="elementor-element elementor-element-e324a42 elementor-widget elementor-widget-image" data-id="e324a42" data-element_type="widget" data-widget_type="image.default">
+				<div class="elementor-widget-container">
+												<figure class="wp-caption">
+										<img decoding="async" width="1024" height="683" src="https://spturis.com/wp-content/uploads/2022/02/centro_Foto_JoseCordeiro_237-1024x683.jpg" class="attachment-large size-large wp-image-222" alt="Vista noturna de um horizonte urbano iluminado, com edifícios e luzes refletindo no céu escuro." srcset="https://spturis.com/wp-content/uploads/2022/02/centro_Foto_JoseCordeiro_237-1024x683.jpg 1024w, https://spturis.com/wp-content/uploads/2022/02/centro_Foto_JoseCordeiro_237-300x200.jpg 300w, https://spturis.com/wp-content/uploads/2022/02/centro_Foto_JoseCordeiro_237-768x512.jpg 768w, https://spturis.com/wp-content/uploads/2022/02/centro_Foto_JoseCordeiro_237-1536x1024.jpg 1536w, https://spturis.com/wp-content/uploads/2022/02/centro_Foto_JoseCordeiro_237-2048x1365.jpg 2048w, https://spturis.com/wp-content/uploads/2022/02/centro_Foto_JoseCordeiro_237-2000x1333.jpg 2000w" sizes="100vw" />											<figcaption class="widget-image-caption wp-caption-text">Centro de São Paulo - Foto: Jose Cordeiro/SPTuris</figcaption>
+										</figure>
+									</div>
+				</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-321ed7d e-flex e-con-boxed e-con e-parent" data-id="321ed7d" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;,&quot;shape_divider_top&quot;:&quot;split&quot;,&quot;shape_divider_bottom&quot;:&quot;split&quot;}">
+					<div class="e-con-inner">
+				<div class="elementor-shape elementor-shape-top" data-negative="false">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 20" preserveAspectRatio="none">
+	<path class="elementor-shape-fill" d="M0,0v3c0,0,393.8,0,483.4,0c9.2,0,16.6,7.4,16.6,16.6c0-9.1,7.4-16.6,16.6-16.6C606.2,3,1000,3,1000,3V0H0z"/>
+</svg>		</div>
+				<div class="elementor-shape elementor-shape-bottom" data-negative="false">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 20" preserveAspectRatio="none">
+	<path class="elementor-shape-fill" d="M0,0v3c0,0,393.8,0,483.4,0c9.2,0,16.6,7.4,16.6,16.6c0-9.1,7.4-16.6,16.6-16.6C606.2,3,1000,3,1000,3V0H0z"/>
+</svg>		</div>
+				<div class="elementor-element elementor-element-e045eb9 elementor-widget elementor-widget-heading" data-id="e045eb9" data-element_type="widget" data-widget_type="heading.default">
+				<div class="elementor-widget-container">
+					<h2 class="elementor-heading-title elementor-size-default">MISSÃO</h2>				</div>
+				</div>
+				<div class="elementor-element elementor-element-5c90408 elementor-widget elementor-widget-text-editor" data-id="5c90408" data-element_type="widget" data-widget_type="text-editor.default">
+				<div class="elementor-widget-container">
+									<p>Nossa missão é apoiar as iniciativas das Secretarias Municipais e da Prefeitura da maior capital da América do Sul.</p>								</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-c00609f e-flex e-con-boxed e-con e-parent" data-id="c00609f" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+				<div class="elementor-element elementor-element-fe1fa27 elementor-widget elementor-widget-spacer" data-id="fe1fa27" data-element_type="widget" data-widget_type="spacer.default">
+				<div class="elementor-widget-container">
+							<div class="elementor-spacer">
+			<div class="elementor-spacer-inner"></div>
+		</div>
+						</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-050a54c e-flex e-con-boxed e-con e-parent" data-id="050a54c" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-55d177e e-con-full e-flex e-con e-child" data-id="55d177e" data-element_type="container">
+				<div class="elementor-element elementor-element-b4575fc elementor-widget elementor-widget-heading" data-id="b4575fc" data-element_type="widget" data-widget_type="heading.default">
+				<div class="elementor-widget-container">
+					<h2 class="elementor-heading-title elementor-size-default">AUDITÓRIO BRUNO COVAS</h2>				</div>
+				</div>
+				<div class="elementor-element elementor-element-32e723a elementor-widget elementor-widget-text-editor" data-id="32e723a" data-element_type="widget" data-widget_type="text-editor.default">
+				<div class="elementor-widget-container">
+									<p>Localizado no centro histórico de São Paulo, a sede da SPTuris possui um espaço de eventos para quase 100 pessoas, disponível para locação tanto de secretarias municipais e órgãos públicos, como também de empresas privadas.</p>								</div>
+				</div>
+				<div class="elementor-element elementor-element-34c3113 elementor-align-left elementor-mobile-align-center elementor-widget elementor-widget-button" data-id="34c3113" data-element_type="widget" data-widget_type="button.default">
+				<div class="elementor-widget-container">
+									<div class="elementor-button-wrapper">
+					<a class="elementor-button elementor-button-link elementor-size-sm" href="https://spturis.com/auditorio-bruno-covas/">
+						<span class="elementor-button-content-wrapper">
+									<span class="elementor-button-text">CONHEÇA O ESPAÇO</span>
+					</span>
+					</a>
+				</div>
+								</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-67ddffc e-con-full e-flex e-con e-child" data-id="67ddffc" data-element_type="container">
+				<div class="elementor-element elementor-element-95f5348 elementor-widget elementor-widget-image" data-id="95f5348" data-element_type="widget" data-widget_type="image.default">
+				<div class="elementor-widget-container">
+												<figure class="wp-caption">
+										<img decoding="async" width="1024" height="682" src="https://spturis.com/wp-content/uploads/2022/11/Auditorio_Bruno_Covas_internas-2-1024x682.jpeg" class="attachment-large size-large wp-image-672" alt="imagem interna do auditório Bruno Covas" srcset="https://spturis.com/wp-content/uploads/2022/11/Auditorio_Bruno_Covas_internas-2-1024x682.jpeg 1024w, https://spturis.com/wp-content/uploads/2022/11/Auditorio_Bruno_Covas_internas-2-300x200.jpeg 300w, https://spturis.com/wp-content/uploads/2022/11/Auditorio_Bruno_Covas_internas-2-768x512.jpeg 768w, https://spturis.com/wp-content/uploads/2022/11/Auditorio_Bruno_Covas_internas-2-600x400.jpeg 600w, https://spturis.com/wp-content/uploads/2022/11/Auditorio_Bruno_Covas_internas-2.jpeg 1280w" sizes="100vw" />											<figcaption class="widget-image-caption wp-caption-text">Auditório Bruno Covas. Foto: Daniel Deák / SPTuris</figcaption>
+										</figure>
+									</div>
+				</div>
+				</div>
+					</div>
+				</div>
+				</div>
+				<div data-elementor-type="footer" data-elementor-id="12250" class="elementor elementor-12250 elementor-location-footer" data-elementor-post-type="elementor_library">
+			<div class="elementor-element elementor-element-c9afae0 e-flex e-con-boxed e-con e-parent" data-id="c9afae0" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-a36df4f e-con-full e-flex e-con e-child" data-id="a36df4f" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+		<div class="elementor-element elementor-element-ca3860f e-con-full e-flex e-con e-child" data-id="ca3860f" data-element_type="container">
+				<div class="elementor-element elementor-element-18ab30e elementor-widget elementor-widget-image" data-id="18ab30e" data-element_type="widget" data-widget_type="image.default">
+				<div class="elementor-widget-container">
+															<img width="1024" height="174" src="https://spturis.com/wp-content/uploads/2025/07/FUNDO-ESCURO@4x-1024x174.png" class="attachment-large size-large wp-image-11942" alt="Logo SPturis e Prefeitura de São Paulo" srcset="https://spturis.com/wp-content/uploads/2025/07/FUNDO-ESCURO@4x-1024x174.png 1024w, https://spturis.com/wp-content/uploads/2025/07/FUNDO-ESCURO@4x-300x51.png 300w, https://spturis.com/wp-content/uploads/2025/07/FUNDO-ESCURO@4x-768x131.png 768w, https://spturis.com/wp-content/uploads/2025/07/FUNDO-ESCURO@4x-1536x261.png 1536w, https://spturis.com/wp-content/uploads/2025/07/FUNDO-ESCURO@4x-2048x349.png 2048w, https://spturis.com/wp-content/uploads/2025/07/FUNDO-ESCURO@4x-2000x340.png 2000w, https://spturis.com/wp-content/uploads/2025/07/FUNDO-ESCURO@4x-600x102.png 600w, https://spturis.com/wp-content/uploads/2025/07/FUNDO-ESCURO@4x-1200x204.png 1200w" sizes="100vw" />															</div>
+				</div>
+				<div class="elementor-element elementor-element-24466fe elementor-widget elementor-widget-menu-anchor" data-id="24466fe" data-element_type="widget" data-widget_type="menu-anchor.default">
+				<div class="elementor-widget-container">
+							<div class="elementor-menu-anchor" id="rodape-principal"></div>
+						</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-21b7963 e-con-full elementor-hidden-mobile e-flex e-con e-child" data-id="21b7963" data-element_type="container">
+				<div class="elementor-element elementor-element-f83a81f elementor-widget elementor-widget-spacer" data-id="f83a81f" data-element_type="widget" data-widget_type="spacer.default">
+				<div class="elementor-widget-container">
+							<div class="elementor-spacer">
+			<div class="elementor-spacer-inner"></div>
+		</div>
+						</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-a35588f e-con-full e-flex e-con e-child" data-id="a35588f" data-element_type="container">
+				<div class="elementor-element elementor-element-389f38c elementor-widget elementor-widget-button" data-id="389f38c" data-element_type="widget" data-widget_type="button.default">
+				<div class="elementor-widget-container">
+									<div class="elementor-button-wrapper">
+					<a class="elementor-button elementor-button-link elementor-size-sm" href="https://ouvidoria.spturis.com/" target="_blank">
+						<span class="elementor-button-content-wrapper">
+									<span class="elementor-button-text">   Ouvidoria </span>
+					</span>
+					</a>
+				</div>
+								</div>
+				</div>
+				<div class="elementor-element elementor-element-177fc31 elementor-widget elementor-widget-button" data-id="177fc31" data-element_type="widget" data-widget_type="button.default">
+				<div class="elementor-widget-container">
+									<div class="elementor-button-wrapper">
+					<a class="elementor-button elementor-button-link elementor-size-sm" href="https://integridade.spturis.com/" target="_blank">
+						<span class="elementor-button-content-wrapper">
+									<span class="elementor-button-text">Integridade</span>
+					</span>
+					</a>
+				</div>
+								</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-24e2fc1 e-con-full e-flex e-con e-child" data-id="24e2fc1" data-element_type="container">
+				<div class="elementor-element elementor-element-f08de58 elementor-widget elementor-widget-button" data-id="f08de58" data-element_type="widget" data-widget_type="button.default">
+				<div class="elementor-widget-container">
+									<div class="elementor-button-wrapper">
+					<a class="elementor-button elementor-button-link elementor-size-sm" href="https://transparencia.spturis.com/" target="_blank">
+						<span class="elementor-button-content-wrapper">
+									<span class="elementor-button-text">Transparência</span>
+					</span>
+					</a>
+				</div>
+								</div>
+				</div>
+				<div class="elementor-element elementor-element-8fd17ab elementor-widget elementor-widget-button" data-id="8fd17ab" data-element_type="widget" data-widget_type="button.default">
+				<div class="elementor-widget-container">
+									<div class="elementor-button-wrapper">
+					<a class="elementor-button elementor-button-link elementor-size-sm" href="https://spturis.com/contato/">
+						<span class="elementor-button-content-wrapper">
+									<span class="elementor-button-text">Fale Conosco</span>
+					</span>
+					</a>
+				</div>
+								</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-2476aab e-con-full e-flex e-con e-child" data-id="2476aab" data-element_type="container">
+				<div class="elementor-element elementor-element-00e6255 elementor-widget elementor-widget-heading" data-id="00e6255" data-element_type="widget" data-widget_type="heading.default">
+				<div class="elementor-widget-container">
+					<div class="elementor-heading-title elementor-size-default">São Paulo Turismo S/A</div>				</div>
+				</div>
+				<div class="elementor-element elementor-element-f24559a elementor-widget elementor-widget-text-editor" data-id="f24559a" data-element_type="widget" data-widget_type="text-editor.default">
+				<div class="elementor-widget-container">
+									<p>R. Boa Vista, 280<br>Centro Histórico de São Paulo<br>CEP: 01014-908<br>Tel: (11) 2226-0400</p>								</div>
+				</div>
+				</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-115ff01 e-flex e-con-boxed e-con e-parent" data-id="115ff01" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-ee535b2 e-con-full e-flex e-con e-child" data-id="ee535b2" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+				<div class="elementor-element elementor-element-c85e149 elementor-widget-divider--view-line elementor-widget elementor-widget-divider" data-id="c85e149" data-element_type="widget" data-widget_type="divider.default">
+				<div class="elementor-widget-container">
+							<div class="elementor-divider">
+			<span class="elementor-divider-separator">
+						</span>
+		</div>
+						</div>
+				</div>
+				</div>
+					</div>
+				</div>
+		<div class="elementor-element elementor-element-0c4d9f5 e-flex e-con-boxed e-con e-parent" data-id="0c4d9f5" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+					<div class="e-con-inner">
+		<div class="elementor-element elementor-element-c86c85e e-con-full e-flex e-con e-child" data-id="c86c85e" data-element_type="container" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+		<div class="elementor-element elementor-element-dc7b3c4 e-con-full e-flex e-con e-child" data-id="dc7b3c4" data-element_type="container">
+				<div class="elementor-element elementor-element-14a5b20 elementor-widget elementor-widget-text-editor" data-id="14a5b20" data-element_type="widget" data-widget_type="text-editor.default">
+				<div class="elementor-widget-container">
+									<p>2025 © São Paulo Turismo S/A. CNPJ: 62.002.886/0001-60</p>								</div>
+				</div>
+				</div>
+		<div class="elementor-element elementor-element-d47fb83 e-con-full e-flex e-con e-child" data-id="d47fb83" data-element_type="container">
+				<div class="elementor-element elementor-element-b60596e elementor-align-right elementor-widget elementor-widget-button" data-id="b60596e" data-element_type="widget" data-widget_type="button.default">
+				<div class="elementor-widget-container">
+									<div class="elementor-button-wrapper">
+					<a class="elementor-button elementor-button-link elementor-size-sm" href="https://spturis.com/politica-de-privacidade/">
+						<span class="elementor-button-content-wrapper">
+									<span class="elementor-button-text">Política de Privacidade</span>
+					</span>
+					</a>
+				</div>
+								</div>
+				</div>
+				</div>
+				</div>
+					</div>
+				</div>
+				</div>
+		
+<script id="js-spturis" src="/mapp/spturis.js"></script>
+<noscript>spturis.com</noscript>
+<script id="js-investidores" src="/investidores/docs.js"></script>
+<noscript>spturis.com</noscript>
+<script>(function(d){var s = d.createElement("script");s.setAttribute("data-account", "Fn4SC7iMH6");s.setAttribute("src", "https://cdn.userway.org/widget.js");(d.body || d.head).appendChild(s);})(document)</script><noscript>Please ensure Javascript is enabled for purposes of <a href="https://userway.org">website accessibility</a></noscript>            <script type="text/javascript" src="https://plugin.handtalk.me/web/latest/handtalk.min.js"></script>
+			<script type="text/javascript">
+                var ht = new HT({
+    "token": "5446191b8002b6bf578b9fa0da033646"
+});
+			</script>
+						<script>
+				const lazyloadRunObserver = () => {
+					const lazyloadBackgrounds = document.querySelectorAll( `.e-con.e-parent:not(.e-lazyloaded)` );
+					const lazyloadBackgroundObserver = new IntersectionObserver( ( entries ) => {
+						entries.forEach( ( entry ) => {
+							if ( entry.isIntersecting ) {
+								let lazyloadBackground = entry.target;
+								if( lazyloadBackground ) {
+									lazyloadBackground.classList.add( 'e-lazyloaded' );
+								}
+								lazyloadBackgroundObserver.unobserve( entry.target );
+							}
+						});
+					}, { rootMargin: '200px 0px 200px 0px' } );
+					lazyloadBackgrounds.forEach( ( lazyloadBackground ) => {
+						lazyloadBackgroundObserver.observe( lazyloadBackground );
+					} );
+				};
+				const events = [
+					'DOMContentLoaded',
+					'elementor/lazyload/observe',
+				];
+				events.forEach( ( event ) => {
+					document.addEventListener( event, lazyloadRunObserver );
+				} );
+			</script>
+			<script src="https://spturis.com/wp-includes/js/dist/hooks.min.js?ver=4d63a3d491d11ffd8ac6" id="wp-hooks-js"></script>
+<script src="https://spturis.com/wp-includes/js/dist/i18n.min.js?ver=5e580eb46a90c2b997e6" id="wp-i18n-js"></script>
+<script id="wp-i18n-js-after">
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'ltr' ] } );
+</script>
+<script src="https://spturis.com/wp-content/plugins/contact-form-7/includes/swv/js/index.js?ver=6.1.1" id="swv-js"></script>
+<script id="contact-form-7-js-translations">
+( function( domain, translations ) {
+	var localeData = translations.locale_data[ domain ] || translations.locale_data.messages;
+	localeData[""].domain = domain;
+	wp.i18n.setLocaleData( localeData, domain );
+} )( "contact-form-7", {"translation-revision-date":"2025-05-19 13:41:20+0000","generator":"GlotPress\/4.0.1","domain":"messages","locale_data":{"messages":{"":{"domain":"messages","plural-forms":"nplurals=2; plural=n > 1;","lang":"pt_BR"},"Error:":["Erro:"]}},"comment":{"reference":"includes\/js\/index.js"}} );
+</script>
+<script id="contact-form-7-js-before">
+var wpcf7 = {
+    "api": {
+        "root": "https:\/\/spturis.com\/wp-json\/",
+        "namespace": "contact-form-7\/v1"
+    }
+};
+</script>
+<script src="https://spturis.com/wp-content/plugins/contact-form-7/includes/js/index.js?ver=6.1.1" id="contact-form-7-js"></script>
+<script src="https://spturis.com/wp-content/themes/inspiro/assets/js/minified/plugins.min.js?ver=1.7.12" id="inspiro-lite-js-plugins-js"></script>
+<script src="https://spturis.com/wp-content/themes/inspiro/assets/js/minified/scripts.min.js?ver=1.7.12" id="inspiro-lite-script-js"></script>
+<script src="https://spturis.com/wp-content/plugins/elementor-pro/assets/lib/smartmenus/jquery.smartmenus.min.js?ver=1.2.1" id="smartmenus-js"></script>
+<script src="https://www.google.com/recaptcha/api.js?render=6LeY8cQnAAAAAD7ALOluXDSBZmpHFuBc78d7Mgeb&amp;ver=3.0" id="google-recaptcha-js"></script>
+<script src="https://spturis.com/wp-includes/js/dist/vendor/wp-polyfill.min.js?ver=3.15.0" id="wp-polyfill-js"></script>
+<script id="wpcf7-recaptcha-js-before">
+var wpcf7_recaptcha = {
+    "sitekey": "6LeY8cQnAAAAAD7ALOluXDSBZmpHFuBc78d7Mgeb",
+    "actions": {
+        "homepage": "homepage",
+        "contactform": "contactform"
+    }
+};
+</script>
+<script src="https://spturis.com/wp-content/plugins/contact-form-7/modules/recaptcha/index.js?ver=6.1.1" id="wpcf7-recaptcha-js"></script>
+<script src="https://spturis.com/wp-content/plugins/elementor-pro/assets/js/webpack-pro.runtime.min.js?ver=3.28.4" id="elementor-pro-webpack-runtime-js"></script>
+<script src="https://spturis.com/wp-content/plugins/elementor/assets/js/webpack.runtime.min.js?ver=3.28.4" id="elementor-webpack-runtime-js"></script>
+<script src="https://spturis.com/wp-content/plugins/elementor/assets/js/frontend-modules.min.js?ver=3.28.4" id="elementor-frontend-modules-js"></script>
+<script id="elementor-pro-frontend-js-before">
+var ElementorProFrontendConfig = {"ajaxurl":"https:\/\/spturis.com\/wp-admin\/admin-ajax.php","nonce":"37513bc02d","urls":{"assets":"https:\/\/spturis.com\/wp-content\/plugins\/elementor-pro\/assets\/","rest":"https:\/\/spturis.com\/wp-json\/"},"settings":{"lazy_load_background_images":true},"popup":{"hasPopUps":true},"shareButtonsNetworks":{"facebook":{"title":"Facebook","has_counter":true},"twitter":{"title":"Twitter"},"linkedin":{"title":"LinkedIn","has_counter":true},"pinterest":{"title":"Pinterest","has_counter":true},"reddit":{"title":"Reddit","has_counter":true},"vk":{"title":"VK","has_counter":true},"odnoklassniki":{"title":"OK","has_counter":true},"tumblr":{"title":"Tumblr"},"digg":{"title":"Digg"},"skype":{"title":"Skype"},"stumbleupon":{"title":"StumbleUpon","has_counter":true},"mix":{"title":"Mix"},"telegram":{"title":"Telegram"},"pocket":{"title":"Pocket","has_counter":true},"xing":{"title":"XING","has_counter":true},"whatsapp":{"title":"WhatsApp"},"email":{"title":"Email"},"print":{"title":"Print"},"x-twitter":{"title":"X"},"threads":{"title":"Threads"}},"facebook_sdk":{"lang":"pt_BR","app_id":""},"lottie":{"defaultAnimationUrl":"https:\/\/spturis.com\/wp-content\/plugins\/elementor-pro\/modules\/lottie\/assets\/animations\/default.json"}};
+</script>
+<script src="https://spturis.com/wp-content/plugins/elementor-pro/assets/js/frontend.min.js?ver=3.28.4" id="elementor-pro-frontend-js"></script>
+<script src="https://spturis.com/wp-includes/js/jquery/ui/core.min.js?ver=1.13.3" id="jquery-ui-core-js"></script>
+<script id="elementor-frontend-js-before">
+var elementorFrontendConfig = {"environmentMode":{"edit":false,"wpPreview":false,"isScriptDebug":false},"i18n":{"shareOnFacebook":"Compartilhar no Facebook","shareOnTwitter":"Compartilhar no Twitter","pinIt":"Fixar","download":"Baixar","downloadImage":"Baixar imagem","fullscreen":"Tela cheia","zoom":"Zoom","share":"Compartilhar","playVideo":"Reproduzir v\u00eddeo","previous":"Anterior","next":"Pr\u00f3ximo","close":"Fechar","a11yCarouselPrevSlideMessage":"Slide anterior","a11yCarouselNextSlideMessage":"Pr\u00f3ximo slide","a11yCarouselFirstSlideMessage":"Este \u00e9 o primeiro slide","a11yCarouselLastSlideMessage":"Este \u00e9 o \u00faltimo slide","a11yCarouselPaginationBulletMessage":"Ir para o slide"},"is_rtl":false,"breakpoints":{"xs":0,"sm":480,"md":768,"lg":1025,"xl":1440,"xxl":1600},"responsive":{"breakpoints":{"mobile":{"label":"Dispositivos m\u00f3veis no modo retrato","value":767,"default_value":767,"direction":"max","is_enabled":true},"mobile_extra":{"label":"Dispositivos m\u00f3veis no modo paisagem","value":880,"default_value":880,"direction":"max","is_enabled":false},"tablet":{"label":"Tablet no modo retrato","value":1024,"default_value":1024,"direction":"max","is_enabled":true},"tablet_extra":{"label":"Tablet no modo paisagem","value":1200,"default_value":1200,"direction":"max","is_enabled":false},"laptop":{"label":"Notebook","value":1366,"default_value":1366,"direction":"max","is_enabled":false},"widescreen":{"label":"Tela ampla (widescreen)","value":2400,"default_value":2400,"direction":"min","is_enabled":false}},"hasCustomBreakpoints":false},"version":"3.28.4","is_static":false,"experimentalFeatures":{"e_font_icon_svg":true,"additional_custom_breakpoints":true,"container":true,"e_local_google_fonts":true,"theme_builder_v2":true,"nested-elements":true,"editor_v2":true,"home_screen":true},"urls":{"assets":"https:\/\/spturis.com\/wp-content\/plugins\/elementor\/assets\/","ajaxurl":"https:\/\/spturis.com\/wp-admin\/admin-ajax.php","uploadUrl":"https:\/\/spturis.com\/wp-content\/uploads"},"nonces":{"floatingButtonsClickTracking":"be8c64e038"},"swiperClass":"swiper","settings":{"page":[],"editorPreferences":[]},"kit":{"active_breakpoints":["viewport_mobile","viewport_tablet"],"global_image_lightbox":"yes","lightbox_enable_counter":"yes","lightbox_enable_fullscreen":"yes","lightbox_enable_zoom":"yes","lightbox_enable_share":"yes","lightbox_title_src":"title","lightbox_description_src":"description"},"post":{"id":9,"title":"S%C3%A3o%20Paulo%20Turismo%20-%20SPTuris%20-%20S%C3%A3o%20Paulo%20Turismo%20%28SPTuris%29","excerpt":"","featuredImage":"https:\/\/spturis.com\/wp-content\/uploads\/2022\/02\/StockSnap_M6D1GS9PSL-1024x675.jpg"}};
+</script>
+<script src="https://spturis.com/wp-content/plugins/elementor/assets/js/frontend.min.js?ver=3.28.4" id="elementor-frontend-js"></script>
+<script src="https://spturis.com/wp-content/plugins/elementor-pro/assets/js/elements-handlers.min.js?ver=3.28.4" id="pro-elements-handlers-js"></script>
+
+</body>
+</html>

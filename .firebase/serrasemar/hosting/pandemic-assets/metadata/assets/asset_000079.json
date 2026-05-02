@@ -1,0 +1,62 @@
+{
+  "id": "asset_000079",
+  "type": "image",
+  "source_name": "agenciacenarium.com.br",
+  "source_page_url": "https://agenciacenarium.com.br/com-aumento-de-mortes-por-covid-19-manaus-usa-vala-comum-para-enterrar-seus-mortos/",
+  "original_media_url": "https://i0.wp.com/agenciacenarium.com.br/wp-content/uploads/2020/04/Sandro-Pereira-Revista-Cenarium-2-1200624-e1587509796743.png?fit=400%2C208&ssl=1",
+  "original_filename": "Sandro-Pereira-Revista-Cenarium-2-1200624-e1587509796743.png",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/Sandro-Pereira-Revista-Cenarium-2-1200624-e1587509796743.png",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000079.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000079.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000079_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000079_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000079_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000079_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": "não especificado"
+  },
+  "resolution": {
+    "width": 400,
+    "height": 208
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "Paula Litaiff",
+  "date_published": "2020-04-21T22:42:32+00:00",
+  "date_captured": "não especificado",
+  "caption": "Por Paula Litaiff – Da Revista Cenarium Com o aumento de mortes por Covid-19, Manaus precisou usar valas comuns para enterrar seus mortos. A informação foi repassada por familiares das vítimas fatais da doença e confirmada pela Secretaria Municipal de Limpeza Urbana (Semulsp), vinculada à Prefeitura de Manaus. Em nota, a Semulsp explicou que por conta […]",
+  "city_region": "não especificado",
+  "license": {
+    "status": "editorial_rights_managed",
+    "name": "não especificado",
+    "url": "não especificado",
+    "text_snippet": "Agência Cenarium English EditoriasSociedadeMeio AmbienteVia BrasíliaEconomiaDiversidadePoderTurismoCultura+CiênciaEsportesCenarium BrasíliaCenarium RondôniaCenarium RoraimaA AgênciaSobre nósLinha EditorialEquipeLeitorImagensComercialInício » Com aumento de mortes por Covid-19, Manaus usa vala comum para enterrar seus mortosSociedadeCom aumento de mortes por Covid-19, Manaus usa vala comum para ent",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "bec7a0e58185b178384ac148eed07f2ddd4558b2977a2641737a59abca922b29"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:55:03.861Z",
+    "http_status": 200,
+    "content_type": "image/png",
+    "final_url": "https://i0.wp.com/agenciacenarium.com.br/wp-content/uploads/2020/04/Sandro-Pereira-Revista-Cenarium-2-1200624-e1587509796743.png?fit=400%2C208&ssl=1",
+    "http_headers": {
+      "content-type": "image/png",
+      "content-length": "172664",
+      "last-modified": "Wed, 25 Feb 2026 02:55:03 GMT"
+    },
+    "content_length": "172664",
+    "last_modified": "Wed, 25 Feb 2026 02:55:03 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "não especificado"
+  }
+}

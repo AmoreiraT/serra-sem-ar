@@ -1,0 +1,69 @@
+{
+  "id": "asset_000078",
+  "type": "image",
+  "source_name": "bancodeimagens.portoalegre.rs.gov.br",
+  "source_page_url": "https://bancodeimagens.portoalegre.rs.gov.br/imagem/43663",
+  "original_media_url": "https://www.procempa.com.br/img/desenvolvimento_procempa_br.png",
+  "original_filename": "desenvolvimento_procempa_br.png",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/desenvolvimento_procempa_br.png",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000078.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000078.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000078_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000078_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000078_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000078_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": [
+      "/pandemic-assets/processed/cubemaps/asset_000078/px.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000078/nx.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000078/py.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000078/ny.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000078/pz.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000078/nz.jpg"
+    ]
+  },
+  "resolution": {
+    "width": 165,
+    "height": 15
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "não especificado",
+  "date_published": "não especificado",
+  "date_captured": "não especificado",
+  "caption": "não especificado",
+  "city_region": "não especificado",
+  "license": {
+    "status": "license_unspecified",
+    "name": "não especificado",
+    "url": "não especificado",
+    "text_snippet": "Pular para o conteúdo principal Buscar Buscar por secretaria, assunto ou palavra-chave Buscar por secretaria, assunto ou palavra-chave Secretaria Administração e Patrimônio Copa do Mundo Feminina Cultura Defesa Civil Demhab Desenvolvimento Econômico, Turismo e Eventos Dmae DMLU Educação EPTC Esporte e Lazer Fazenda Gabinete da Causa Animal Gabinete da Primeira-Dama Gabinete da Vice-Prefeita Gabine",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "426c1497c61bbf63d3ab0d2df520019b36fd0fd83972148ae4f505174332e68d"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:54:33.838Z",
+    "http_status": 200,
+    "content_type": "image/png",
+    "final_url": "https://www.procempa.com.br/img/desenvolvimento_procempa_br.png",
+    "http_headers": {
+      "content-type": "image/png",
+      "content-length": "2137",
+      "last-modified": "Mon, 29 Jan 2024 20:26:10 GMT"
+    },
+    "content_length": "2137",
+    "last_modified": "Mon, 29 Jan 2024 20:26:10 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "generated"
+  }
+}

@@ -28,6 +28,39 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /playerPresence/{presenceId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasOnly([
+        "sessionId",
+        "userId",
+        "displayName",
+        "color",
+        "position",
+        "target",
+        "currentDateIndex",
+        "updatedAtMs",
+        "updatedAt"
+      ])
+      && request.resource.data.sessionId is string
+      && request.resource.data.sessionId.size() >= 8
+      && request.resource.data.sessionId.size() <= 96
+      && request.resource.data.color is string
+      && request.resource.data.color.matches("^#[0-9a-fA-F]{6}$")
+      && request.resource.data.updatedAtMs is number
+      && request.resource.data.currentDateIndex is int
+      && request.resource.data.position is map
+      && request.resource.data.position.x is number
+      && request.resource.data.position.y is number
+      && request.resource.data.position.z is number
+      && request.resource.data.target is map
+      && request.resource.data.target.x is number
+      && request.resource.data.target.y is number
+      && request.resource.data.target.z is number
+      && (!("userId" in request.resource.data) || request.resource.data.userId == null || request.resource.data.userId is string)
+      && (!("displayName" in request.resource.data) || request.resource.data.displayName == null || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 120));
+      allow delete: if true;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

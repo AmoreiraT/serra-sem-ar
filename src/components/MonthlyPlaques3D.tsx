@@ -160,7 +160,6 @@ type PlaqueData = {
 export const MonthlyPlaques3D = () => {
   const data = useCovidStore((state) => state.data);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
-  const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const revealedX = useCovidStore((state) => state.revealedX);
   const terrainSampler = useCovidStore((state) => state.terrainSampler);
   const [fontsReady, setFontsReady] = useState(false);
@@ -266,12 +265,6 @@ export const MonthlyPlaques3D = () => {
       .filter(Boolean) as PlaqueData[];
   }, [data, mountainPoints, terrainSampler, fontsReady]);
 
-  const activeMonthKey = useMemo(() => {
-    const entry = data[currentDateIndex];
-    if (!entry) return null;
-    return `${entry.date.getFullYear()}-${entry.date.getMonth()}`;
-  }, [currentDateIndex, data]);
-
   useEffect(() => {
     return () => {
       plaques.forEach((plaque) => plaque.texture?.dispose());
@@ -290,12 +283,8 @@ export const MonthlyPlaques3D = () => {
     <group>
       {visiblePlaques.map((plaque) => {
         const boardPosition = plaque.boardPoint.toArray() as [number, number, number];
-        const isActive = plaque.key === activeMonthKey;
-        const postColor = isActive ? '#f4d8b4' : '#4a2b16';
-        const frameColor = isActive ? '#6b3a1b' : '#2b1a10';
-        const panelColor = '#ffffff';
-        const panelEmissive = isActive ? '#f1a95b' : '#2a160c';
-        const panelEmissiveIntensity = isActive ? 0.55 : 0.2;
+        const postColor = '#4a2b16';
+        const frameColor = '#1f130c';
 
         return (
           <group key={`month-plaque-${plaque.key}`} position={boardPosition} rotation={[0, plaque.rotationY, 0]}>
@@ -329,13 +318,9 @@ export const MonthlyPlaques3D = () => {
               </mesh>
               <mesh position={[0, BOARD_HEIGHT / 2, -BOARD_DEPTH / 2 + 0.012]} castShadow receiveShadow>
                 <boxGeometry args={[BOARD_WIDTH, BOARD_HEIGHT, BOARD_DEPTH / 2]} />
-                <meshStandardMaterial
-                  color={panelColor}
-                  roughness={0.58}
-                  metalness={0.14}
+                <meshBasicMaterial
+                  color="#ffffff"
                   map={plaque.texture ?? undefined}
-                  emissive={panelEmissive}
-                  emissiveIntensity={panelEmissiveIntensity}
                   toneMapped={false}
                 />
               </mesh>

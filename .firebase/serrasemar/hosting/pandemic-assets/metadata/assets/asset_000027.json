@@ -1,0 +1,69 @@
+{
+  "id": "asset_000027",
+  "type": "image",
+  "source_name": "www.saude.rj.gov.br",
+  "source_page_url": "https://www.saude.rj.gov.br/noticias/2020/05/governo-do-rio-inaugura-hospital-de-campanha-do-parque-dos-atletas-nesta-segunda",
+  "original_media_url": "https://www.saude.rj.gov.br/site/img/botaowhats.jpeg",
+  "original_filename": "botaowhats.jpeg",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/botaowhats.jpeg",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000027.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000027.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000027_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000027_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000027_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000027_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": [
+      "/pandemic-assets/processed/cubemaps/asset_000027/px.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000027/nx.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000027/py.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000027/ny.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000027/pz.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000027/nz.jpg"
+    ]
+  },
+  "resolution": {
+    "width": 120,
+    "height": 43
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "não especificado",
+  "date_published": "não especificado",
+  "date_captured": "não especificado",
+  "caption": "Unidade, que contou com recursos da iniciativa privada, é a terceira aberta pelo estado no combate à Covid-19",
+  "city_region": "não especificado",
+  "license": {
+    "status": "editorial_rights_managed",
+    "name": "não especificado",
+    "url": "https://creativecommons.org/licenses/by/3.0/br/",
+    "text_snippet": "Conexão Saúde Viver melhor Cidadão Profissional de saúde Gestor Pesquisador Setores da Saúde Assessoria de Regionalização Atendimento Atenção Especializada, Controle e Avaliação Atenção Psicossocial e Populações em Situação de Vulnerabilidade Atenção Primária à Saúde Auditoria Design em Saúde Contratações Educação e Formação em Saúde Humanização Informação SUS LACENRJ Licitações Medicamentos Organ",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "e46a93ae23f67d38b8ad59e89d81fca8734b96e999dca72565dc1959d2746ea2"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:32.486Z",
+    "http_status": 200,
+    "content_type": "image/jpeg",
+    "final_url": "https://www.saude.rj.gov.br/site/img/botaowhats.jpeg",
+    "http_headers": {
+      "content-type": "image/jpeg",
+      "content-length": "8230",
+      "last-modified": "Thu, 02 May 2024 15:31:13 GMT"
+    },
+    "content_length": "8230",
+    "last_modified": "Thu, 02 May 2024 15:31:13 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "generated"
+  }
+}

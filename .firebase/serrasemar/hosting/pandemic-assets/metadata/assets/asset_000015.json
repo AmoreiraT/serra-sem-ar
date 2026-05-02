@@ -1,0 +1,59 @@
+{
+  "id": "asset_000015",
+  "type": "image",
+  "source_name": "commons.wikimedia.org",
+  "source_page_url": "https://commons.wikimedia.org/wiki/File:Sports_court_in_Rio_de_Janeiro,Brazil_2020.jpg",
+  "original_media_url": "https://commons.wikimedia.org/wiki/File:Sports_court_in_Rio_de_Janeiro,Brazil_2020.jpg",
+  "original_filename": "File_Sports_court_in_Rio_de_Janeiro_Brazil_2020.jpg",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/File_Sports_court_in_Rio_de_Janeiro_Brazil_2020.jpg",
+    "texture_2k": "não especificado",
+    "texture_4k": "não especificado",
+    "normal": "não especificado",
+    "roughness": "não especificado",
+    "alpha_masks": [],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": "não especificado"
+  },
+  "resolution": {
+    "width": 0,
+    "height": 0
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "Boaventuravinicius Own work",
+  "date_published": "não especificado",
+  "date_captured": "2020-05-10",
+  "caption": "não especificado",
+  "city_region": "não especificado",
+  "license": {
+    "status": "free_use",
+    "name": "CC BY-SA 4.0",
+    "url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "text_snippet": "Creative Commons Attribution-Share Alike 4.0",
+    "verified": true
+  },
+  "hashes": {
+    "sha256": "32764c63de97a02f5ca636dc3d5ceaaf2d3564a39b43b3df20a965e4adde2664"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:24.416Z",
+    "http_status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "final_url": "https://upload.wikimedia.org/wikipedia/commons/7/7a/Sports_court_in_Rio_de_Janeiro%2CBrazil_2020.jpg",
+    "http_headers": {
+      "content-type": "text/html; charset=UTF-8",
+      "content-length": "109784",
+      "last-modified": "Wed, 11 Feb 2026 02:53:23 GMT"
+    },
+    "content_length": "109784",
+    "last_modified": "Wed, 11 Feb 2026 02:53:23 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "não especificado"
+  }
+}

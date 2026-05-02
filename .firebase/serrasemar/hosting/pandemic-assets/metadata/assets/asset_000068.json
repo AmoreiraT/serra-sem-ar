@@ -1,0 +1,69 @@
+{
+  "id": "asset_000068",
+  "type": "image",
+  "source_name": "amazoniareal.com.br",
+  "source_page_url": "https://amazoniareal.com.br/a-dupla-catastrofe-sanitaria-em-manaus-durante-a-pandemia-de-covid-19/",
+  "original_media_url": "https://amazoniareal.com.br/wp-content/uploads/2021/07/Trust-Logo-Stacked.png?1",
+  "original_filename": "Trust-Logo-Stacked.png",
+  "local_paths": {
+    "raw": "/pandemic-assets/raw/images/Trust-Logo-Stacked.png",
+    "texture_2k": "/pandemic-assets/processed/textures/2k/asset_000068.jpg",
+    "texture_4k": "/pandemic-assets/processed/textures/4k/asset_000068.jpg",
+    "normal": "/pandemic-assets/processed/maps/normal/asset_000068_normal.png",
+    "roughness": "/pandemic-assets/processed/maps/roughness/asset_000068_roughness.png",
+    "alpha_masks": [
+      "/pandemic-assets/processed/masks/alpha/asset_000068_alpha_vignette.png",
+      "/pandemic-assets/processed/masks/alpha/asset_000068_alpha_tear.png"
+    ],
+    "video_mp4": "não especificado",
+    "video_webm": "não especificado",
+    "thumb": "não especificado",
+    "cubemap_faces": [
+      "/pandemic-assets/processed/cubemaps/asset_000068/px.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000068/nx.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000068/py.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000068/ny.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000068/pz.jpg",
+      "/pandemic-assets/processed/cubemaps/asset_000068/nz.jpg"
+    ]
+  },
+  "resolution": {
+    "width": 862,
+    "height": 384
+  },
+  "duration_seconds": "não aplicável",
+  "fps": "não aplicável",
+  "author_credit": "Jesem Orellana",
+  "date_published": "2021-01-28T21:36:36+00:00",
+  "date_captured": "não especificado",
+  "caption": "Dupla-catástrofe-sanitária-em-Manaus",
+  "city_region": "não especificado",
+  "license": {
+    "status": "license_unspecified",
+    "name": "não especificado",
+    "url": "não especificado",
+    "text_snippet": "Amazônia Real <iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-N6HQ95L\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe> × Como doar Editorias CRISE CLIMÁTICA-COP30 MEIO AMBIENTE POVOS INDÍGENAS QUESTÃO AGRÁRIA POLÍTICA ECONOMIA E NEGÓCIOS CULTURA ESPECIAIS Redes Sociais Política A dupla Catástrofe Sanitária em Manaus, durante a pandemia de Covid-19 Sepultamentos e",
+    "verified": false
+  },
+  "hashes": {
+    "sha256": "080c99e29f5c76387ceebe9e55210bfb160b924fdaa2e8bf6a8a6487e4e2bfa2"
+  },
+  "ingest": {
+    "downloaded_at": "2026-02-25T02:53:55.175Z",
+    "http_status": 200,
+    "content_type": "image/png",
+    "final_url": "https://amazoniareal.com.br/wp-content/uploads/2021/07/Trust-Logo-Stacked.png?1",
+    "http_headers": {
+      "content-type": "image/png",
+      "content-length": "27358",
+      "last-modified": "Fri, 03 Oct 2025 17:50:12 GMT"
+    },
+    "content_length": "27358",
+    "last_modified": "Fri, 03 Oct 2025 17:50:12 GMT"
+  },
+  "processed": {
+    "loop_duration_seconds": "não aplicável",
+    "loop_status": "não aplicável",
+    "cubemap_status": "generated"
+  }
+}
