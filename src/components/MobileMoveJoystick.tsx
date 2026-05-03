@@ -1,5 +1,5 @@
-import { type PointerEventHandler, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { type PointerEventHandler, useEffect, useRef, useState } from 'react';
 import { useCovidStore } from '../stores/covidStore';
 
 const JOYSTICK_RADIUS = 42;
@@ -57,6 +57,16 @@ export const MobileMoveJoystick = () => {
   };
 
   const reset = () => {
+    const activePointerId = pointerIdRef.current;
+    if (activePointerId !== null && baseRef.current) {
+      try {
+        if (baseRef.current.hasPointerCapture?.(activePointerId)) {
+          baseRef.current.releasePointerCapture?.(activePointerId);
+        }
+      } catch {
+        // Ignore release races on mobile browsers.
+      }
+    }
     pointerIdRef.current = null;
     setActive(false);
     setThumb({ x: 0, y: 0 });
@@ -68,7 +78,13 @@ export const MobileMoveJoystick = () => {
     pointerIdRef.current = event.pointerId;
     setActive(true);
     event.preventDefault();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    try {
+      if (!event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      }
+    } catch {
+      // Some mobile webviews throw InvalidStateError if pointer state changes mid-frame.
+    }
     updateByPointer(event.clientX, event.clientY);
   };
 

@@ -1,10 +1,10 @@
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, Bell, Info, Pin, RotateCcw, X } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { AlertCircle, Bell, Info, Pin, X } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
 import './App.css';
-import { ControlsHelp } from './components/ControlsHelp';
 import { CinematicAudio } from './components/CinematicAudio';
+import { ControlsHelp } from './components/ControlsHelp';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { EventCard } from './components/EventCard';
 import { InfoPanel } from './components/InfoPanel';
@@ -13,8 +13,8 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { MemorialPanel } from './components/MemorialPanel';
 import { MobileMoveJoystick } from './components/MobileMoveJoystick';
 import { Button } from './components/ui/button';
-import { useCovidData } from './hooks/useCovidData';
 import { useIsMobile } from './hooks/use-mobile';
+import { useCovidData } from './hooks/useCovidData';
 import { AuthProvider } from './providers/AuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
 
@@ -24,23 +24,7 @@ function AppContent() {
   const { isLoading, error } = useCovidData();
   const [mobilePanel, setMobilePanel] = useState<'event' | 'memorial' | 'header' | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
-  const [isPortrait, setIsPortrait] = useState(false);
   const isMobile = useIsMobile();
-
-  useEffect(() => {
-    const updateOrientation = () => {
-      setIsPortrait(window.innerHeight > window.innerWidth);
-    };
-
-    updateOrientation();
-    window.addEventListener('resize', updateOrientation);
-    window.addEventListener('orientationchange', updateOrientation);
-
-    return () => {
-      window.removeEventListener('resize', updateOrientation);
-      window.removeEventListener('orientationchange', updateOrientation);
-    };
-  }, []);
 
   const toggleMobilePanel = (panel: 'event' | 'memorial' | 'header') => {
     setMobilePanel((current) => (current === panel ? null : panel));
@@ -104,17 +88,6 @@ function AppContent() {
             <Scene3D enableControls showStats={false} />
           </Suspense>
           <CinematicAudio />
-
-          {isMobile && isPortrait && (
-            <div className="orientation-hint pointer-events-none absolute left-1/2 top-24 z-20 w-[min(86vw,24rem)] -translate-x-1/2 rounded-xl border border-amber-200/25 bg-black/65 px-3 py-2 text-white shadow-xl backdrop-blur-md sm:top-28">
-              <div className="flex items-center gap-2">
-                <RotateCcw className="h-4 w-4 shrink-0 text-amber-200" />
-                <p className="text-xs leading-snug text-white/85">
-                  Para uma experiência mais imersiva, prefira a posição horizontal.
-                </p>
-              </div>
-            </div>
-          )}
 
           <div className="hud-desktop-left hidden xl:block">
             <EventCard />

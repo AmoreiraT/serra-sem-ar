@@ -68,10 +68,10 @@ const getSceneProfile = (): SceneProfile => {
     return {
       isMobile,
       isConstrained: true,
-      dpr: [0.75, 1],
+      dpr: [0.9, 1],
       shadows: false,
       mountainQuality: 'mobile',
-      environmentQuality: reducedMotion || memory <= 3 ? 'lean' : 'balanced',
+      environmentQuality: isMobile || reducedMotion || memory <= 3 ? 'lean' : 'balanced',
     };
   }
 
@@ -413,6 +413,7 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
 
   const keyStateRef = useRef<MovementState>({ ...defaultMoveState });
   const pointerLockedRef = useRef(false);
+  const pointerLockCooldownUntilRef = useRef(0);
   const yawRef = useRef(-Math.PI * 0.5);
   const pitchRef = useRef(THREE.MathUtils.degToRad(0));
   const distanceRef = useRef(0);
@@ -530,13 +531,37 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
   }, []);
 
   useEffect(() => {
+    if (isMobile) return;
+
     const canvas = gl.domElement;
     const requestPointerLock = () => {
-      canvas.requestPointerLock?.();
+      const now = performance.now();
+      if (now < pointerLockCooldownUntilRef.current) return;
+      if (document.pointerLockElement === canvas) return;
+
+      try {
+        const maybePromise = canvas.requestPointerLock?.();
+        if (maybePromise && typeof (maybePromise as Promise<void>).catch === 'function') {
+          void (maybePromise as Promise<void>).catch(() => {
+            pointerLockCooldownUntilRef.current = performance.now() + 700;
+          });
+        }
+      } catch {
+        pointerLockCooldownUntilRef.current = performance.now() + 700;
+      }
     };
 
     const handlePointerLockChange = () => {
-      pointerLockedRef.current = document.pointerLockElement === canvas;
+      const isLocked = document.pointerLockElement === canvas;
+      pointerLockedRef.current = isLocked;
+      if (!isLocked) {
+        pointerLockCooldownUntilRef.current = performance.now() + 700;
+      }
+    };
+
+    const handlePointerLockError = () => {
+      pointerLockedRef.current = false;
+      pointerLockCooldownUntilRef.current = performance.now() + 900;
     };
 
     const applyLookDelta = (dx: number, dy: number) => {
@@ -561,15 +586,17 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
 
     canvas.addEventListener('click', requestPointerLock);
     document.addEventListener('pointerlockchange', handlePointerLockChange);
+    document.addEventListener('pointerlockerror', handlePointerLockError);
     document.addEventListener('mousemove', handlePointerMove);
 
     return () => {
       canvas.removeEventListener('click', requestPointerLock);
       document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      document.removeEventListener('pointerlockerror', handlePointerLockError);
       document.removeEventListener('mousemove', handlePointerMove);
       if (pointerLockedRef.current) document.exitPointerLock?.();
     };
-  }, [gl]);
+  }, [gl, isMobile]);
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -585,7 +612,13 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
       touchState.pointerId = event.pointerId;
       touchState.x = event.clientX;
       touchState.y = event.clientY;
-      canvas.setPointerCapture?.(event.pointerId);
+      try {
+        if (!canvas.hasPointerCapture?.(event.pointerId)) {
+          canvas.setPointerCapture?.(event.pointerId);
+        }
+      } catch {
+        // Some mobile webviews can throw InvalidStateError during capture races.
+      }
     };
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -606,6 +639,13 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
       if (touchState.pointerId !== event.pointerId) return;
       touchState.active = false;
       touchState.pointerId = null;
+      try {
+        if (canvas.hasPointerCapture?.(event.pointerId)) {
+          canvas.releasePointerCapture?.(event.pointerId);
+        }
+      } catch {
+        // Ignore release races on mobile browsers.
+      }
     };
 
     canvas.style.touchAction = 'none';
@@ -717,7 +757,7 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
     const lateralClamped = THREE.MathUtils.clamp(lateral, -smoothedSample.outerWidth, smoothedSample.outerWidth);
     const playerPos = playerPosRef.current.copy(smoothedSample.position).addScaledVector(right, lateralClamped);
     const sampledHeightRaw = terrainSampler?.sampleHeight(playerPos.x, playerPos.z);
-    const sampledHeight = Number.isFinite(sampledHeightRaw) ? sampledHeightRaw : smoothedSample.position.y;
+    const sampledHeight = (sampledHeightRaw != null && Number.isFinite(sampledHeightRaw)) ? sampledHeightRaw : smoothedSample.position.y;
     const lateralRatio = smoothedSample.halfWidth > 1e-4
       ? Math.min(Math.abs(lateralClamped) / smoothedSample.halfWidth, 1)
       : 0;
@@ -769,7 +809,7 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
       .addScaledVector(up, eyeHeight + bobOffset)
       .addScaledVector(rightAligned, swayOffset);
     const cameraSurfaceRaw = terrainSampler?.sampleHeight(desiredCameraPos.x, desiredCameraPos.z);
-    const cameraSurfaceY = Number.isFinite(cameraSurfaceRaw) ? cameraSurfaceRaw : desiredGroundY;
+    const cameraSurfaceY = (cameraSurfaceRaw != null && Number.isFinite(cameraSurfaceRaw)) ? cameraSurfaceRaw : desiredGroundY;
     const cameraMinY = cameraSurfaceY + Math.max(0.9, eyeHeight * 0.62);
     if (desiredCameraPos.y < cameraMinY) desiredCameraPos.y = cameraMinY;
 

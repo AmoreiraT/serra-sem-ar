@@ -2,8 +2,8 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { EnvironmentBand, LayeredLayoutItem, PandemicTexture } from '../types/environment';
-import { applyBackgroundMaterialConstraints, applyDesaturationShader } from './visualHierarchy';
 import { BRIGHTNESS_BY_BAND, CONTRAST_BY_BAND, DESATURATION_BY_BAND } from './environmentConstants';
+import { applyBackgroundMaterialConstraints, applyDesaturationShader } from './visualHierarchy';
 
 interface BillboardPlaneProps {
   readonly item: LayeredLayoutItem;
@@ -28,8 +28,19 @@ const createVideoElement = (url: string): HTMLVideoElement => {
   video.muted = true;
   video.loop = true;
   video.playsInline = true;
-  video.preload = 'auto';
+  video.preload = 'metadata';
   return video;
+};
+
+const disposeVideoTexture = (texture: THREE.VideoTexture | null) => {
+  if (!texture) return;
+  const source = texture.source.data;
+  if (source instanceof HTMLVideoElement) {
+    source.pause();
+    source.removeAttribute('src');
+    source.load();
+  }
+  texture.dispose();
 };
 
 export const BillboardPlane = ({
@@ -68,66 +79,63 @@ export const BillboardPlane = ({
   useEffect(() => {
     if (!videoUrl) {
       setVideoTexture((previous) => {
-        if (previous) {
-          const source = previous.source.data;
-          if (source instanceof HTMLVideoElement) {
-            source.pause();
-            source.removeAttribute('src');
-            source.load();
-          }
-          previous.dispose();
-        }
+        disposeVideoTexture(previous);
         return null;
       });
       return;
     }
 
     let cancelled = false;
+    let activated = false;
     const video = createVideoElement(videoUrl);
     const texture = new THREE.VideoTexture(video);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
     texture.generateMipmaps = false;
+    texture.needsUpdate = false;
+
+    const activateTexture = () => {
+      if (cancelled || activated || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+      activated = true;
+      setVideoTexture((previous) => {
+        disposeVideoTexture(previous);
+        return texture;
+      });
+    };
+
+    const handleLoadedData = () => {
+      activateTexture();
+    };
+
+    video.addEventListener('loadeddata', handleLoadedData);
 
     const boot = async () => {
       try {
         await video.play();
       } catch {
-        // autoplay can fail; user interaction will start playback
+        // Safari/webviews often block autoplay; keep the image texture fallback active.
       }
 
       if (cancelled) {
-        texture.dispose();
-        video.pause();
-        video.removeAttribute('src');
-        video.load();
+        video.removeEventListener('loadeddata', handleLoadedData);
+        disposeVideoTexture(texture);
         return;
       }
 
-      setVideoTexture((previous) => {
-        if (previous) {
-          const source = previous.source.data;
-          if (source instanceof HTMLVideoElement) {
-            source.pause();
-            source.removeAttribute('src');
-            source.load();
-          }
-          previous.dispose();
-        }
-        return texture;
-      });
+      activateTexture();
     };
 
     void boot();
 
     return () => {
       cancelled = true;
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
+      video.removeEventListener('loadeddata', handleLoadedData);
+      if (!activated) {
+        disposeVideoTexture(texture);
+      }
       setVideoTexture((previous) => {
-        previous?.dispose();
+        disposeVideoTexture(previous);
         return null;
       });
     };

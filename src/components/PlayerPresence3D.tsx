@@ -7,9 +7,12 @@ import { db } from '../services/firebaseConfig';
 import { useCovidStore } from '../stores/covidStore';
 
 const PRESENCE_COLLECTION = 'playerPresence';
-const PRESENCE_TTL_MS = 12_000;
-const WRITE_INTERVAL_MS = 1_600;
-const MAX_REMOTE_PLAYERS = 300;
+const PRESENCE_TTL_MS = 18_000;
+const WRITE_INTERVAL_MS = 2_500;
+const HEARTBEAT_INTERVAL_MS = 12_000;
+const MAX_REMOTE_PLAYERS = 80;
+const POSITION_DELTA_EPSILON_SQ = 0.04;
+const DATE_INDEX_DELTA_EPSILON = 1;
 const LOCAL_SESSION_KEY = 'serra-sem-ar-presence-id';
 
 // Flame simulation constants matching the reference implementation
@@ -83,6 +86,13 @@ const getSessionId = () => {
 };
 
 const vectorFromArray = ([x, y, z]: [number, number, number]): PresenceVector => ({ x, y, z });
+
+const distanceSq = (a: [number, number, number], b: [number, number, number]) => {
+  const dx = a[0] - b[0];
+  const dy = a[1] - b[1];
+  const dz = a[2] - b[2];
+  return dx * dx + dy * dy + dz * dz;
+};
 
 const isPresenceFresh = (presence: PresenceDoc, now: number) =>
   typeof presence.updatedAtMs === 'number' && now - presence.updatedAtMs <= PRESENCE_TTL_MS;
@@ -192,12 +202,19 @@ const getLocalFlamePosition = (
 
 export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' }) => {
   const { user } = useAuth();
+  const isPresenceEnabled = import.meta.env.VITE_ENABLE_PRESENCE !== 'false';
   const sessionId = useMemo(getSessionId, []);
   const color = useMemo(() => palette[hashString(sessionId) % palette.length], [sessionId]);
   const cameraPosition = useCovidStore((state) => state.cameraPosition);
   const cameraTarget = useCovidStore((state) => state.cameraTarget);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const latestStateRef = useRef({ cameraPosition, cameraTarget, currentDateIndex });
+  const lastPublishedRef = useRef<{
+    cameraPosition: [number, number, number];
+    cameraTarget: [number, number, number];
+    currentDateIndex: number;
+    atMs: number;
+  } | null>(null);
   const [remotePresences, setRemotePresences] = useState<FlamePresence[]>([]);
   const localPresence = useMemo<FlamePresence>(
     () => ({
@@ -214,12 +231,35 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
   }, [cameraPosition, cameraTarget, currentDateIndex]);
 
   useEffect(() => {
+    if (!isPresenceEnabled) {
+      lastPublishedRef.current = null;
+      return;
+    }
+
     const ref = doc(db, PRESENCE_COLLECTION, sessionId);
     let cancelled = false;
 
-    const publish = async () => {
+    const removePresence = async () => {
+      await deleteDoc(ref).catch(() => undefined);
+    };
+
+    const publish = async (force = false) => {
       if (cancelled) return;
       const latest = latestStateRef.current;
+      const now = Date.now();
+      const previous = lastPublishedRef.current;
+
+      if (!force && previous) {
+        const movedEnough =
+          distanceSq(latest.cameraPosition, previous.cameraPosition) > POSITION_DELTA_EPSILON_SQ ||
+          distanceSq(latest.cameraTarget, previous.cameraTarget) > POSITION_DELTA_EPSILON_SQ;
+        const dateChangedEnough =
+          Math.abs(latest.currentDateIndex - previous.currentDateIndex) >= DATE_INDEX_DELTA_EPSILON;
+        const heartbeatDue = now - previous.atMs >= HEARTBEAT_INTERVAL_MS;
+
+        if (!movedEnough && !dateChangedEnough && !heartbeatDue) return;
+      }
+
       try {
         await setDoc(
           ref,
@@ -231,29 +271,49 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
             position: vectorFromArray(latest.cameraPosition),
             target: vectorFromArray(latest.cameraTarget),
             currentDateIndex: latest.currentDateIndex,
-            updatedAtMs: Date.now(),
+            updatedAtMs: now,
             updatedAt: serverTimestamp(),
           },
           { merge: true }
         );
+        lastPublishedRef.current = {
+          cameraPosition: [...latest.cameraPosition] as [number, number, number],
+          cameraTarget: [...latest.cameraTarget] as [number, number, number],
+          currentDateIndex: latest.currentDateIndex,
+          atMs: now,
+        };
       } catch {
         // Presence is optional; Firestore rules may not be deployed yet.
       }
     };
 
-    void publish();
+    void publish(true);
     const interval = window.setInterval(() => {
       void publish();
     }, WRITE_INTERVAL_MS);
 
+    const handlePageExit = () => {
+      void removePresence();
+    };
+
+    window.addEventListener('pagehide', handlePageExit);
+    window.addEventListener('beforeunload', handlePageExit);
+
     return () => {
       cancelled = true;
       window.clearInterval(interval);
-      void deleteDoc(ref).catch(() => undefined);
+      window.removeEventListener('pagehide', handlePageExit);
+      window.removeEventListener('beforeunload', handlePageExit);
+      void removePresence();
     };
-  }, [color, sessionId, user?.displayName, user?.uid]);
+  }, [color, isPresenceEnabled, sessionId, user?.displayName, user?.uid]);
 
   useEffect(() => {
+    if (!isPresenceEnabled) {
+      setRemotePresences([]);
+      return;
+    }
+
     const presenceQuery = query(collection(db, PRESENCE_COLLECTION), orderBy('updatedAtMs', 'desc'), limit(MAX_REMOTE_PLAYERS));
     const unsubscribe = onSnapshot(
       presenceQuery,
@@ -279,7 +339,7 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
     );
 
     return () => unsubscribe();
-  }, [sessionId]);
+  }, [isPresenceEnabled, sessionId]);
 
   return (
     <group name="player-presence-flames">

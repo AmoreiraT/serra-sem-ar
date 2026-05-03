@@ -6,9 +6,17 @@ import { useCovidStore } from '../stores/covidStore';
 import { Button } from './ui/button';
 
 const AUDIO_SOURCES = {
-  thunder: 'https://upload.wikimedia.org/wikipedia/commons/4/42/Rain_and_thunder.ogg',
-  crowd: 'https://upload.wikimedia.org/wikipedia/commons/5/54/Cafe_ambiance.ogg',
+  thunder: '/pandemic-assets/audios/doente.mp3',
+  crowd: '/pandemic-assets/audios/coracao_hospital.mp3',
 } as const;
+
+const CUE_SAMPLE_SOURCES = {
+  cough: '/pandemic-assets/audios/doente.mp3',
+  sneeze: '/pandemic-assets/audios/coracao_hospital.mp3',
+} as const;
+
+type CueKey = keyof typeof CUE_SAMPLE_SOURCES;
+type CueBuffers = Partial<Record<CueKey, AudioBuffer>>;
 
 type Runtime = {
   context: AudioContext;
@@ -16,12 +24,16 @@ type Runtime = {
   movementTimer: number;
   highAltitudeTimer: number;
   windSource: AudioBufferSourceNode;
+  cueBuffers: CueBuffers;
   teardown: () => void;
 };
 
 type WindowWithAudioFallback = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
 
 const createNoiseBuffer = (context: AudioContext, seconds: number, amplitude: number) => {
   const sampleRate = context.sampleRate;
@@ -44,8 +56,8 @@ const createLoopingMedia = (
   pan: number
 ) => {
   const element = new Audio(url);
-  element.crossOrigin = 'anonymous';
   element.loop = true;
+  element.playsInline = true;
   element.preload = 'metadata';
 
   const source = context.createMediaElementSource(element);
@@ -64,6 +76,46 @@ const createLoopingMedia = (
   gain.connect(master);
 
   return element;
+};
+
+const loadAudioBuffer = async (context: AudioContext, url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to load audio sample: ${url}`);
+  const arrayBuffer = await response.arrayBuffer();
+  return context.decodeAudioData(arrayBuffer);
+};
+
+const playSpatialCueSample = (
+  context: AudioContext,
+  destination: AudioNode,
+  buffer: AudioBuffer,
+  intensity: number,
+  panValue: number,
+  options: { rateMin: number; rateMax: number; gain: number; maxDuration: number }
+) => {
+  const startAt = context.currentTime;
+  const source = context.createBufferSource();
+  const panner = context.createStereoPanner();
+  const gain = context.createGain();
+
+  source.buffer = buffer;
+  source.playbackRate.value = lerp(options.rateMin, options.rateMax, Math.random());
+  panner.pan.value = clamp(panValue, -1, 1);
+
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(options.gain * intensity, startAt + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + options.maxDuration);
+
+  source.connect(panner);
+  panner.connect(gain);
+  gain.connect(destination);
+
+  const duration = Math.min(options.maxDuration + 0.04, Math.max(0.18, buffer.duration));
+  const maxOffset = Math.max(0, buffer.duration - duration);
+  const offset = maxOffset > 0 ? Math.random() * maxOffset : 0;
+
+  source.start(startAt, offset, duration);
+  source.stop(startAt + duration + 0.02);
 };
 
 const playFootstep = (context: AudioContext, destination: AudioNode, intensity: number) => {
@@ -253,6 +305,8 @@ export const CinematicAudio = () => {
   const cameraPosition = useCovidStore((state) => state.cameraPosition);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
 
+  const cueBuffersRef = useRef<CueBuffers>({});
+
   useEffect(() => {
     mobileMoveInputRef.current = mobileMoveInput;
   }, [mobileMoveInput]);
@@ -305,6 +359,17 @@ export const CinematicAudio = () => {
       void thunder.play().catch(() => undefined);
       void crowd.play().catch(() => undefined);
 
+      void Promise.all(
+        (Object.keys(CUE_SAMPLE_SOURCES) as CueKey[]).map(async (key) => {
+          try {
+            const buffer = await loadAudioBuffer(context, CUE_SAMPLE_SOURCES[key]);
+            cueBuffersRef.current[key] = buffer;
+          } catch {
+            // Keep synthetic fallback for unavailable samples.
+          }
+        })
+      );
+
       const movementTimer = window.setInterval(() => {
         const runtime = runtimeRef.current;
         if (!runtime) return;
@@ -351,11 +416,31 @@ export const CinematicAudio = () => {
         const pan = Math.sin(now * 1.73) * 0.72;
         const cueIntensity = 0.58 + intensity * 0.72;
         const roll = Math.random();
+        const coughSample = cueBuffersRef.current.cough;
+        const sneezeSample = cueBuffersRef.current.sneeze;
 
         if (roll < 0.38) {
-          playCough(runtime.context, runtime.master, cueIntensity, pan);
+          if (coughSample) {
+            playSpatialCueSample(runtime.context, runtime.master, coughSample, cueIntensity, pan, {
+              rateMin: 0.9,
+              rateMax: 1.05,
+              gain: 0.1,
+              maxDuration: 0.42,
+            });
+          } else {
+            playCough(runtime.context, runtime.master, cueIntensity, pan);
+          }
         } else if (roll < 0.68) {
-          playSneeze(runtime.context, runtime.master, cueIntensity, -pan);
+          if (sneezeSample) {
+            playSpatialCueSample(runtime.context, runtime.master, sneezeSample, cueIntensity, -pan, {
+              rateMin: 1.1,
+              rateMax: 1.25,
+              gain: 0.09,
+              maxDuration: 0.36,
+            });
+          } else {
+            playSneeze(runtime.context, runtime.master, cueIntensity, -pan);
+          }
         } else {
           playAmbulanceSiren(runtime.context, runtime.master, cueIntensity, pan);
         }
@@ -376,6 +461,7 @@ export const CinematicAudio = () => {
           // Already stopped.
         }
         void context.close();
+        cueBuffersRef.current = {};
       };
 
       runtimeRef.current = {
@@ -384,6 +470,7 @@ export const CinematicAudio = () => {
         movementTimer,
         highAltitudeTimer,
         windSource,
+        cueBuffers: cueBuffersRef.current,
         teardown,
       };
 

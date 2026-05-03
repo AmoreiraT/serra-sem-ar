@@ -43,6 +43,8 @@ const MAX_PEAK_SOURCES = 4;
 const MIN_PEAK_DISTANCE_XZ = 18;
 const PROXIMITY_NEAR = 9;
 const PROXIMITY_FAR = 165;
+const MIN_FILTER_FREQUENCY = 20;
+const MAX_FILTER_FREQUENCY = 20000;
 
 type TrackProfile = (typeof PEAK_AUDIO_TRACKS)[number];
 
@@ -61,10 +63,10 @@ type RuntimeSource = {
     audio: THREE.PositionalAudio;
     peak: PeakSource;
     phase: number;
-    memoryLowpass: BiquadFilterNode;
-    memoryHighpass: BiquadFilterNode;
-    memoryConvolver: ConvolverNode;
-    memoryWetGain: GainNode;
+    memoryLowpass: BiquadFilterNode | null;
+    memoryHighpass: BiquadFilterNode | null;
+    memoryConvolver: ConvolverNode | null;
+    memoryWetGain: GainNode | null;
 };
 
 type IndexedMountainPoint = {
@@ -225,6 +227,26 @@ const buildPeakSources = (points: MountainPoint[]) => {
     return result;
 };
 
+const shouldUseMobileLiteAudio = () => {
+    if (typeof window === 'undefined') return false;
+
+    const ua = navigator.userAgent;
+    const width = window.innerWidth;
+    const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+    const cores = navigator.hardwareConcurrency ?? 8;
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const isMobile = coarsePointer || width < 900;
+    const isIOS = /iPad|iPhone|iPod/.test(ua);
+    const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    const isStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    const isIOSWebView = isIOS && !isSafari && !isStandalone;
+
+    if (isIOS && isMobile) return true;
+    if (isIOSWebView) return true;
+
+    return isMobile && (memory <= 4 || cores <= 4);
+};
+
 export const PeakAudio3D = () => {
     const mountainPoints = useCovidStore((state) => state.mountainPoints);
     const { camera, scene } = useThree();
@@ -236,6 +258,7 @@ export const PeakAudio3D = () => {
         previousY: 0,
         smoothedSignedSpeed: 0,
     });
+    const mobileLiteRef = useRef(shouldUseMobileLiteAudio());
 
     const peakSources = useMemo<PeakSource[]>(() => buildPeakSources(mountainPoints), [mountainPoints]);
 
@@ -261,7 +284,8 @@ export const PeakAudio3D = () => {
         camera.add(listener);
 
         const loader = new THREE.AudioLoader();
-        const impulse = createImpulseResponse(listener.context, 3.3, 2.8);
+        const useMobileLite = mobileLiteRef.current;
+        const impulse = useMobileLite ? null : createImpulseResponse(listener.context, 3.3, 2.8);
         const listenerInput = listener.getInput();
 
         const runtimeSources: RuntimeSource[] = peakSources.map((source, index) => {
@@ -278,29 +302,36 @@ export const PeakAudio3D = () => {
             audio.setVolume(0.0001);
 
             // "Memoria distante": each source has a moving lowpass/highpass + long convolver tail.
-            const memoryHighpass = listener.context.createBiquadFilter();
-            memoryHighpass.type = 'highpass';
-            memoryHighpass.frequency.value = 120;
-            memoryHighpass.Q.value = 0.45;
+            let memoryHighpass: BiquadFilterNode | null = null;
+            let memoryLowpass: BiquadFilterNode | null = null;
+            let memoryConvolver: ConvolverNode | null = null;
+            let memoryWetGain: GainNode | null = null;
 
-            const memoryLowpass = listener.context.createBiquadFilter();
-            memoryLowpass.type = 'lowpass';
-            memoryLowpass.frequency.value = 2100;
-            memoryLowpass.Q.value = 0.7;
+            if (!useMobileLite && impulse) {
+                memoryHighpass = listener.context.createBiquadFilter();
+                memoryHighpass.type = 'highpass';
+                memoryHighpass.frequency.value = 120;
+                memoryHighpass.Q.value = 0.45;
 
-            const memoryConvolver = listener.context.createConvolver();
-            memoryConvolver.buffer = impulse;
+                memoryLowpass = listener.context.createBiquadFilter();
+                memoryLowpass.type = 'lowpass';
+                memoryLowpass.frequency.value = 2100;
+                memoryLowpass.Q.value = 0.7;
 
-            const memoryWetGain = listener.context.createGain();
-            memoryWetGain.gain.value = 0.12 + source.altitudeNorm * 0.1;
+                memoryConvolver = listener.context.createConvolver();
+                memoryConvolver.buffer = impulse;
 
-            // Feed only wet signal from positional output into the cinematic memory tail.
-            const outputNode = audio.getOutput();
-            outputNode.connect(memoryHighpass);
-            memoryHighpass.connect(memoryLowpass);
-            memoryLowpass.connect(memoryConvolver);
-            memoryConvolver.connect(memoryWetGain);
-            memoryWetGain.connect(listenerInput);
+                memoryWetGain = listener.context.createGain();
+                memoryWetGain.gain.value = 0.12 + source.altitudeNorm * 0.1;
+
+                // Feed only wet signal from positional output into the cinematic memory tail.
+                const outputNode = audio.getOutput();
+                outputNode.connect(memoryHighpass);
+                memoryHighpass.connect(memoryLowpass);
+                memoryLowpass.connect(memoryConvolver);
+                memoryConvolver.connect(memoryWetGain);
+                memoryWetGain.connect(listenerInput);
+            }
 
             node.add(audio);
             scene.add(node);
@@ -369,11 +400,13 @@ export const PeakAudio3D = () => {
                 if (source.audio.isPlaying) source.audio.stop();
 
                 const outputNode = source.audio.getOutput();
-                outputNode.disconnect(source.memoryHighpass);
-                source.memoryHighpass.disconnect(source.memoryLowpass);
-                source.memoryLowpass.disconnect(source.memoryConvolver);
-                source.memoryConvolver.disconnect(source.memoryWetGain);
-                source.memoryWetGain.disconnect(listenerInput);
+                if (source.memoryHighpass && source.memoryLowpass && source.memoryConvolver && source.memoryWetGain) {
+                    outputNode.disconnect(source.memoryHighpass);
+                    source.memoryHighpass.disconnect(source.memoryLowpass);
+                    source.memoryLowpass.disconnect(source.memoryConvolver);
+                    source.memoryConvolver.disconnect(source.memoryWetGain);
+                    source.memoryWetGain.disconnect(listenerInput);
+                }
 
                 source.audio.disconnect();
                 source.node.remove(source.audio);
@@ -461,12 +494,28 @@ export const PeakAudio3D = () => {
             // Dramatic: filter opens bright/wide, dry signal dominates.
             // Poetic:   lowpass closes into muffled fog, reverb tail floods wide.
             const memoryFocus = THREE.MathUtils.clamp((periodWeight * 0.65 + proximity * 0.35) * altitudeBlend, 0, 1);
-            const lpBase = 900 + memoryFocus * 3200;
-            source.memoryLowpass.frequency.value = lpBase + dramaticMode * 900 - poeticMode * 1200;
-            source.memoryHighpass.frequency.value = 95 + (1 - proximity) * 110 + poeticMode * 55;
-            const wetBase = (0.06 + (1 - proximity) * 0.16) * (0.72 + (1 - memoryFocus) * 0.5);
-            // Poetic descente: memoria inunda o espaco com reverb. Dramatic: seco e presente.
-            source.memoryWetGain.gain.value = wetBase * (1 + poeticMode * 2.1 - dramaticMode * 0.42);
+            if (source.memoryLowpass && source.memoryHighpass && source.memoryWetGain) {
+                const lpBase = 900 + memoryFocus * 3200;
+                const lowpassTarget = THREE.MathUtils.clamp(
+                    lpBase + dramaticMode * 900 - poeticMode * 1200,
+                    MIN_FILTER_FREQUENCY,
+                    MAX_FILTER_FREQUENCY
+                );
+                const highpassTarget = THREE.MathUtils.clamp(
+                    95 + (1 - proximity) * 110 + poeticMode * 55,
+                    MIN_FILTER_FREQUENCY,
+                    MAX_FILTER_FREQUENCY
+                );
+                source.memoryLowpass.frequency.value = lowpassTarget;
+                source.memoryHighpass.frequency.value = highpassTarget;
+                const wetBase = (0.06 + (1 - proximity) * 0.16) * (0.72 + (1 - memoryFocus) * 0.5);
+                // Poetic descente: memoria inunda o espaco com reverb. Dramatic: seco e presente.
+                source.memoryWetGain.gain.value = THREE.MathUtils.clamp(
+                    wetBase * (1 + poeticMode * 2.1 - dramaticMode * 0.42),
+                    0,
+                    1.6
+                );
+            }
         });
     });
 
