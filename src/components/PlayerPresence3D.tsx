@@ -9,18 +9,18 @@ import { useCovidStore } from '../stores/covidStore';
 const PRESENCE_COLLECTION = 'playerPresence';
 const PRESENCE_TTL_MS = 12_000;
 const WRITE_INTERVAL_MS = 1_600;
-const MAX_REMOTE_PLAYERS = 28;
+const MAX_REMOTE_PLAYERS = 300;
 const LOCAL_SESSION_KEY = 'serra-sem-ar-presence-id';
 
 // Flame simulation constants matching the reference implementation
 // https://g7495x.gitlab.io/webgl-particle-flame-three.js/
-const SPHERE_RADIUS = 0.75;
-const PARTICLE_LIFETIME = 2.0;   // seconds per particle life cycle
-const PARTICLE_SPEED = 2.0;      // world-units/sec
-const CURLINESS = 0.65;          // how much position influences curl direction
-const REACTIVENESS = 0.15;       // how fast the noise field evolves over time
-const PARTICLE_OPACITY_SCALE = 0.875;
-const WIND_Y = 1.25;             // upward wind strength (dominant movement)
+const SPHERE_RADIUS = 0.62;
+const PARTICLE_LIFETIME = 2.55;  // longer life for an extended veil/plume
+const PARTICLE_SPEED = 0.55;
+const CURLINESS = 0.88;
+const REACTIVENESS = 0.85;
+const PARTICLE_OPACITY_SCALE = 1.45;
+const WIND_Y = 0.65;
 
 type PresenceVector = {
   x: number;
@@ -138,7 +138,7 @@ const flameDirection = (px: number, py: number, pz: number, t: number): Float32A
 const createSoulParticleTexture = () => {
   if (typeof document === 'undefined') return null;
 
-  const size = 64;
+  const size = 48;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -294,14 +294,19 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
 const PlayerSoulFlame = ({ presence, quality }: { presence: FlamePresence; quality: 'desktop' | 'mobile' }) => {
   const groupRef = useRef<THREE.Group>(null);
   const pointsRef = useRef<THREE.Points>(null);
+  const ghostPointsRef = useRef<THREE.Points>(null);
   const targetRef = useRef(new THREE.Vector3(...presence.position));
 
   // Total particles: equivalent to spherePointCount × batchCount (lifetime × emitFrequency).
   // Staggering ages across [0, PARTICLE_LIFETIME) gives the same steady-state distribution
   // as the reference GPGPU batch system.
   const particleCount = presence.isLocal
-    ? (quality === 'mobile' ? 1536 : 3072)
-    : (quality === 'mobile' ? 1024 : 2048);
+    ? quality === 'mobile'
+      ? 1408
+      : 2688
+    : quality === 'mobile'
+      ? 896
+      : 1792;
 
   // One unique Fibonacci sphere spawn position per particle.
   const spherePoints = useMemo(() => fibonacciSphere(particleCount), [particleCount]);
@@ -334,8 +339,26 @@ const PlayerSoulFlame = ({ presence, quality }: { presence: FlamePresence; quali
         vertexColors: true,
         map: particleTexture ?? undefined,
         alphaTest: 0.01,
-        size: presence.isLocal ? 0.022 : 0.034,
+        size: presence.isLocal ? 0.019 : 0.027,
         transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true,
+        fog: false,
+      }),
+    [particleTexture, presence.isLocal]
+  );
+
+  // Subtle ghost layer for volumetric depth using the same simulation buffer.
+  const ghostMaterial = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        vertexColors: true,
+        map: particleTexture ?? undefined,
+        alphaTest: 0.006,
+        size: presence.isLocal ? 0.026 : 0.036,
+        transparent: true,
+        opacity: 0.22,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         sizeAttenuation: true,
@@ -368,9 +391,10 @@ const PlayerSoulFlame = ({ presence, quality }: { presence: FlamePresence; quali
     return () => {
       geometry.dispose();
       material.dispose();
+      ghostMaterial.dispose();
       particleTexture?.dispose();
     };
-  }, [geometry, material, particleTexture]);
+  }, [geometry, ghostMaterial, material, particleTexture]);
 
   useFrame(({ clock }, delta) => {
     const group = groupRef.current;
@@ -391,7 +415,7 @@ const PlayerSoulFlame = ({ presence, quality }: { presence: FlamePresence; quali
     // Mirror reference oscillating noise-time: uTime = 168.5 + 1.5·sin(t/5)
     const noiseT = (168.5 + 1.5 * Math.sin(elapsed / 5)) * REACTIVENESS;
     const dt = Math.min(delta, 0.05);
-    const fadeAge = PARTICLE_LIFETIME * 0.75; // opacity → 0 at 75 % of lifetime
+    const fadeAge = PARTICLE_LIFETIME * 0.8;
 
     const count = particleCount;
     for (let i = 0; i < count; i++) {
@@ -410,11 +434,16 @@ const PlayerSoulFlame = ({ presence, quality }: { presence: FlamePresence; quali
       const py = pos[i * 3 + 1];
       const pz = pos[i * 3 + 2];
 
+      const lifeN = a / PARTICLE_LIFETIME;
+      // Hold young particles close to the sphere before they peel into the plume.
+      const launch = THREE.MathUtils.smoothstep(lifeN, 0.06, 0.42);
+
       // Advance position along curl-noise + wind direction.
       const dir = flameDirection(px, py, pz, noiseT);
-      const npx = px + dir[0] * dt * PARTICLE_SPEED;
-      const npy = py + dir[1] * dt * PARTICLE_SPEED;
-      const npz = pz + dir[2] * dt * PARTICLE_SPEED;
+      const swirl = Math.sin(elapsed * 0.55 + lifeN * Math.PI * 3) * 0.18;
+      const npx = px + (dir[0] * (0.52 + launch * 0.86) + dir[2] * swirl * launch * 0.22) * dt * PARTICLE_SPEED;
+      const npy = py + dir[1] * (0.6 + launch * 0.9) * dt * PARTICLE_SPEED;
+      const npz = pz + (dir[2] * (0.52 + launch * 0.86) - dir[0] * swirl * launch * 0.22) * dt * PARTICLE_SPEED;
 
       pos[i * 3] = npx;
       pos[i * 3 + 1] = npy;
@@ -425,7 +454,8 @@ const PlayerSoulFlame = ({ presence, quality }: { presence: FlamePresence; quali
       positions[i * 3 + 2] = npz;
 
       // Linear fade: full brightness at birth → 0 at fadeAge.
-      const opacity = Math.max(0, 1 - a / fadeAge) * PARTICLE_OPACITY_SCALE;
+      const bodyBoost = 1 - THREE.MathUtils.smoothstep(lifeN, 0.22, 0.48) * 0.18;
+      const opacity = Math.max(0, 1 - a / fadeAge) * PARTICLE_OPACITY_SCALE * bodyBoost;
       colors[i * 3] = baseR * opacity;
       colors[i * 3 + 1] = baseG * opacity;
       colors[i * 3 + 2] = baseB * opacity;
@@ -433,11 +463,19 @@ const PlayerSoulFlame = ({ presence, quality }: { presence: FlamePresence; quali
 
     posAttr.needsUpdate = true;
     colorAttr.needsUpdate = true;
+
+    if (ghostPointsRef.current) {
+      ghostPointsRef.current.rotation.y = -elapsed * 0.11;
+      ghostPointsRef.current.rotation.x = Math.sin(elapsed * 0.2) * 0.04;
+    }
   });
 
   return (
-    <group ref={groupRef} position={presence.position} scale={presence.isLocal ? 0.46 : 0.68} renderOrder={18}>
+    <group ref={groupRef} position={presence.position} scale={presence.isLocal ? 0.36 : 0.52} renderOrder={18}>
       <points ref={pointsRef} geometry={geometry} material={material} frustumCulled={false} />
+      <group position={[0, 0.07, 0]} scale={1.08}>
+        <points ref={ghostPointsRef} geometry={geometry} material={ghostMaterial} frustumCulled={false} />
+      </group>
     </group>
   );
 };
