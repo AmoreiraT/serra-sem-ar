@@ -4,61 +4,16 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /memorials/{memorialId} {
       allow read: if true;
-      allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly([
-          "date",
-          "dateIndex",
-          "name",
-          "message",
-          "uid",
-          "userName",
-          "userPhoto",
-          "createdAt"
-        ])
-        && request.resource.data.date is string
-        && request.resource.data.date.matches("^\\d{4}-\\d{2}-\\d{2}$")
-        && request.resource.data.message is string
-        && request.resource.data.message.size() > 0
-        && request.resource.data.message.size() <= 240
-        && request.resource.data.uid == request.auth.uid
-        && (!("name" in request.resource.data) || request.resource.data.name == null || (request.resource.data.name is string && request.resource.data.name.size() <= 64))
-        && (!("dateIndex" in request.resource.data) || request.resource.data.dateIndex == null || request.resource.data.dateIndex is int)
-        && (!("userName" in request.resource.data) || request.resource.data.userName == null || (request.resource.data.userName is string && request.resource.data.userName.size() <= 120))
-        && (!("userPhoto" in request.resource.data) || request.resource.data.userPhoto == null || (request.resource.data.userPhoto is string && request.resource.data.userPhoto.size() <= 512));
-      allow update, delete: if false;
+      allow create, update, delete: if false;
     }
 
     match /playerPresence/{presenceId} {
-      allow read: if true;
-      allow create, update: if request.resource.data.keys().hasOnly([
-        "sessionId",
-        "userId",
-        "displayName",
-        "color",
-        "position",
-        "target",
-        "currentDateIndex",
-        "updatedAtMs",
-        "updatedAt"
-      ])
-      && request.resource.data.sessionId is string
-      && request.resource.data.sessionId.size() >= 8
-      && request.resource.data.sessionId.size() <= 96
-      && request.resource.data.color is string
-      && request.resource.data.color.matches("^#[0-9a-fA-F]{6}$")
-      && request.resource.data.updatedAtMs is number
-      && request.resource.data.currentDateIndex is int
-      && request.resource.data.position is map
-      && request.resource.data.position.x is number
-      && request.resource.data.position.y is number
-      && request.resource.data.position.z is number
-      && request.resource.data.target is map
-      && request.resource.data.target.x is number
-      && request.resource.data.target.y is number
-      && request.resource.data.target.z is number
-      && (!("userId" in request.resource.data) || request.resource.data.userId == null || request.resource.data.userId is string)
-      && (!("displayName" in request.resource.data) || request.resource.data.displayName == null || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 120));
-      allow delete: if true;
+      allow read, write: if false;
+    }
+
+    match /config/{configId} {
+      allow read: if configId == "presenceSettings";
+      allow write: if false;
     }
 
     match /{document=**} {

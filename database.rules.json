@@ -1,0 +1,24 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "realtimePresence": {
+      "$sessionId": {
+        ".read": false,
+        ".write": "data.exists() && data.child('sessionId').val() === $sessionId && !newData.exists()"
+      }
+    },
+    "worldState": {
+      "oxygen": {
+        ".read": true,
+        ".write": false
+      }
+    },
+    "collapseEvents": {
+      ".read": true,
+      ".write": false,
+      ".indexOn": ["targetSessionId", "createdAt"]
+    }
+  }
+}
+

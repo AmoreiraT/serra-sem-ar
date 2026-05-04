@@ -17,7 +17,8 @@
     "assets:process:cubemaps": "node scripts/pandemic-assets/06_build_cubemaps.mjs",
     "assets:manifest": "node scripts/pandemic-assets/07_build_indexes_and_report.mjs",
     "assets:validate": "node scripts/pandemic-assets/08_validate.mjs",
-    "assets:all": "pnpm assets:extract && pnpm assets:download && pnpm assets:classify && pnpm assets:process:images && pnpm assets:process:videos && pnpm assets:process:cubemaps && pnpm assets:manifest && pnpm assets:validate"
+    "assets:all": "pnpm assets:extract && pnpm assets:download && pnpm assets:classify && pnpm assets:process:images && pnpm assets:process:videos && pnpm assets:process:cubemaps && pnpm assets:manifest && pnpm assets:validate",
+    "presence:estimate-cost": "node scripts/estimate-presence-cost.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",

@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils';
 import { type PointerEventHandler, useEffect, useRef, useState } from 'react';
 import { useCovidStore } from '../stores/covidStore';
+import './MobileMoveJoystick.css';
 
 const JOYSTICK_RADIUS = 42;
-const THUMB_RADIUS = 19;
 const DEAD_ZONE = 0.12;
 
 export const MobileMoveJoystick = () => {
@@ -12,6 +12,7 @@ export const MobileMoveJoystick = () => {
   const [thumb, setThumb] = useState({ x: 0, y: 0 });
   const pointerIdRef = useRef<number | null>(null);
   const baseRef = useRef<HTMLDivElement | null>(null);
+  const thumbRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -107,6 +108,11 @@ export const MobileMoveJoystick = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!thumbRef.current) return;
+    thumbRef.current.style.transform = `translate(calc(-50% + ${thumb.x}px), calc(-50% + ${thumb.y}px))`;
+  }, [thumb.x, thumb.y]);
+
   return (
     <div
       data-joystick-control="true"
@@ -123,15 +129,11 @@ export const MobileMoveJoystick = () => {
       >
         <div className="pointer-events-none absolute inset-4 rounded-full border border-dashed border-white/20" />
         <div
+          ref={thumbRef}
           className={cn(
-            'pointer-events-none absolute left-1/2 top-1/2 rounded-full border border-white/60 bg-white/15 shadow-lg transition-transform',
+            'mobile-joystick-thumb pointer-events-none absolute left-1/2 top-1/2 rounded-full border border-white/60 bg-white/15 shadow-lg transition-transform',
             active ? 'duration-75' : 'duration-200'
           )}
-          style={{
-            width: THUMB_RADIUS * 2,
-            height: THUMB_RADIUS * 2,
-            transform: `translate(calc(-50% + ${thumb.x}px), calc(-50% + ${thumb.y}px))`,
-          }}
         />
       </div>
     </div>

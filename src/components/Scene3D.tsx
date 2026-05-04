@@ -11,7 +11,7 @@ import { MemorialPins3D } from './MemorialPins3D';
 import { MonthlyPlaques3D } from './MonthlyPlaques3D';
 import { Mountain3D } from './Mountain3D';
 import { PeakAudio3D } from './PeakAudio3D';
-import { PlayerPresence3D } from './PlayerPresence3D';
+import { MemorialMarkers } from './memorials/MemorialMarkers';
 
 interface Scene3DProps {
   enableControls?: boolean;
@@ -138,6 +138,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
   }, []);
 
   const { dpr, isMobile, shadows, mountainQuality, environmentQuality } = sceneProfile;
+  const oxygenMemorialsEnabled = import.meta.env.VITE_ENABLE_OXYGEN_MEMORIALS !== 'false';
 
   const calculatedRadius = useMemo(() => {
     if (!mountainMesh) return 90;
@@ -216,7 +217,6 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           quality={mountainQuality}
         />
         <PeakAudio3D />
-        <PlayerPresence3D quality={mountainQuality} />
 
         <Physics gravity={[0, -9.81, 0]} colliders="trimesh">
           <Suspense fallback={null}>
@@ -225,6 +225,10 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           <EventMarkers3D />
           <MonthlyPlaques3D />
           <MemorialPins3D />
+          <MemorialMarkers
+            enabled={oxygenMemorialsEnabled}
+            maxMarkers={isMobile ? 60 : 140}
+          />
 
           <Suspense fallback={null}>
             <FirstPersonWalker eyeHeight={1.6} isMobile={isMobile} />
@@ -324,13 +328,19 @@ function CameraSync({
   cameraTarget: [number, number, number];
   onSync?: (pos: [number, number, number], tgt: [number, number, number]) => void;
 }) {
-  const { camera, controls } = useThree() as unknown as { camera: THREE.PerspectiveCamera; controls?: any };
+  type OptionalControls = {
+    target?: THREE.Vector3;
+    update?: () => void;
+  };
+  const state = useThree((rootState) => rootState);
+  const camera = state.camera;
+  const controls = (state as typeof state & { controls?: OptionalControls }).controls;
 
   useEffect(() => {
     camera.position.set(...cameraPosition);
-    if (controls && controls.target) {
+    if (controls?.target instanceof THREE.Vector3) {
       controls.target.set(...cameraTarget);
-      controls.update();
+      controls.update?.();
     }
     onSync?.(cameraPosition, cameraTarget);
   }, [camera, controls, cameraPosition, cameraTarget, onSync]);

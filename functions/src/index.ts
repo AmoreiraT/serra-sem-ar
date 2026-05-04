@@ -1,7 +1,13 @@
 import {initializeApp} from "firebase-admin/app";
 import {FieldValue, getFirestore} from "firebase-admin/firestore";
-import {HttpsError, onCall} from "firebase-functions/v2/https";
+import {HttpsError, onCall, onRequest} from "firebase-functions/v2/https";
 import {setGlobalOptions} from "firebase-functions/v2/options";
+import {handleOxygenRecalculate} from "./http/oxygenRecalculate";
+import {handlePresenceJoin} from "./http/presenceJoin";
+import {handlePresenceLeave} from "./http/presenceLeave";
+import {handlePresenceUpdate} from "./http/presenceUpdate";
+import {cleanupStalePresence} from "./scheduled/cleanupStalePresence";
+import {applyCors, sendHttpError, type HttpRequest, type HttpResponse} from "./utils/http";
 
 setGlobalOptions({region: "us-east1"});
 
@@ -18,6 +24,44 @@ type CreateMemorialPayload = {
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_MESSAGE_LENGTH = 240;
 const MAX_NAME_LENGTH = 64;
+
+export {cleanupStalePresence};
+
+const routePathForRequest = (request: HttpRequest): string => {
+  const rawPath = request.path ?? new URL(request.url ?? "/", "https://serra-sem-ar.local").pathname;
+  const withoutApiPrefix = rawPath.replace(/^\/api(?=\/|$)/, "");
+  return withoutApiPrefix || "/";
+};
+
+export const api = onRequest(async (request, response) => {
+  const httpRequest = request as HttpRequest;
+  const httpResponse = response as HttpResponse;
+  if (applyCors(httpRequest, httpResponse)) return;
+
+  try {
+    const routePath = routePathForRequest(httpRequest);
+    if (routePath === "/presence/join") {
+      await handlePresenceJoin(httpRequest, httpResponse);
+      return;
+    }
+    if (routePath === "/presence/update") {
+      await handlePresenceUpdate(httpRequest, httpResponse);
+      return;
+    }
+    if (routePath === "/presence/leave") {
+      await handlePresenceLeave(httpRequest, httpResponse);
+      return;
+    }
+    if (routePath === "/oxygen/recalculate") {
+      await handleOxygenRecalculate(httpRequest, httpResponse);
+      return;
+    }
+
+    response.status(404).json({error: "not_found"});
+  } catch (error: unknown) {
+    sendHttpError(httpResponse, error);
+  }
+});
 
 export const createMemorial = onCall<CreateMemorialPayload>(async (request) => {
   if (!request.auth) {

@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, Bell, Info, Pin, X } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import './App.css';
 import { CinematicAudio } from './components/CinematicAudio';
 import { ControlsHelp } from './components/ControlsHelp';
@@ -12,11 +12,19 @@ import { IntroPresentation } from './components/IntroPresentation';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MemorialPanel } from './components/MemorialPanel';
 import { MobileMoveJoystick } from './components/MobileMoveJoystick';
+import { OxygenBar } from './components/oxygen/OxygenBar';
+import { OxygenCollapseOverlay } from './components/oxygen/OxygenCollapseOverlay';
+import { OxygenWorldStatus } from './components/oxygen/OxygenWorldStatus';
 import { Button } from './components/ui/button';
 import { useIsMobile } from './hooks/use-mobile';
 import { useCovidData } from './hooks/useCovidData';
+import { useOxygenCollapseListener } from './hooks/useOxygenCollapseListener';
+import { usePresencePositionSync } from './hooks/usePresencePositionSync';
+import { usePresenceSession } from './hooks/usePresenceSession';
 import { AuthProvider } from './providers/AuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
+import { useCovidStore } from './stores/covidStore';
+import { useOxygenStore } from './stores/oxygenStore';
 
 const Scene3D = lazy(() => import('./components/Scene3D').then((module) => ({ default: module.Scene3D })));
 
@@ -25,6 +33,21 @@ function AppContent() {
   const [mobilePanel, setMobilePanel] = useState<'event' | 'memorial' | 'header' | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
   const isMobile = useIsMobile();
+  const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
+  const shouldReset = useOxygenStore((state) => state.shouldReset);
+  const presenceSession = usePresenceSession({ enabled: hasEntered });
+  const getPresencePosition = useCallback(() => {
+    const [x, y, z] = useCovidStore.getState().cameraPosition;
+    return { x, y, z };
+  }, []);
+
+  usePresencePositionSync({
+    sessionId: presenceSession.sessionId,
+    dayIndex: currentDateIndex,
+    getPosition: getPresencePosition,
+    enabled: hasEntered && !shouldReset,
+  });
+  useOxygenCollapseListener(presenceSession.sessionId);
 
   const toggleMobilePanel = (panel: 'event' | 'memorial' | 'header') => {
     setMobilePanel((current) => (current === panel ? null : panel));
@@ -88,6 +111,8 @@ function AppContent() {
             <Scene3D enableControls showStats={false} />
           </Suspense>
           <CinematicAudio />
+          <OxygenBar />
+          <OxygenWorldStatus />
 
           <div className="hud-desktop-left hidden xl:block">
             <EventCard />
@@ -183,6 +208,8 @@ function AppContent() {
           <div className="hud-footer pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 transform rounded-lg bg-black/70 px-3 py-2 text-white backdrop-blur-sm sm:px-4">
             <p className="text-xs text-center sm:text-sm">Web Art • AmoreiraT • Three.js - saude.gov.br</p>
           </div>
+
+          <OxygenCollapseOverlay onResetComplete={presenceSession.rejoin} />
         </div>
       </ErrorBoundary>
     </div>

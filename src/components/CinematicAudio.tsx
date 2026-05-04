@@ -1,13 +1,12 @@
 import { cn } from '@/lib/utils';
 import { Volume2, VolumeX } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { covidEventsByDate } from '../data/covidEvents';
 import { useCovidStore } from '../stores/covidStore';
 import { Button } from './ui/button';
 
 const AUDIO_SOURCES = {
   thunder: '/pandemic-assets/audios/doente.mp3',
-  crowd: '/pandemic-assets/audios/coracao_hospital.mp3',
+  crowd: '/pandemic-assets/audios/fora-bozo.mp3',
 } as const;
 
 const CUE_SAMPLE_SOURCES = {
@@ -21,9 +20,7 @@ type CueBuffers = Partial<Record<CueKey, AudioBuffer>>;
 type Runtime = {
   context: AudioContext;
   master: GainNode;
-  movementTimer: number;
   highAltitudeTimer: number;
-  windSource: AudioBufferSourceNode;
   cueBuffers: CueBuffers;
   teardown: () => void;
 };
@@ -35,18 +32,6 @@ type WindowWithAudioFallback = Window & {
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
 
-const createNoiseBuffer = (context: AudioContext, seconds: number, amplitude: number) => {
-  const sampleRate = context.sampleRate;
-  const buffer = context.createBuffer(1, sampleRate * seconds, sampleRate);
-  const data = buffer.getChannelData(0);
-
-  for (let i = 0; i < data.length; i += 1) {
-    data[i] = (Math.random() * 2 - 1) * amplitude;
-  }
-
-  return buffer;
-};
-
 const createLoopingMedia = (
   context: AudioContext,
   master: GainNode,
@@ -57,7 +42,7 @@ const createLoopingMedia = (
 ) => {
   const element = new Audio(url);
   element.loop = true;
-  element.playsInline = true;
+  element.setAttribute('playsinline', 'true');
   element.preload = 'metadata';
 
   const source = context.createMediaElementSource(element);
@@ -118,149 +103,6 @@ const playSpatialCueSample = (
   source.stop(startAt + duration + 0.02);
 };
 
-const playFootstep = (context: AudioContext, destination: AudioNode, intensity: number) => {
-  const startAt = context.currentTime;
-  const stepTone = context.createOscillator();
-  const stepGain = context.createGain();
-  const filter = context.createBiquadFilter();
-
-  stepTone.type = 'triangle';
-  stepTone.frequency.setValueAtTime(72 + Math.random() * 28, startAt);
-  filter.type = 'lowpass';
-  filter.frequency.value = 190;
-
-  stepGain.gain.setValueAtTime(0.0001, startAt);
-  stepGain.gain.exponentialRampToValueAtTime(0.055 * intensity, startAt + 0.014);
-  stepGain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.14);
-
-  stepTone.connect(filter);
-  filter.connect(stepGain);
-  stepGain.connect(destination);
-  stepTone.start(startAt);
-  stepTone.stop(startAt + 0.16);
-};
-
-const playEventAccent = (context: AudioContext, destination: AudioNode) => {
-  const startAt = context.currentTime;
-  const lowTone = context.createOscillator();
-  const highTone = context.createOscillator();
-  const gain = context.createGain();
-
-  lowTone.type = 'sine';
-  highTone.type = 'triangle';
-  lowTone.frequency.setValueAtTime(58, startAt);
-  lowTone.frequency.exponentialRampToValueAtTime(34, startAt + 1.4);
-  highTone.frequency.setValueAtTime(136, startAt);
-  highTone.frequency.exponentialRampToValueAtTime(82, startAt + 0.9);
-
-  gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(0.11, startAt + 0.08);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 1.45);
-
-  lowTone.connect(gain);
-  highTone.connect(gain);
-  gain.connect(destination);
-  lowTone.start(startAt);
-  highTone.start(startAt);
-  lowTone.stop(startAt + 1.5);
-  highTone.stop(startAt + 1.05);
-};
-
-const playCough = (context: AudioContext, destination: AudioNode, intensity: number, panValue: number) => {
-  const startAt = context.currentTime;
-  const panner = context.createStereoPanner();
-  const filter = context.createBiquadFilter();
-  const gain = context.createGain();
-  const noise = context.createBufferSource();
-
-  noise.buffer = createNoiseBuffer(context, 0.42, 0.95);
-  filter.type = 'bandpass';
-  filter.frequency.setValueAtTime(520 + intensity * 220, startAt);
-  filter.Q.value = 1.8;
-  panner.pan.value = panValue;
-
-  gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(0.11 * intensity, startAt + 0.025);
-  gain.gain.exponentialRampToValueAtTime(0.018 * intensity, startAt + 0.12);
-  gain.gain.exponentialRampToValueAtTime(0.08 * intensity, startAt + 0.19);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.36);
-
-  noise.connect(filter);
-  filter.connect(panner);
-  panner.connect(gain);
-  gain.connect(destination);
-  noise.start(startAt);
-  noise.stop(startAt + 0.42);
-};
-
-const playSneeze = (context: AudioContext, destination: AudioNode, intensity: number, panValue: number) => {
-  const startAt = context.currentTime;
-  const panner = context.createStereoPanner();
-  const filter = context.createBiquadFilter();
-  const gain = context.createGain();
-  const noise = context.createBufferSource();
-
-  noise.buffer = createNoiseBuffer(context, 0.65, 0.85);
-  filter.type = 'highpass';
-  filter.frequency.setValueAtTime(1050 + intensity * 650, startAt);
-  filter.Q.value = 0.85;
-  panner.pan.value = panValue;
-
-  gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(0.02 * intensity, startAt + 0.045);
-  gain.gain.exponentialRampToValueAtTime(0.13 * intensity, startAt + 0.11);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.58);
-
-  noise.connect(filter);
-  filter.connect(panner);
-  panner.connect(gain);
-  gain.connect(destination);
-  noise.start(startAt);
-  noise.stop(startAt + 0.65);
-};
-
-const playAmbulanceSiren = (context: AudioContext, destination: AudioNode, intensity: number, panValue: number) => {
-  const startAt = context.currentTime;
-  const panner = context.createStereoPanner();
-  const filter = context.createBiquadFilter();
-  const gain = context.createGain();
-  const siren = context.createOscillator();
-  const overtone = context.createOscillator();
-
-  siren.type = 'sine';
-  overtone.type = 'triangle';
-  filter.type = 'bandpass';
-  filter.frequency.value = 1450;
-  filter.Q.value = 2.2;
-  panner.pan.setValueAtTime(panValue, startAt);
-  panner.pan.linearRampToValueAtTime(-panValue * 0.65, startAt + 2.6);
-
-  for (let i = 0; i < 5; i += 1) {
-    const t = startAt + i * 0.48;
-    const high = 940 + intensity * 180;
-    const low = 620 + intensity * 120;
-    siren.frequency.setValueAtTime(i % 2 === 0 ? high : low, t);
-    siren.frequency.linearRampToValueAtTime(i % 2 === 0 ? low : high, t + 0.42);
-    overtone.frequency.setValueAtTime((i % 2 === 0 ? high : low) * 1.52, t);
-    overtone.frequency.linearRampToValueAtTime((i % 2 === 0 ? low : high) * 1.52, t + 0.42);
-  }
-
-  gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(0.095 * intensity, startAt + 0.18);
-  gain.gain.setValueAtTime(0.095 * intensity, startAt + 1.9);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 2.8);
-
-  siren.connect(filter);
-  overtone.connect(filter);
-  filter.connect(panner);
-  panner.connect(gain);
-  gain.connect(destination);
-  siren.start(startAt);
-  overtone.start(startAt);
-  siren.stop(startAt + 2.9);
-  overtone.stop(startAt + 2.9);
-};
-
 const getHighAltitudeIntensity = (
   mountainPoints: Array<{ y: number }>,
   currentDateIndex: number,
@@ -285,31 +127,19 @@ const getHighAltitudeIntensity = (
   return Math.min(1, (altitude - 0.56) / 0.38);
 };
 
-const dateToIso = (date: Date | undefined) => date?.toISOString().slice(0, 10) ?? '';
-
 export const CinematicAudio = () => {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isBooting, setIsBooting] = useState(false);
   const runtimeRef = useRef<Runtime | null>(null);
-  const pressedKeysRef = useRef(new Set<string>());
-  const mobileMoveInputRef = useRef<[number, number]>([0, 0]);
   const currentDateIndexRef = useRef(0);
   const cameraYRef = useRef(0);
   const mountainPointsRef = useRef<Array<{ y: number }>>([]);
-  const lastStepAtRef = useRef(0);
   const lastHighAltitudeCueAtRef = useRef(0);
-  const lastEventIndexRef = useRef<number | null>(null);
-  const mobileMoveInput = useCovidStore((state) => state.mobileMoveInput);
-  const data = useCovidStore((state) => state.data);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const cameraPosition = useCovidStore((state) => state.cameraPosition);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
 
   const cueBuffersRef = useRef<CueBuffers>({});
-
-  useEffect(() => {
-    mobileMoveInputRef.current = mobileMoveInput;
-  }, [mobileMoveInput]);
 
   useEffect(() => {
     currentDateIndexRef.current = currentDateIndex;
@@ -335,29 +165,15 @@ export const CinematicAudio = () => {
 
       const context = new AudioContextConstructor();
       const master = context.createGain();
-      master.gain.value = 0.86;
+      master.gain.value = 0.56;
       master.connect(context.destination);
 
       const thunder = createLoopingMedia(context, master, AUDIO_SOURCES.thunder, 0.16, 1700, -0.36);
       const crowd = createLoopingMedia(context, master, AUDIO_SOURCES.crowd, 0.055, 900, 0.32);
 
-      const windSource = context.createBufferSource();
-      const windFilter = context.createBiquadFilter();
-      const windGain = context.createGain();
-      windSource.buffer = createNoiseBuffer(context, 2, 0.22);
-      windSource.loop = true;
-      windFilter.type = 'bandpass';
-      windFilter.frequency.value = 420;
-      windFilter.Q.value = 0.42;
-      windGain.gain.value = 0.032;
-      windSource.connect(windFilter);
-      windFilter.connect(windGain);
-      windGain.connect(master);
-      windSource.start();
-
       await context.resume();
       void thunder.play().catch(() => undefined);
-      void crowd.play().catch(() => undefined);
+      // void crowd.play().catch(() => undefined);
 
       void Promise.all(
         (Object.keys(CUE_SAMPLE_SOURCES) as CueKey[]).map(async (key) => {
@@ -365,36 +181,10 @@ export const CinematicAudio = () => {
             const buffer = await loadAudioBuffer(context, CUE_SAMPLE_SOURCES[key]);
             cueBuffersRef.current[key] = buffer;
           } catch {
-            // Keep synthetic fallback for unavailable samples.
+            // Sem fallback sintetico: a paisagem sonora usa apenas arquivos de audios.
           }
         })
       );
-
-      const movementTimer = window.setInterval(() => {
-        const runtime = runtimeRef.current;
-        if (!runtime) return;
-
-        const keys = pressedKeysRef.current;
-        const keyboardMoving =
-          keys.has('w') ||
-          keys.has('a') ||
-          keys.has('s') ||
-          keys.has('d') ||
-          keys.has('arrowup') ||
-          keys.has('arrowdown') ||
-          keys.has('arrowleft') ||
-          keys.has('arrowright');
-        const joystickMagnitude = Math.hypot(mobileMoveInputRef.current[0], mobileMoveInputRef.current[1]);
-        if (!keyboardMoving && joystickMagnitude < 0.08) return;
-
-        const now = runtime.context.currentTime;
-        const isRunning = keys.has('shift');
-        const interval = isRunning ? 0.28 : 0.43;
-        if (now - lastStepAtRef.current < interval) return;
-
-        lastStepAtRef.current = now;
-        playFootstep(runtime.context, runtime.master, Math.max(0.65, Math.min(1, joystickMagnitude || 0.8)));
-      }, 80);
 
       const highAltitudeTimer = window.setInterval(() => {
         const runtime = runtimeRef.current;
@@ -427,8 +217,6 @@ export const CinematicAudio = () => {
               gain: 0.1,
               maxDuration: 0.42,
             });
-          } else {
-            playCough(runtime.context, runtime.master, cueIntensity, pan);
           }
         } else if (roll < 0.68) {
           if (sneezeSample) {
@@ -438,16 +226,11 @@ export const CinematicAudio = () => {
               gain: 0.09,
               maxDuration: 0.36,
             });
-          } else {
-            playSneeze(runtime.context, runtime.master, cueIntensity, -pan);
           }
-        } else {
-          playAmbulanceSiren(runtime.context, runtime.master, cueIntensity, pan);
         }
       }, 950);
 
       const teardown = () => {
-        window.clearInterval(movementTimer);
         window.clearInterval(highAltitudeTimer);
         thunder.pause();
         crowd.pause();
@@ -455,11 +238,6 @@ export const CinematicAudio = () => {
         crowd.removeAttribute('src');
         thunder.load();
         crowd.load();
-        try {
-          windSource.stop();
-        } catch {
-          // Already stopped.
-        }
         void context.close();
         cueBuffersRef.current = {};
       };
@@ -467,15 +245,12 @@ export const CinematicAudio = () => {
       runtimeRef.current = {
         context,
         master,
-        movementTimer,
         highAltitudeTimer,
-        windSource,
         cueBuffers: cueBuffersRef.current,
         teardown,
       };
 
       setIsEnabled(true);
-      playEventAccent(context, master);
     } catch {
       stopAudio();
     } finally {
@@ -484,35 +259,27 @@ export const CinematicAudio = () => {
   }, [isBooting, stopAudio]);
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      pressedKeysRef.current.add(event.key.toLowerCase());
-    };
-    const handleKeyUp = (event: KeyboardEvent) => {
-      pressedKeysRef.current.delete(event.key.toLowerCase());
+    const fadeDown = () => {
+      const runtime = runtimeRef.current;
+      if (!runtime) return;
+      runtime.master.gain.setTargetAtTime(0.08, runtime.context.currentTime, 0.45);
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    const fadeBack = () => {
+      const runtime = runtimeRef.current;
+      if (!runtime) return;
+      runtime.master.gain.setTargetAtTime(0.56, runtime.context.currentTime, 0.9);
+    };
 
+    window.addEventListener('serra:oxygen-collapse', fadeDown);
+    window.addEventListener('serra:oxygen-reset', fadeBack);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('serra:oxygen-collapse', fadeDown);
+      window.removeEventListener('serra:oxygen-reset', fadeBack);
     };
   }, []);
 
   useEffect(() => stopAudio, [stopAudio]);
-
-  useEffect(() => {
-    const runtime = runtimeRef.current;
-    if (!runtime || !data.length) return;
-    if (lastEventIndexRef.current === currentDateIndex) return;
-
-    const isoDate = dateToIso(data[currentDateIndex]?.date);
-    if (!covidEventsByDate.has(isoDate)) return;
-
-    lastEventIndexRef.current = currentDateIndex;
-    playEventAccent(runtime.context, runtime.master);
-  }, [currentDateIndex, data]);
 
   return (
     <div className="pointer-events-auto absolute right-3 top-24 z-20 sm:right-4 sm:top-28 xl:top-40">

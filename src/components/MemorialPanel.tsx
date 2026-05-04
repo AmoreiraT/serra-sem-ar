@@ -1,10 +1,10 @@
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { LogIn, LogOut, Pin } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../providers/AuthProvider';
-import { db } from '../services/firebaseConfig';
+import { functions } from '../services/firebaseConfig';
 import { useCovidStore } from '../stores/covidStore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -12,6 +12,22 @@ import { Textarea } from './ui/textarea';
 
 const MAX_MESSAGE_LENGTH = 240;
 const MAX_NAME_LENGTH = 64;
+
+type CreateMemorialPayload = {
+  date: string;
+  dateIndex?: number | null;
+  name?: string | null;
+  message: string;
+};
+
+type CreateMemorialResponse = {
+  id: string;
+};
+
+const createMemorialEntry = httpsCallable<CreateMemorialPayload, CreateMemorialResponse>(
+  functions,
+  'createMemorial'
+);
 
 interface MemorialPanelProps {
   layout?: 'floating' | 'sheet';
@@ -51,19 +67,15 @@ export const MemorialPanel = ({ layout = 'floating', className }: MemorialPanelP
     setError(null);
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'memorials'), {
+      await createMemorialEntry({
         date: isoDate,
         dateIndex: currentDateIndex,
         name: name.trim() || null,
         message: message.trim(),
-        uid: user.uid,
-        userName: user.displayName ?? null,
-        userPhoto: user.photoURL ?? null,
-        createdAt: serverTimestamp(),
       });
       setName('');
       setMessage('');
-    } catch (submitError: any) {
+    } catch {
       setError('Nao foi possivel salvar o memorial. Tente novamente.');
     } finally {
       setIsSubmitting(false);
@@ -74,7 +86,7 @@ export const MemorialPanel = ({ layout = 'floating', className }: MemorialPanelP
     setError(null);
     try {
       await signInWithGoogle();
-    } catch (signInError) {
+    } catch {
       setError('Nao foi possivel entrar com o Google. Tente novamente.');
     }
   };

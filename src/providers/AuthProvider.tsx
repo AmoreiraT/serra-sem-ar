@@ -14,6 +14,15 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
+const isPopupFallbackError = (error: unknown): boolean => {
+  if (typeof error !== 'object' || error === null) return false;
+  const code = 'code' in error ? error.code : null;
+  return (
+    code === 'auth/popup-blocked' ||
+    code === 'auth/operation-not-supported-in-this-environment'
+  );
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,11 +38,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithGoogle = async () => {
     try {
       await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      if (
-        error?.code === 'auth/popup-blocked' ||
-        error?.code === 'auth/operation-not-supported-in-this-environment'
-      ) {
+    } catch (error: unknown) {
+      if (isPopupFallbackError(error)) {
         await signInWithRedirect(auth, provider);
       } else {
         throw error;

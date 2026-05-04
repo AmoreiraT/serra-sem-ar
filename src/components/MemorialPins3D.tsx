@@ -1,5 +1,5 @@
 import { Billboard, Html } from '@react-three/drei';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, limit as firestoreLimit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import crossSpriteUrl from '../assets/png/cruz-serra.png';
@@ -101,24 +101,30 @@ export const MemorialPins3D = () => {
   const [lockedId, setLockedId] = useState<string | null>(null);
 
   useEffect(() => {
-    const memorialQuery = query(collection(db, 'memorials'), orderBy('date', 'desc'));
-    const unsubscribe = onSnapshot(memorialQuery, (snapshot) => {
-      const items = snapshot.docs.map((doc) => {
-        const payload = doc.data();
-        return {
-          id: doc.id,
-          date: payload.date,
-          dateIndex: payload.dateIndex ?? null,
-          name: payload.name ?? null,
-          message: payload.message ?? '',
-          uid: payload.uid ?? '',
-          userName: payload.userName ?? null,
-          userPhoto: payload.userPhoto ?? null,
-          createdAt: payload.createdAt ?? null,
-        } as MemorialEntry;
-      });
-      setMemorials(items);
-    });
+    const memorialQuery = query(collection(db, 'memorials'), orderBy('date', 'desc'), firestoreLimit(220));
+    const unsubscribe = onSnapshot(
+      memorialQuery,
+      (snapshot) => {
+        const items = snapshot.docs.map((doc) => {
+          const payload = doc.data();
+          return {
+            id: doc.id,
+            date: payload.date,
+            dateIndex: payload.dateIndex ?? null,
+            name: payload.name ?? null,
+            message: payload.message ?? '',
+            uid: payload.uid ?? '',
+            userName: payload.userName ?? null,
+            userPhoto: payload.userPhoto ?? null,
+            createdAt: payload.createdAt ?? null,
+          } as MemorialEntry;
+        });
+        setMemorials(items);
+      },
+      () => {
+        setMemorials([]);
+      }
+    );
     return () => unsubscribe();
   }, []);
 
