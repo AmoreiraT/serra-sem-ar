@@ -1,19 +1,24 @@
+import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ExternalLink, Info, PlayCircle, TextQuote } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { cn } from '@/lib/utils';
-import { covidEvents, covidEventsByDate } from '../data/covidEvents';
 import type { CovidEventAttachment } from '../data/covidEvents';
+import { covidEvents, covidEventsByDate } from '../data/covidEvents';
 import { useCovidStore } from '../stores/covidStore';
 
+type EventCardLayout = 'floating' | 'sheet' | 'mobile';
+
 interface EventCardProps {
-  layout?: 'floating' | 'sheet';
+  layout?: EventCardLayout;
   className?: string;
+  onExpand?: () => void;
 }
 
-export const EventCard = ({ layout = 'floating', className }: EventCardProps = {}) => {
+export const EventCard = ({ layout = 'floating', className, onExpand }: EventCardProps = {}) => {
   const { data, currentDateIndex } = useCovidStore();
   const isSheet = layout === 'sheet';
+  const isMobileCompact = layout === 'mobile';
+  const isExpandedView = isSheet || !isMobileCompact;
 
   const eventsByIndex = useMemo(() => {
     if (!data.length) return [];
@@ -47,6 +52,10 @@ export const EventCard = ({ layout = 'floating', className }: EventCardProps = {
       year: 'numeric',
     });
   }, [event]);
+  const visibleAttachments = useMemo(() => {
+    if (!event?.attachments?.length) return [];
+    return isMobileCompact ? event.attachments.slice(0, 1) : event.attachments;
+  }, [event, isMobileCompact]);
 
   return (
     <AnimatePresence mode="wait">
@@ -60,35 +69,77 @@ export const EventCard = ({ layout = 'floating', className }: EventCardProps = {
           className={cn(
             isSheet
               ? 'w-full'
-              : 'desktop-event-card pointer-events-none absolute bottom-6 left-6 z-10 w-[min(32vw,410px)] safe-bottom',
+              : isMobileCompact
+                ? 'hud-mobile-event pointer-events-none absolute xl:hidden'
+                : 'desktop-event-card pointer-events-none absolute bottom-6 left-6 z-10 w-[min(32vw,410px)] safe-bottom',
             className
           )}
         >
           <div
             className={cn(
-              'pointer-events-auto space-y-2 overflow-auto rounded-2xl border border-white/20 bg-black/85 p-3.5 text-white shadow-2xl backdrop-blur-md',
+              'pointer-events-auto space-y-2 rounded-2xl border border-white/20 bg-black/85 text-white shadow-2xl backdrop-blur-md',
               isSheet
-                ? 'max-h-[60vh]'
-                : 'max-h-[72vh] sm:max-h-[78vh] lg:max-h-none lg:overflow-visible'
+                ? 'max-h-[60vh] overflow-auto p-3.5'
+                : isMobileCompact
+                  ? 'hud-mobile-event-inner overflow-hidden p-2.5'
+                  : 'max-h-[72vh] overflow-auto p-3.5 sm:max-h-[78vh] lg:max-h-none lg:overflow-visible'
             )}
           >
             <div className="flex items-center gap-2 text-amber-300">
-              <Info className="h-4 w-4" />
-              <p className="text-[11px] uppercase tracking-[0.35em]">Registro Histórico</p>
+              <Info className="h-4 w-4 shrink-0" />
+              <p
+                className={cn(
+                  'text-[11px] uppercase',
+                  isMobileCompact ? 'text-[10px] tracking-[0.14em]' : 'truncate tracking-[0.35em]'
+                )}
+              >
+                Registro Histórico
+              </p>
             </div>
             <div>
-              <p className="text-[11px] text-white/70">{formattedDate}</p>
-              <h3 className="text-[15px] font-semibold leading-snug">{event.title}</h3>
+              <p className={cn('text-[11px] text-white/70', isMobileCompact && 'uppercase tracking-[0.12em]')}>{formattedDate}</p>
+              <h3
+                className={cn(
+                  'break-words text-[15px] font-semibold leading-snug',
+                  isMobileCompact && 'line-clamp-2 text-[13px] leading-[1.22]'
+                )}
+              >
+                {event.title}
+              </h3>
             </div>
-            <p className="text-[12px] leading-relaxed text-white/85">{event.description}</p>
 
-            {event.attachments?.length ? (
+            {isExpandedView ? (
+              <p
+                className={cn(
+                  'break-words text-[12px] leading-relaxed text-white/85',
+                  isMobileCompact && 'mobile-event-description'
+                )}
+              >
+                {event.description}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={onExpand}
+                className="inline-flex w-full items-center justify-center rounded-xl border border-amber-200/35 bg-amber-300/12 px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-amber-100 transition hover:bg-amber-300/20"
+              >
+                Abrir registro
+              </button>
+            )}
+
+            {isExpandedView && visibleAttachments.length ? (
               <div className="space-y-2">
-                {event.attachments.map((attachment, idx) => {
+                {visibleAttachments.map((attachment, idx) => {
                   switch (attachment.type) {
                     case 'text':
                       return (
-                        <div key={idx} className="rounded-lg border border-white/10 bg-white/5 p-2 text-[12px] leading-snug text-white/80">
+                        <div
+                          key={idx}
+                          className={cn(
+                            'rounded-lg border border-white/10 bg-white/5 p-2 text-[12px] leading-snug text-white/80',
+                            isMobileCompact && 'mobile-event-description'
+                          )}
+                        >
                           <div className="mb-1 flex items-center gap-2 text-amber-200">
                             <TextQuote className="h-4 w-4" />
                             <span>Citação</span>
@@ -97,9 +148,9 @@ export const EventCard = ({ layout = 'floating', className }: EventCardProps = {
                         </div>
                       );
                     case 'image':
-                      return <HistoricalImage key={idx} attachment={attachment} />;
+                      return <HistoricalImage key={idx} attachment={attachment} compact={isMobileCompact} />;
                     case 'video':
-                      return <HistoricalVideo key={idx} attachment={attachment} />;
+                      return <HistoricalVideo key={idx} attachment={attachment} compact={isMobileCompact} />;
                     case 'link':
                     default:
                       return (
@@ -108,9 +159,9 @@ export const EventCard = ({ layout = 'floating', className }: EventCardProps = {
                           href={attachment.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[12px] text-amber-200 transition-colors hover:text-amber-100"
+                          className="inline-flex max-w-full items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[12px] text-amber-200 transition-colors hover:text-amber-100"
                         >
-                          {attachment.label ?? 'Abrir referência'}
+                          <span className="min-w-0 truncate">{attachment.label ?? 'Abrir referência'}</span>
                           <ExternalLink className="h-4 w-4" />
                         </a>
                       );
@@ -119,15 +170,15 @@ export const EventCard = ({ layout = 'floating', className }: EventCardProps = {
               </div>
             ) : null}
 
-            {event.source && (
+            {isExpandedView && event.source && (
               <a
                 href={event.source}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 text-[12px] text-amber-200 transition-colors hover:text-amber-100"
+                className="inline-flex max-w-full items-center gap-2 text-[12px] text-amber-200 transition-colors hover:text-amber-100"
               >
                 <ExternalLink className="h-4 w-4" />
-                Fonte oficial
+                <span className="min-w-0 truncate">Fonte oficial</span>
               </a>
             )}
           </div>
@@ -153,7 +204,13 @@ const getYoutubeVideoId = (url?: string) => {
   return null;
 };
 
-const HistoricalImage = ({ attachment }: { attachment: CovidEventAttachment }) => {
+const HistoricalImage = ({
+  attachment,
+  compact = false,
+}: {
+  attachment: CovidEventAttachment;
+  compact?: boolean;
+}) => {
   const [hasError, setHasError] = useState(false);
 
   if (!attachment.url || hasError) {
@@ -167,11 +224,11 @@ const HistoricalImage = ({ attachment }: { attachment: CovidEventAttachment }) =
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5">
+    <div className="hud-mobile-event-media overflow-hidden rounded-lg border border-white/10 bg-white/5">
       <img
         src={attachment.url}
         alt={attachment.label ?? 'Imagem histórica'}
-        className="h-36 w-full object-cover"
+        className={cn(compact ? 'h-24 min-[390px]:h-28' : 'h-36', 'w-full object-cover')}
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
@@ -184,7 +241,13 @@ const HistoricalImage = ({ attachment }: { attachment: CovidEventAttachment }) =
   );
 };
 
-const HistoricalVideo = ({ attachment }: { attachment: CovidEventAttachment }) => {
+const HistoricalVideo = ({
+  attachment,
+  compact = false,
+}: {
+  attachment: CovidEventAttachment;
+  compact?: boolean;
+}) => {
   const [hasError, setHasError] = useState(false);
   const youtubeId = getYoutubeVideoId(attachment.url);
 
@@ -197,9 +260,9 @@ const HistoricalVideo = ({ attachment }: { attachment: CovidEventAttachment }) =
         href={watchUrl}
         target="_blank"
         rel="noreferrer"
-        className="group block overflow-hidden rounded-lg border border-white/10 bg-white/5 transition-colors hover:border-amber-200/40"
+        className="hud-mobile-event-media group block overflow-hidden rounded-lg border border-white/10 bg-white/5 transition-colors hover:border-amber-200/40"
       >
-        <div className="relative h-36 w-full bg-white/5">
+        <div className={cn('relative w-full bg-white/5', compact ? 'h-24 min-[390px]:h-28' : 'h-36')}>
           {!hasError && (
             <img
               src={thumbnailUrl}
@@ -235,9 +298,9 @@ const HistoricalVideo = ({ attachment }: { attachment: CovidEventAttachment }) =
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5">
+    <div className="hud-mobile-event-media overflow-hidden rounded-lg border border-white/10 bg-white/5">
       <video
-        className="h-36 w-full object-cover"
+        className={cn(compact ? 'h-24 min-[390px]:h-28' : 'h-36', 'w-full object-cover')}
         controls
         preload="metadata"
         src={attachment.url}

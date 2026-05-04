@@ -1,5 +1,6 @@
-import {randomUUID} from "crypto";
-import {getDatabase} from "firebase-admin/database";
+import { randomUUID } from "crypto";
+import { getDatabase } from "firebase-admin/database";
+import type { OxygenStatus } from "../types/oxygen";
 import type {
   JoinPresenceRequest,
   JoinPresenceResponse,
@@ -8,12 +9,11 @@ import type {
   UpdatePresenceRequest,
   UpdatePresenceResponse,
 } from "../types/presence";
-import type {OxygenStatus} from "../types/oxygen";
-import {oxygenConfig} from "./oxygen.config";
-import {clamp} from "../utils/clamp";
-import {HttpError} from "../utils/http";
-import {isRecord, parseRealtimePresence} from "../utils/validation";
-import {recordDailySessionJoined} from "./memorial.service";
+import { clamp } from "../utils/clamp";
+import { HttpError } from "../utils/http";
+import { isRecord, parseRealtimePresence } from "../utils/validation";
+import { recordDailySessionJoined } from "./memorial.service";
+import { oxygenConfig } from "./oxygen.config";
 
 const PRESENCE_PATH = "realtimePresence";
 const WORLD_OXYGEN_PATH = "worldState/oxygen";
@@ -34,7 +34,7 @@ const presenceRef = (sessionId: string) => database().ref(`${PRESENCE_PATH}/${se
 export const recommendedUpdateIntervalMs = (isMobile: boolean): number =>
   isMobile ? MOBILE_UPDATE_INTERVAL_MS : DESKTOP_UPDATE_INTERVAL_MS;
 
-const defaultPosition = {x: 50, y: 30, z: 50};
+const defaultPosition = { x: 50, y: 30, z: 50 };
 
 export const joinPresence = async (input: JoinPresenceRequest): Promise<JoinPresenceResponse> => {
   const now = Date.now();
@@ -50,9 +50,15 @@ export const joinPresence = async (input: JoinPresenceRequest): Promise<JoinPres
     status: "alive",
     isMobile: input.isMobile,
     updateIntervalMs,
-    userAgent: input.userAgent,
-    clientId: input.clientId,
   };
+
+  // Realtime Database rejects undefined values; include optional fields only when present.
+  if (input.userAgent) {
+    presence.userAgent = input.userAgent;
+  }
+  if (input.clientId) {
+    presence.clientId = input.clientId;
+  }
 
   await presenceRef(sessionId).set(presence);
   await recordDailySessionJoined().catch((error: unknown) => {
@@ -75,7 +81,7 @@ export const getPresence = async (sessionId: string): Promise<RealtimePresence |
 
 export const leavePresence = async (sessionId: string): Promise<LeavePresenceResponse> => {
   await presenceRef(sessionId).remove();
-  return {success: true};
+  return { success: true };
 };
 
 export const listAlivePresences = async (now = Date.now()): Promise<RealtimePresence[]> => {
@@ -129,7 +135,7 @@ const getWorldFallback = async (): Promise<{ collectiveOxygen: number; status: O
       100;
   const status = readWorldStatus(raw.status);
 
-  return {collectiveOxygen, status};
+  return { collectiveOxygen, status };
 };
 
 const calculateIndividualOxygen = (collectiveOxygen: number, isMobile: boolean): number => {

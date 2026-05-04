@@ -632,6 +632,7 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
     };
 
     const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') return;
       if (!touchState.active || touchState.pointerId !== event.pointerId) return;
       const dx = event.clientX - touchState.x;
       const dy = event.clientY - touchState.y;
@@ -646,6 +647,7 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
     };
 
     const handlePointerUp = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') return;
       if (touchState.pointerId !== event.pointerId) return;
       touchState.active = false;
       touchState.pointerId = null;
@@ -660,16 +662,16 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
 
     canvas.style.touchAction = 'none';
     canvas.addEventListener('pointerdown', handlePointerDown);
-    canvas.addEventListener('pointermove', handlePointerMove);
-    canvas.addEventListener('pointerup', handlePointerUp);
-    canvas.addEventListener('pointercancel', handlePointerUp);
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
 
     return () => {
       canvas.style.touchAction = previousTouchAction;
       canvas.removeEventListener('pointerdown', handlePointerDown);
-      canvas.removeEventListener('pointermove', handlePointerMove);
-      canvas.removeEventListener('pointerup', handlePointerUp);
-      canvas.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
     };
   }, [gl]);
 

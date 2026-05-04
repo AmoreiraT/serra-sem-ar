@@ -11,7 +11,10 @@ export const OxygenBar = () => {
   const oxygen = useOxygenStore((state) => state.oxygen);
   const status = useOxygenStore((state) => state.status);
   const isOfflineFallback = useOxygenStore((state) => state.isOfflineFallback);
-  const width = `${Math.max(0, Math.min(100, oxygen))}%`;
+  const boundedOxygen = Number.isFinite(oxygen) ? Math.max(0, Math.min(100, oxygen)) : 0;
+  const roundedOxygen = Math.round(boundedOxygen);
+  const widthStep = Math.round(boundedOxygen / 5) * 5;
+  const widthClass = `oxygen-fill-${Math.max(0, Math.min(100, widthStep))}`;
 
   return (
     <div className="pointer-events-none absolute left-3 top-[5.2rem] z-20 w-[min(72vw,280px)] sm:left-4 sm:top-24 xl:top-32">
@@ -19,20 +22,17 @@ export const OxygenBar = () => {
         <div className="mb-1.5 flex items-center justify-between gap-3">
           <span className="text-[10px] uppercase tracking-[0.26em] text-white/68">Oxigenio</span>
           <span className="text-[11px] tabular-nums text-white/78">
-            {Math.round(oxygen)}%
+            {roundedOxygen}%
             {isOfflineFallback ? ' local' : ''}
           </span>
         </div>
+        <progress className="sr-only" value={boundedOxygen} max={100} aria-label="Oxigenio individual" />
         <div
           className="h-1.5 overflow-hidden rounded-full bg-white/12"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(oxygen)}
+          aria-hidden="true"
         >
           <div
-            className={cn('h-full rounded-full transition-[width,background-color] duration-700', toneByStatus[status])}
-            style={{ width }}
+            className={cn('h-full rounded-full transition-[width,background-color] duration-700', toneByStatus[status], widthClass)}
           />
         </div>
       </div>

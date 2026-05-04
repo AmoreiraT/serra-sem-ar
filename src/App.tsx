@@ -1,6 +1,7 @@
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, Bell, Info, Pin, X } from 'lucide-react';
+import { AlertCircle, Info, Pin, X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useState } from 'react';
 import './App.css';
 import { CinematicAudio } from './components/CinematicAudio';
@@ -16,7 +17,6 @@ import { OxygenBar } from './components/oxygen/OxygenBar';
 import { OxygenCollapseOverlay } from './components/oxygen/OxygenCollapseOverlay';
 import { OxygenWorldStatus } from './components/oxygen/OxygenWorldStatus';
 import { Button } from './components/ui/button';
-import { useIsMobile } from './hooks/use-mobile';
 import { useCovidData } from './hooks/useCovidData';
 import { useOxygenCollapseListener } from './hooks/useOxygenCollapseListener';
 import { usePresencePositionSync } from './hooks/usePresencePositionSync';
@@ -26,7 +26,33 @@ import { QueryProvider } from './providers/QueryProvider';
 import { useCovidStore } from './stores/covidStore';
 import { useOxygenStore } from './stores/oxygenStore';
 
-const Scene3D = lazy(() => import('./components/Scene3D').then((module) => ({ default: module.Scene3D })));
+const SCENE_IMPORT_RELOAD_KEY = 'serra-sem-ar-scene-import-reload';
+
+const isDynamicImportError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
+  return /dynamically imported module|module script/i.test(error.message);
+};
+
+const loadScene3D = async () => {
+  try {
+    const module = await import('./components/Scene3D');
+    window.sessionStorage.removeItem(SCENE_IMPORT_RELOAD_KEY);
+    return { default: module.Scene3D };
+  } catch (error: unknown) {
+    if (
+      typeof window !== 'undefined' &&
+      isDynamicImportError(error) &&
+      window.sessionStorage.getItem(SCENE_IMPORT_RELOAD_KEY) !== '1'
+    ) {
+      window.sessionStorage.setItem(SCENE_IMPORT_RELOAD_KEY, '1');
+      window.location.reload();
+      return new Promise<{ default: typeof import('./components/Scene3D').Scene3D }>(() => undefined);
+    }
+    throw error;
+  }
+};
+
+const Scene3D = lazy(loadScene3D);
 
 function AppContent() {
   const { isLoading, error } = useCovidData();
@@ -52,6 +78,8 @@ function AppContent() {
   const toggleMobilePanel = (panel: 'event' | 'memorial' | 'header') => {
     setMobilePanel((current) => (current === panel ? null : panel));
   };
+
+  const openHistoricalPanel = () => setMobilePanel('event');
 
   const closeMobilePanel = () => setMobilePanel(null);
 
@@ -89,6 +117,20 @@ function AppContent() {
             <Button
               size="icon"
               variant="outline"
+              aria-pressed={mobilePanel === 'memorial'}
+              onClick={() => toggleMobilePanel('memorial')}
+              title="Memorial"
+              className={cn(
+                'h-9 w-9 rounded-full border border-white/20 bg-black/75 text-white shadow-lg backdrop-blur-sm transition hover:bg-white/10',
+                mobilePanel === 'memorial' && 'border-amber-300 bg-amber-500 text-black hover:bg-amber-400'
+              )}
+            >
+              <Pin className="h-4 w-4" />
+              <span className="sr-only">Memorial</span>
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
               aria-pressed={mobilePanel === 'header'}
               onClick={() => toggleMobilePanel('header')}
               title="Resumo"
@@ -121,43 +163,15 @@ function AppContent() {
             <MemorialPanel />
           </div>
 
-          <div className="hud-fab xl:hidden absolute bottom-20 right-3 z-20 flex flex-col gap-2 safe-bottom sm:bottom-6 sm:right-4">
-            <Button
-              size="icon"
-              variant="outline"
-              aria-pressed={mobilePanel === 'event'}
-              onClick={() => toggleMobilePanel('event')}
-              title="Registro histórico"
-              className={cn(
-                'h-11 w-11 rounded-full border border-white/20 bg-black/75 text-white shadow-lg backdrop-blur-sm transition hover:bg-white/10',
-                mobilePanel === 'event' && 'border-amber-300 bg-amber-500 text-black hover:bg-amber-400'
-              )}
-            >
-              <Bell className="h-4 w-4" />
-              <span className="sr-only">Registro histórico</span>
-            </Button>
-            <Button
-              size="icon"
-              variant="outline"
-              aria-pressed={mobilePanel === 'memorial'}
-              onClick={() => toggleMobilePanel('memorial')}
-              title="Memorial"
-              className={cn(
-                'h-11 w-11 rounded-full border border-white/20 bg-black/75 text-white shadow-lg backdrop-blur-sm transition hover:bg-white/10',
-                mobilePanel === 'memorial' && 'border-amber-300 bg-amber-500 text-black hover:bg-amber-400'
-              )}
-            >
-              <Pin className="h-4 w-4" />
-              <span className="sr-only">Memorial</span>
-            </Button>
-          </div>
-
           {isMobile && (
-            <div
-              className="hud-joystick absolute bottom-4 left-3 z-20 safe-bottom max-[380px]:scale-90 max-[340px]:scale-75 sm:bottom-6 sm:left-4"
-              data-joystick-control="true"
-            >
-              <MobileMoveJoystick />
+            <div className="hud-mobile-bottom xl:hidden absolute inset-x-0 bottom-0 z-20 px-3 pb-3 safe-bottom-pad sm:px-4 sm:pb-4">
+              <div
+                className="hud-joystick relative shrink-0 max-[380px]:scale-90 max-[340px]:scale-75"
+                data-joystick-control="true"
+              >
+                <MobileMoveJoystick />
+              </div>
+              <EventCard layout="mobile" onExpand={openHistoricalPanel} className="hud-mobile-event-slot" />
             </div>
           )}
 

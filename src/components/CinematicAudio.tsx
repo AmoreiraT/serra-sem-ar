@@ -282,7 +282,7 @@ export const CinematicAudio = () => {
   useEffect(() => stopAudio, [stopAudio]);
 
   return (
-    <div className="pointer-events-auto absolute right-3 top-24 z-20 sm:right-4 sm:top-28 xl:top-40">
+    <div className="hud-audio-toggle pointer-events-auto absolute right-3 top-24 z-20 sm:right-4 sm:top-28 xl:top-40">
       <Button
         type="button"
         size="sm"
@@ -303,7 +303,7 @@ export const CinematicAudio = () => {
         )}
       >
         {isEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-        <span className="text-xs uppercase tracking-[0.22em]">Som</span>
+        <span className="audio-toggle-label text-xs uppercase tracking-[0.22em]">Som</span>
         <span className="sr-only">{isEnabled ? 'Desativar paisagem sonora' : 'Ativar paisagem sonora'}</span>
       </Button>
     </div>

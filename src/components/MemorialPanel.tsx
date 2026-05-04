@@ -1,8 +1,8 @@
+import { cn } from '@/lib/utils';
 import { httpsCallable } from 'firebase/functions';
 import { LogIn, LogOut, Pin } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { cn } from '@/lib/utils';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { functions } from '../services/firebaseConfig';
 import { useCovidStore } from '../stores/covidStore';
@@ -129,16 +129,24 @@ export const MemorialPanel = ({ layout = 'floating', className }: MemorialPanelP
       </div>
 
       {!user && (
-        <div className="space-y-3 text-[12px] text-white/80">
-          <p>
-            Entre com Google para registrar uma lembranca no dia exato da linha do tempo.
+        <div
+          className={cn(
+            'space-y-3 text-[12px] text-white/80',
+            isSheet && 'rounded-lg border border-white/12 bg-white/5 p-2.5 text-[11px]'
+          )}
+        >
+          <p className={cn(isSheet && 'leading-snug')}>
+            Entre com Google para registrar uma lembranca neste dia da linha do tempo.
           </p>
           <Button
             variant="outline"
             size="sm"
             onClick={handleSignIn}
             disabled={isLoading}
-            className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+            className={cn(
+              'w-full border-white/20 bg-white/5 text-white hover:bg-white/10',
+              isSheet && 'h-8 text-[11px]'
+            )}
           >
             <LogIn className="h-4 w-4" />
             Entrar com Google

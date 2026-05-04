@@ -6,19 +6,15 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "outDir": "lib",
+    "rootDir": ".",
     "sourceMap": true,
     "strict": true,
+    "forceConsistentCasingInFileNames": true,
     "target": "es2017",
-    "lib": [
-      "es2017"
-    ],
-    "types": [
-      "node"
-    ],
+    "lib": ["es2017"],
+    "types": ["node"],
     "skipLibCheck": true
   },
   "compileOnSave": true,
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

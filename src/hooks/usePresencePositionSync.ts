@@ -118,6 +118,7 @@ export const usePresencePositionSync = ({
         }
       } catch {
         lastRecalculateAtRef.current = now;
+        lastRecalculateDayRef.current = latest.dayIndex;
       }
     };
 
@@ -139,4 +140,3 @@ export const usePresencePositionSync = ({
     updateIntervalMs,
   ]);
 };
-
