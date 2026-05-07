@@ -2,7 +2,7 @@
 
 ## Diagnóstico do código atual
 
-- O app já força **modo 2D no mobile/Safari** para evitar travamentos de WebGL no iPhone (`useRenderProfile` retorna `mode: '2d'` quando detecta mobile). Isso melhora estabilidade, mas muda radicalmente a experiência visual em relação ao desktop.  
+- O app já força **modo 2D em dispositivos mobile** (`useRenderProfile` retorna `mode: '2d'` quando detecta mobile). Isso ajuda a estabilidade de forma geral — com Safari/iPhone sendo um dos casos mais sensíveis por travamentos de WebGL —, mas muda radicalmente a experiência visual em relação ao desktop.  
 - O shell principal usa `100vh` + `100dvh`, safe-area e vários ajustes por altura em `App.css`, o que ajuda no iOS, mas aumenta complexidade e risco de sobreposição em telas muito baixas (Safari com barra dinâmica).  
 - O HUD mobile combina joystick + card de evento + botões superiores + overlays, com muitas media queries por altura/largura. Isso indica que o layout depende fortemente de ajuste manual por breakpoint, em vez de regras estruturais com prioridades de conteúdo.  
 - O `Scene2D` está relativamente sofisticado e desenha muita coisa em canvas (profundidade, texturas, marcadores), o que pode pesar em iPhones antigos se não houver degradação dinâmica por FPS.
