@@ -65,8 +65,11 @@ function AppContent() {
   const renderProfile = useRenderProfile();
   const presenceEnabled = isPresenceEnabled();
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
+  const mobileMoveInput = useCovidStore((state) => state.mobileMoveInput);
   const shouldReset = useOxygenStore((state) => state.shouldReset);
   const presenceSession = usePresenceSession({ enabled: hasEntered && presenceEnabled });
+  const isMobileMoving = Math.hypot(mobileMoveInput[0], mobileMoveInput[1]) > 0.12;
+  const mobileHudState = mobilePanel ? 'reading' : isMobileMoving ? 'moving' : 'idle';
   const getPresencePosition = useCallback(() => {
     const [x, y, z] = useCovidStore.getState().cameraPosition;
     return { x, y, z };
@@ -110,7 +113,13 @@ function AppContent() {
   }
 
   return (
-    <div className="app-shell relative h-screen w-full overflow-hidden bg-black" data-render-mode={renderProfile.mode}>
+    <div
+      className="app-shell relative h-screen w-full overflow-hidden bg-black"
+      data-device-class={renderProfile.deviceClass}
+      data-mobile-hud-state={isMobile ? mobileHudState : undefined}
+      data-render-mode={renderProfile.mode}
+      data-render-reason={renderProfile.reason}
+    >
       <header className="app-header pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
         <div className="hud-desktop-header pointer-events-auto hidden flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:flex xl:gap-4 xl:px-6 xl:py-3">
           <InfoPanel variant="compact" />
@@ -118,7 +127,7 @@ function AppContent() {
         </div>
         <div className="hud-mobile-header pointer-events-auto flex items-center gap-2 rounded-b-2xl bg-black/55 px-3 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:hidden">
           <InfoPanel variant="mini" />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="hud-mobile-secondary-actions ml-auto flex items-center gap-2">
             <Button
               size="icon"
               variant="outline"
@@ -157,7 +166,7 @@ function AppContent() {
           {renderProfile.mode === '2d' ? (
             <Scene2D />
           ) : (
-            // Em aparelhos fortes a obra usa WebGL completo; em Safari/mobile o canvas 2D evita estouro de memoria.
+            // Mobile-high usa WebGL lean e volta para 2D se o warm-up perder estabilidade.
             <Suspense fallback={<LoadingScreen message="Preparando a serra 3D..." />}>
               <Scene3D enableControls showStats={false} />
             </Suspense>
@@ -174,7 +183,10 @@ function AppContent() {
           </div>
 
           {isMobile && (
-            <div className="hud-mobile-bottom xl:hidden absolute inset-x-0 bottom-0 z-20 px-3 pb-3 safe-bottom-pad sm:px-4 sm:pb-4">
+            <div
+              className="hud-mobile-bottom xl:hidden absolute inset-x-0 bottom-0 z-20 px-3 pb-3 safe-bottom-pad sm:px-4 sm:pb-4"
+              data-mobile-hud-state={mobileHudState}
+            >
               <div
                 className="hud-joystick relative shrink-0 max-[380px]:scale-90 max-[340px]:scale-75"
                 data-joystick-control="true"

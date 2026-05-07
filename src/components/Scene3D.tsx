@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { EnvironmentQuality } from '../environment/UrbanVoidEnvironment';
 import { UrbanVoidEnvironment } from '../environment/UrbanVoidEnvironment';
+import { RENDER_PROFILE_CHANGE_EVENT, WEBGL_FALLBACK_STORAGE_KEY } from '../hooks/useRenderProfile';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
 import { EventMarkers3D } from './EventMarkers3D';
 import { MemorialPins3D } from './MemorialPins3D';
@@ -95,6 +96,16 @@ const getSceneProfile = (): SceneProfile => {
     mountainQuality: 'desktop',
     environmentQuality: 'full',
   };
+};
+
+const activateWebGLFallback = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(WEBGL_FALLBACK_STORAGE_KEY, '2d');
+  } catch {
+    // Session storage can be unavailable in stricter browser modes.
+  }
+  window.dispatchEvent(new Event(RENDER_PROFILE_CHANGE_EVENT));
 };
 
 export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DProps) => {
@@ -188,6 +199,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
           cameraTarget={initialCameraTarget}
         />
         <CameraGroundClamp enabled={enableControls} clearance={1.2} />
+        <MobileWebGLFallbackGuard enabled={isMobile} />
 
         <hemisphereLight color="#fcc884" groundColor="#4c331e" intensity={0.6} />
         <directionalLight
@@ -242,6 +254,62 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
     </div>
   );
 };
+
+function MobileWebGLFallbackGuard({ enabled }: { enabled: boolean }) {
+  const { gl } = useThree();
+  const monitorRef = useRef({
+    startedAt: 0,
+    samples: 0,
+    averageFrameMs: 16.7,
+    fallbackActivated: false,
+  });
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+
+    const canvas = gl.domElement;
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      monitorRef.current.fallbackActivated = true;
+      activateWebGLFallback();
+    };
+
+    canvas.addEventListener('webglcontextlost', handleContextLost);
+    return () => {
+      canvas.removeEventListener('webglcontextlost', handleContextLost);
+    };
+  }, [enabled, gl]);
+
+  useFrame((_, delta) => {
+    if (!enabled) return;
+
+    const monitor = monitorRef.current;
+    if (monitor.fallbackActivated) return;
+
+    const now = performance.now();
+    if (!monitor.startedAt) {
+      monitor.startedAt = now;
+      return;
+    }
+
+    if (now - monitor.startedAt < 1800) return;
+
+    const frameMs = Math.min(delta * 1000, 120);
+    monitor.samples += 1;
+    monitor.averageFrameMs =
+      monitor.samples === 1 ? frameMs : monitor.averageFrameMs * 0.92 + frameMs * 0.08;
+
+    if (monitor.samples < 90) return;
+
+    const averageFps = 1000 / Math.max(monitor.averageFrameMs, 1);
+    if (averageFps < 24 || monitor.averageFrameMs > 42) {
+      monitor.fallbackActivated = true;
+      activateWebGLFallback();
+    }
+  });
+
+  return null;
+}
 
 function SurroundingTerrain({
   mountainRadius,

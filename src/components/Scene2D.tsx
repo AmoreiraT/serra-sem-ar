@@ -50,6 +50,22 @@ type ProjectedPoint = {
   heading: number;
 };
 
+type Scene2DQuality = 'high' | 'medium' | 'low';
+
+type Scene2DQualitySettings = {
+  depthSampleCount: number;
+  ridgeLayers: number;
+  terrainLineStep: number;
+  terrainTextureAlpha: number;
+  useRoadTexture: boolean;
+  roadCrossStep: number;
+  roadScratchCount: number;
+  roadDustCount: number;
+  memoryTrailCount: number;
+  maxLocalFootprints: number;
+  maxRemoteFootprints: number;
+};
+
 const DEFAULT_KEYS: KeyState = {
   forward: false,
   backward: false,
@@ -66,10 +82,58 @@ const textureCanvasCache = new Map<string, HTMLCanvasElement>();
 let cachedRoadTextureImage: HTMLImageElement | null = null;
 let pendingRoadTextureImage: Promise<HTMLImageElement | null> | null = null;
 
+const SCENE_2D_QUALITY: Record<Scene2DQuality, Scene2DQualitySettings> = {
+  high: {
+    depthSampleCount: DEPTH_SAMPLE_COUNT,
+    ridgeLayers: 3,
+    terrainLineStep: 5,
+    terrainTextureAlpha: 0.2,
+    useRoadTexture: true,
+    roadCrossStep: 3,
+    roadScratchCount: 26,
+    roadDustCount: 128,
+    memoryTrailCount: 14,
+    maxLocalFootprints: MAX_LOCAL_FOOTPRINTS,
+    maxRemoteFootprints: MAX_REMOTE_MARKERS,
+  },
+  medium: {
+    depthSampleCount: 38,
+    ridgeLayers: 2,
+    terrainLineStep: 7,
+    terrainTextureAlpha: 0.14,
+    useRoadTexture: true,
+    roadCrossStep: 5,
+    roadScratchCount: 16,
+    roadDustCount: 72,
+    memoryTrailCount: 9,
+    maxLocalFootprints: 26,
+    maxRemoteFootprints: 10,
+  },
+  low: {
+    depthSampleCount: 30,
+    ridgeLayers: 1,
+    terrainLineStep: 9,
+    terrainTextureAlpha: 0,
+    useRoadTexture: false,
+    roadCrossStep: 7,
+    roadScratchCount: 8,
+    roadDustCount: 36,
+    memoryTrailCount: 5,
+    maxLocalFootprints: 18,
+    maxRemoteFootprints: 5,
+  },
+};
+
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const damp = (current: number, target: number, lambda: number, delta: number) =>
   lerp(current, target, 1 - Math.exp(-lambda * delta));
+
+const degradeScene2DQuality = (quality: Scene2DQuality): Scene2DQuality =>
+  quality === 'high' ? 'medium' : quality === 'medium' ? 'low' : 'low';
+
+const restoreScene2DQuality = (quality: Scene2DQuality): Scene2DQuality =>
+  quality === 'low' ? 'medium' : quality === 'medium' ? 'high' : 'high';
 
 const seededFraction = (seed: number): number => {
   const x = Math.sin(seed * 12.9898) * 43758.5453;
@@ -218,11 +282,12 @@ const createDepthSamples = (
   currentIndex: number,
   lateral: number,
   points: MountainPoint[],
-  maxHeight: number
+  maxHeight: number,
+  sampleCount = DEPTH_SAMPLE_COUNT
 ): DepthSample[] => {
   const samples: DepthSample[] = [];
-  for (let i = 0; i <= DEPTH_SAMPLE_COUNT; i += 1) {
-    const t = i / DEPTH_SAMPLE_COUNT;
+  for (let i = 0; i <= sampleCount; i += 1) {
+    const t = i / sampleCount;
     samples.push(createDepthSample(t, width, height, currentIndex, lateral, points, maxHeight));
   }
   return samples;
@@ -366,11 +431,12 @@ const drawDistantRidges = (
   height: number,
   points: MountainPoint[],
   currentIndex: number,
-  maxHeight: number
+  maxHeight: number,
+  layerCount: number
 ) => {
-  drawDistantRidge(ctx, width, height, points, currentIndex, maxHeight, 0);
-  drawDistantRidge(ctx, width, height, points, currentIndex, maxHeight, 1);
-  drawDistantRidge(ctx, width, height, points, currentIndex, maxHeight, 2);
+  for (let layer = 0; layer < layerCount; layer += 1) {
+    drawDistantRidge(ctx, width, height, points, currentIndex, maxHeight, layer);
+  }
 };
 
 const fillQuad = (
@@ -393,7 +459,13 @@ const fillQuad = (
   ctx.fill();
 };
 
-const drawTerrainMesh = (ctx: CanvasRenderingContext2D, width: number, height: number, samples: DepthSample[]) => {
+const drawTerrainMesh = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  samples: DepthSample[],
+  quality: Scene2DQualitySettings
+) => {
   ctx.save();
 
   for (let i = 0; i < samples.length - 1; i += 1) {
@@ -457,18 +529,21 @@ const drawTerrainMesh = (ctx: CanvasRenderingContext2D, width: number, height: n
     );
   }
 
-  const terrainTexture = getProceduralTexture(
-    'terrain-rust-96',
-    96,
-    '#3d1b0a',
-    'rgba(132, 70, 31, 0.75)',
-    'rgba(24, 8, 3, 0.9)'
-  );
-  if (terrainTexture) {
+  const terrainTexture =
+    quality.terrainTextureAlpha > 0
+      ? getProceduralTexture(
+          'terrain-rust-96',
+          96,
+          '#3d1b0a',
+          'rgba(132, 70, 31, 0.75)',
+          'rgba(24, 8, 3, 0.9)'
+        )
+      : null;
+  if (terrainTexture && quality.terrainTextureAlpha > 0) {
     const pattern = ctx.createPattern(terrainTexture, 'repeat');
     if (pattern) {
       ctx.save();
-      ctx.globalAlpha = 0.2;
+      ctx.globalAlpha = quality.terrainTextureAlpha;
       ctx.globalCompositeOperation = 'multiply';
       ctx.fillStyle = pattern;
       ctx.fillRect(0, height * 0.24, width, height * 0.86);
@@ -479,7 +554,7 @@ const drawTerrainMesh = (ctx: CanvasRenderingContext2D, width: number, height: n
   ctx.globalAlpha = 0.2;
   ctx.strokeStyle = '#9c5f2e';
   ctx.lineWidth = 1;
-  for (let i = 5; i < samples.length; i += 5) {
+  for (let i = quality.terrainLineStep; i < samples.length; i += quality.terrainLineStep) {
     const sample = samples[i];
     ctx.beginPath();
     ctx.moveTo(-width * 0.08, sample.y + height * 0.04);
@@ -524,7 +599,8 @@ const drawRoadMesh = (
   width: number,
   height: number,
   samples: DepthSample[],
-  roadTextureImage: CanvasImageSource | null
+  roadTextureImage: CanvasImageSource | null,
+  quality: Scene2DQualitySettings
 ) => {
   ctx.save();
   drawRoadCastShadow(ctx, width, height, samples);
@@ -566,14 +642,16 @@ const drawRoadMesh = (
   ctx.fill();
 
   const roadTexture =
-    roadTextureImage ??
-    getProceduralTexture(
-      'road-dust-80',
-      80,
-      '#8b4b20',
-      'rgba(195, 124, 56, 0.82)',
-      'rgba(41, 15, 5, 0.9)'
-    );
+    quality.useRoadTexture
+      ? roadTextureImage ??
+        getProceduralTexture(
+          'road-dust-80',
+          80,
+          '#8b4b20',
+          'rgba(195, 124, 56, 0.82)',
+          'rgba(41, 15, 5, 0.9)'
+        )
+      : null;
   if (roadTexture) {
     const pattern = ctx.createPattern(roadTexture, 'repeat');
     if (pattern) {
@@ -615,7 +693,7 @@ const drawRoadMesh = (
 
   ctx.save();
   ctx.globalCompositeOperation = 'multiply';
-  for (let i = 3; i < samples.length; i += 3) {
+  for (let i = quality.roadCrossStep; i < samples.length; i += quality.roadCrossStep) {
     const sample = samples[i];
     ctx.strokeStyle = `rgba(33, 12, 4, ${0.06 + sample.t * 0.16})`;
     ctx.lineWidth = lerp(0.55, 2.2, sample.t);
@@ -628,8 +706,9 @@ const drawRoadMesh = (
 
   ctx.save();
   ctx.globalCompositeOperation = 'multiply';
-  for (let i = 0; i < 26; i += 1) {
-    const sample = samples[Math.min(samples.length - 1, Math.floor((i / 25) * (samples.length - 1)))];
+  const scratchDenominator = Math.max(quality.roadScratchCount - 1, 1);
+  for (let i = 0; i < quality.roadScratchCount; i += 1) {
+    const sample = samples[Math.min(samples.length - 1, Math.floor((i / scratchDenominator) * (samples.length - 1)))];
     const edge = i % 2 === 0 ? -1 : 1;
     ctx.strokeStyle = `rgba(38, 14, 4, ${0.04 + sample.t * 0.08})`;
     ctx.lineWidth = 0.8 + sample.t * 2.1;
@@ -676,7 +755,7 @@ const drawRoadMesh = (
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  for (let i = 0; i < 128; i += 1) {
+  for (let i = 0; i < quality.roadDustCount; i += 1) {
     const seed = i + Math.floor(last.dayIndex * 1.3) * 31;
     const depth = seededFraction(seed) ** 0.58;
     const sample = samples[Math.min(samples.length - 1, Math.floor(depth * (samples.length - 1)))];
@@ -832,10 +911,11 @@ const drawMemoryTrail = (
   height: number,
   lateral: number,
   points: MountainPoint[],
-  maxHeight: number
+  maxHeight: number,
+  trailCount: number
 ) => {
   ctx.save();
-  for (let i = 0; i < 14; i += 1) {
+  for (let i = 0; i < trailCount; i += 1) {
     const trailIndex = currentIndex - 4 - i * 4.8;
     const printLateral = lateral * 0.28 + Math.sin((currentIndex - i * 8) * 0.06) * 0.16;
     const point = projectDay(trailIndex, printLateral, currentIndex, width, height, points, maxHeight);
@@ -886,6 +966,7 @@ export const Scene2D = () => {
   const keyStateRef = useRef<KeyState>({ ...DEFAULT_KEYS });
   const syncTimerRef = useRef(0);
   const roadTextureRef = useRef<CanvasImageSource | null>(cachedRoadTextureImage);
+  const qualityRef = useRef<Scene2DQuality>('high');
 
   const eventMarkers = useMemo<EventMarker2D[]>(() => {
     if (!data.length) return [];
@@ -1025,7 +1106,13 @@ export const Scene2D = () => {
     let animationFrame = 0;
     let lastTime = performance.now();
     let lastPaint = 0;
+    let averageFrameMs = 16.7;
+    let averagePaintMs = 0;
+    let stablePaints = 0;
+    let qualityCooldownUntil = lastTime + 1800;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    qualityRef.current = reducedMotion ? 'low' : 'high';
+    canvas.dataset.sceneQuality = qualityRef.current;
     const frameMs = reducedMotion ? 100 : 48;
 
     const resize = () => {
@@ -1046,7 +1133,42 @@ export const Scene2D = () => {
       }
     };
 
+    const setDynamicQuality = (nextQuality: Scene2DQuality, now: number) => {
+      if (qualityRef.current === nextQuality) return;
+      qualityRef.current = nextQuality;
+      canvas.dataset.sceneQuality = nextQuality;
+      stablePaints = 0;
+      qualityCooldownUntil = now + 2600;
+    };
+
+    const updateDynamicQuality = (paintMs: number, now: number) => {
+      averagePaintMs = averagePaintMs === 0 ? paintMs : averagePaintMs * 0.88 + paintMs * 0.12;
+      if (reducedMotion || now < qualityCooldownUntil) return;
+
+      const currentQuality = qualityRef.current;
+      const shouldDrop =
+        (currentQuality === 'high' && (averagePaintMs > 24 || averageFrameMs > 38)) ||
+        (currentQuality === 'medium' && (averagePaintMs > 30 || averageFrameMs > 46));
+
+      if (shouldDrop) {
+        setDynamicQuality(degradeScene2DQuality(currentQuality), now);
+        return;
+      }
+
+      const restoreThreshold = currentQuality === 'low' ? 15 : 12;
+      if (currentQuality !== 'high' && averagePaintMs < restoreThreshold && averageFrameMs < 24) {
+        stablePaints += 1;
+        if (stablePaints >= 120) {
+          setDynamicQuality(restoreScene2DQuality(currentQuality), now);
+        }
+        return;
+      }
+
+      stablePaints = 0;
+    };
+
     const paint = (now: number) => {
+      const paintStart = performance.now();
       resize();
       const width = canvas.width;
       const height = canvas.height;
@@ -1055,26 +1177,28 @@ export const Scene2D = () => {
       const points = mountainPointsRef.current;
       const maxHeight = maxMountainHeightRef.current;
       const remote = remoteEntriesRef.current;
-      const samples = createDepthSamples(width, height, currentIndex, lateral, points, maxHeight);
+      const quality = SCENE_2D_QUALITY[qualityRef.current];
+      const samples = createDepthSamples(width, height, currentIndex, lateral, points, maxHeight, quality.depthSampleCount);
 
       context.clearRect(0, 0, width, height);
       drawBackground(context, width, height);
-      drawDistantRidges(context, width, height, points, currentIndex, maxHeight);
-      drawTerrainMesh(context, width, height, samples);
-      drawRoadMesh(context, width, height, samples, roadTextureRef.current);
+      drawDistantRidges(context, width, height, points, currentIndex, maxHeight, quality.ridgeLayers);
+      drawTerrainMesh(context, width, height, samples, quality);
+      drawRoadMesh(context, width, height, samples, roadTextureRef.current, quality);
       drawEventMarkers(context, eventMarkersRef.current, currentIndex, width, height, lateral, points, maxHeight);
-      drawMemoryTrail(context, currentIndex, width, height, lateral, points, maxHeight);
+      drawMemoryTrail(context, currentIndex, width, height, lateral, points, maxHeight, quality.memoryTrailCount);
 
-      localFootprintsRef.current.forEach((footprint, idx) => {
+      const visibleLocalFootprints = localFootprintsRef.current.slice(-quality.maxLocalFootprints);
+      visibleLocalFootprints.forEach((footprint, idx) => {
         const point = projectDay(footprint.index, footprint.lateral, currentIndex, width, height, points, maxHeight);
         if (!point) return;
         const age = (now - footprint.createdAt) / 1000;
-        const recency = (idx + 1) / Math.max(localFootprintsRef.current.length, 1);
+        const recency = (idx + 1) / Math.max(visibleLocalFootprints.length, 1);
         const alpha = clamp(0.18 + recency * 0.72, 0.2, 0.92) * clamp(1 - age / 180, 0.36, 1);
         drawFootprintPair(context, point, idx * 41 + Math.round(footprint.index), alpha, BLOOD_COLORS[idx % BLOOD_COLORS.length]);
       });
 
-      remote.forEach((entry, idx) => {
+      remote.slice(0, quality.maxRemoteFootprints).forEach((entry, idx) => {
         const remoteLateral = clamp((entry.position.z ?? 0) / 5.2, -1, 1);
         const point = projectDay(entry.dayIndex, remoteLateral, currentIndex, width, height, points, maxHeight);
         if (!point) return;
@@ -1083,11 +1207,14 @@ export const Scene2D = () => {
       });
 
       drawAtmosphere(context, width, height);
+      updateDynamicQuality(performance.now() - paintStart, performance.now());
     };
 
     const tick = (now: number) => {
-      const delta = Math.min((now - lastTime) / 1000, 0.08);
+      const elapsedMs = Math.min(now - lastTime, 80);
+      const delta = elapsedMs / 1000;
       lastTime = now;
+      averageFrameMs = averageFrameMs * 0.94 + elapsedMs * 0.06;
 
       const state = useCovidStore.getState();
       const maxIndex = Math.max(0, dataRef.current.length - 1);

@@ -89,7 +89,7 @@ export const EventCard = ({ layout = 'floating', className, onExpand }: EventCar
               <Info className="h-4 w-4 shrink-0" />
               <p
                 className={cn(
-                  'text-[11px] uppercase',
+                  'hud-mobile-event-kicker text-[11px] uppercase',
                   isMobileCompact ? 'text-[10px] tracking-[0.14em]' : 'truncate tracking-[0.35em]'
                 )}
               >
@@ -97,10 +97,17 @@ export const EventCard = ({ layout = 'floating', className, onExpand }: EventCar
               </p>
             </div>
             <div>
-              <p className={cn('text-[11px] text-white/70', isMobileCompact && 'uppercase tracking-[0.12em]')}>{formattedDate}</p>
+              <p
+                className={cn(
+                  'hud-mobile-event-date text-[11px] text-white/70',
+                  isMobileCompact && 'uppercase tracking-[0.12em]'
+                )}
+              >
+                {formattedDate}
+              </p>
               <h3
                 className={cn(
-                  'break-words text-[15px] font-semibold leading-snug',
+                  'hud-mobile-event-title break-words text-[15px] font-semibold leading-snug',
                   isMobileCompact && 'line-clamp-2 text-[13px] leading-[1.22]'
                 )}
               >
@@ -121,7 +128,7 @@ export const EventCard = ({ layout = 'floating', className, onExpand }: EventCar
               <button
                 type="button"
                 onClick={onExpand}
-                className="inline-flex w-full items-center justify-center rounded-xl border border-amber-200/35 bg-amber-300/12 px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-amber-100 transition hover:bg-amber-300/20"
+                className="hud-mobile-event-cta inline-flex w-full items-center justify-center rounded-xl border border-amber-200/35 bg-amber-300/12 px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-amber-100 transition hover:bg-amber-300/20"
               >
                 Abrir registro
               </button>
