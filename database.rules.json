@@ -6,7 +6,16 @@
       ".indexOn": ["lastSeenAt", "joinedAt"],
       "$sessionId": {
         ".read": false,
-        ".write": "data.exists() && data.child('sessionId').val() === $sessionId && !newData.exists()"
+        ".write": "data.exists() && data.child('sessionId').val() === $sessionId && ((!newData.exists()) || (data.child('status').val() === 'alive' && newData.exists() && newData.child('sessionId').val() === $sessionId && newData.child('joinedAt').val() === data.child('joinedAt').val() && newData.child('updateIntervalMs').val() === data.child('updateIntervalMs').val() && newData.child('status').val() === 'alive' && newData.child('lastSeenAt').isNumber() && newData.child('lastSeenAt').val() >= now - 60000 && newData.child('lastSeenAt').val() <= now + 10000 && newData.child('dayIndex').isNumber() && newData.child('dayIndex').val() >= 0 && newData.child('dayIndex').val() <= 5000 && newData.child('isMobile').isBoolean() && newData.child('position').child('x').isNumber() && newData.child('position').child('x').val() >= -10000 && newData.child('position').child('x').val() <= 10000 && newData.child('position').child('y').isNumber() && newData.child('position').child('y').val() >= -10000 && newData.child('position').child('y').val() <= 10000 && newData.child('position').child('z').isNumber() && newData.child('position').child('z').val() >= -10000 && newData.child('position').child('z').val() <= 10000 && (!newData.child('cases').exists() || (newData.child('cases').isNumber() && newData.child('cases').val() >= 0 && newData.child('cases').val() <= 2000000)) && (!newData.child('deaths').exists() || (newData.child('deaths').isNumber() && newData.child('deaths').val() >= 0 && newData.child('deaths').val() <= 50000))))"
+      }
+    },
+    "presenceRooms": {
+      ".read": true,
+      "$roomId": {
+        ".indexOn": ["lastSeenAt", "dayIndex"],
+        "$sessionId": {
+          ".write": "(!newData.exists() && data.exists() && data.child('sessionId').val() === $sessionId) || (newData.exists() && newData.child('sessionId').val() === $sessionId && newData.child('status').val() === 'alive' && newData.child('lastSeenAt').isNumber() && newData.child('lastSeenAt').val() >= now - 60000 && newData.child('lastSeenAt').val() <= now + 10000 && newData.child('dayIndex').isNumber() && newData.child('dayIndex').val() >= 0 && newData.child('dayIndex').val() <= 5000 && newData.child('isMobile').isBoolean() && newData.child('position').child('x').isNumber() && newData.child('position').child('x').val() >= -10000 && newData.child('position').child('x').val() <= 10000 && newData.child('position').child('y').isNumber() && newData.child('position').child('y').val() >= -10000 && newData.child('position').child('y').val() <= 10000 && newData.child('position').child('z').isNumber() && newData.child('position').child('z').val() >= -10000 && newData.child('position').child('z').val() <= 10000 && (!newData.child('cases').exists() || (newData.child('cases').isNumber() && newData.child('cases').val() >= 0 && newData.child('cases').val() <= 2000000)) && (!newData.child('deaths').exists() || (newData.child('deaths').isNumber() && newData.child('deaths').val() >= 0 && newData.child('deaths').val() <= 50000)))"
+        }
       }
     },
     "worldState": {
@@ -16,7 +25,7 @@
       }
     },
     "collapseEvents": {
-      ".read": true,
+      ".read": false,
       ".write": false,
       ".indexOn": ["targetSessionId", "createdAt"]
     }

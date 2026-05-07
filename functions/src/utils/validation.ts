@@ -107,6 +107,14 @@ export const validateUpdatePresenceRequest = (body: unknown): UpdatePresenceRequ
       max: MAX_DAY_INDEX,
       integer: true,
     }),
+    cases: payload.cases === undefined ? undefined : requireFiniteNumber(payload.cases, "cases", {
+      min: 0,
+      max: 2_000_000,
+    }),
+    deaths: payload.deaths === undefined ? undefined : requireFiniteNumber(payload.deaths, "deaths", {
+      min: 0,
+      max: 50_000,
+    }),
     position: requirePresenceVector(payload.position),
     clientTimestamp,
   };
@@ -170,6 +178,8 @@ export const parseRealtimePresence = (value: unknown, fallbackSessionId?: string
     lastSeenAt: value.lastSeenAt,
     oxygen: value.oxygen,
     dayIndex: value.dayIndex,
+    cases: typeof value.cases === "number" && Number.isFinite(value.cases) ? value.cases : undefined,
+    deaths: typeof value.deaths === "number" && Number.isFinite(value.deaths) ? value.deaths : undefined,
     position,
     status,
     isMobile: value.isMobile,
@@ -184,6 +194,21 @@ export const parseRealtimePresence = (value: unknown, fallbackSessionId?: string
 export const parseWorldOxygenState = (value: unknown): WorldOxygenState | null => {
   if (!isRecord(value)) return null;
   const status = value.status;
+  const lastCollapse =
+    isRecord(value.lastCollapse) &&
+    typeof value.lastCollapse.eventId === "string" &&
+    typeof value.lastCollapse.targetSessionId === "string" &&
+    typeof value.lastCollapse.createdAt === "number" &&
+    Number.isFinite(value.lastCollapse.createdAt) &&
+    typeof value.lastCollapse.message === "string" ?
+      {
+        eventId: value.lastCollapse.eventId,
+        targetSessionId: value.lastCollapse.targetSessionId,
+        createdAt: value.lastCollapse.createdAt,
+        message: value.lastCollapse.message,
+      } :
+      null;
+
   if (
     typeof value.updatedAt !== "number" ||
     !Number.isFinite(value.updatedAt) ||
@@ -213,5 +238,6 @@ export const parseWorldOxygenState = (value: unknown): WorldOxygenState | null =
     normalizedDeaths: value.normalizedDeaths,
     pressure: value.pressure,
     status,
+    lastCollapse,
   };
 };

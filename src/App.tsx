@@ -13,6 +13,7 @@ import { IntroPresentation } from './components/IntroPresentation';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MemorialPanel } from './components/MemorialPanel';
 import { MobileMoveJoystick } from './components/MobileMoveJoystick';
+import { Scene2D } from './components/Scene2D';
 import { OxygenBar } from './components/oxygen/OxygenBar';
 import { OxygenCollapseOverlay } from './components/oxygen/OxygenCollapseOverlay';
 import { OxygenWorldStatus } from './components/oxygen/OxygenWorldStatus';
@@ -21,6 +22,7 @@ import { useCovidData } from './hooks/useCovidData';
 import { useOxygenCollapseListener } from './hooks/useOxygenCollapseListener';
 import { usePresencePositionSync } from './hooks/usePresencePositionSync';
 import { usePresenceSession } from './hooks/usePresenceSession';
+import { useRenderProfile } from './hooks/useRenderProfile';
 import { AuthProvider } from './providers/AuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
 import { useCovidStore } from './stores/covidStore';
@@ -53,15 +55,18 @@ const loadScene3D = async () => {
 };
 
 const Scene3D = lazy(loadScene3D);
+const isPresenceEnabled = () => import.meta.env.VITE_ENABLE_PRESENCE !== 'false';
 
 function AppContent() {
   const { isLoading, error } = useCovidData();
   const [mobilePanel, setMobilePanel] = useState<'event' | 'memorial' | 'header' | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
   const isMobile = useIsMobile();
+  const renderProfile = useRenderProfile();
+  const presenceEnabled = isPresenceEnabled();
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const shouldReset = useOxygenStore((state) => state.shouldReset);
-  const presenceSession = usePresenceSession({ enabled: hasEntered });
+  const presenceSession = usePresenceSession({ enabled: hasEntered && presenceEnabled });
   const getPresencePosition = useCallback(() => {
     const [x, y, z] = useCovidStore.getState().cameraPosition;
     return { x, y, z };
@@ -71,9 +76,9 @@ function AppContent() {
     sessionId: presenceSession.sessionId,
     dayIndex: currentDateIndex,
     getPosition: getPresencePosition,
-    enabled: hasEntered && !shouldReset,
+    enabled: hasEntered && presenceEnabled && !shouldReset,
   });
-  useOxygenCollapseListener(presenceSession.sessionId);
+  useOxygenCollapseListener(presenceEnabled ? presenceSession.sessionId : null);
 
   const toggleMobilePanel = (panel: 'event' | 'memorial' | 'header') => {
     setMobilePanel((current) => (current === panel ? null : panel));
@@ -105,7 +110,7 @@ function AppContent() {
   }
 
   return (
-    <div className="app-shell relative h-screen w-full overflow-hidden bg-black">
+    <div className="app-shell relative h-screen w-full overflow-hidden bg-black" data-render-mode={renderProfile.mode}>
       <header className="app-header pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
         <div className="hud-desktop-header pointer-events-auto hidden flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:flex xl:gap-4 xl:px-6 xl:py-3">
           <InfoPanel variant="compact" />
@@ -149,9 +154,14 @@ function AppContent() {
 
       <ErrorBoundary>
         <div className="relative h-full">
-          <Suspense fallback={<LoadingScreen message="Preparando a serra 3D..." />}>
-            <Scene3D enableControls showStats={false} />
-          </Suspense>
+          {renderProfile.mode === '2d' ? (
+            <Scene2D />
+          ) : (
+            // Em aparelhos fortes a obra usa WebGL completo; em Safari/mobile o canvas 2D evita estouro de memoria.
+            <Suspense fallback={<LoadingScreen message="Preparando a serra 3D..." />}>
+              <Scene3D enableControls showStats={false} />
+            </Suspense>
+          )}
           <CinematicAudio />
           <OxygenBar />
           <OxygenWorldStatus />

@@ -1,8 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { recalculateOxygen, updatePresence } from '../services/presenceApi';
+import {
+  configurePresenceRoomOnDisconnect,
+  getPresenceRoomId,
+  removeRealtimePresenceRoom,
+  writeRealtimePresence,
+} from '../services/firebaseRealtime';
 import { useCovidStore } from '../stores/covidStore';
 import { useOxygenStore } from '../stores/oxygenStore';
-import type { OxygenStatus } from '../types/oxygen';
 import type { PresenceVector } from '../types/realtimePresence';
 
 export type UsePresencePositionSyncInput = {
@@ -12,29 +16,44 @@ export type UsePresencePositionSyncInput = {
   enabled: boolean;
 };
 
-const RECALCULATE_LEASE_KEY = 'serra-sem-ar-oxygen-recalculate-lease';
-const RECALCULATE_DESKTOP_INTERVAL_MS = 15_000;
-const RECALCULATE_MOBILE_INTERVAL_MS = 25_000;
+const DESKTOP_MIN_WRITE_INTERVAL_MS = 5_000;
+const MOBILE_MIN_WRITE_INTERVAL_MS = 8_000;
+const HEARTBEAT_INTERVAL_MS = 45_000;
+const POSITION_DELTA_METERS = 2;
+const POSITION_DELTA_SQ = POSITION_DELTA_METERS * POSITION_DELTA_METERS;
+const DAY_INDEX_DELTA = 7;
+
+type PublishedPresence = {
+  position: PresenceVector;
+  dayIndex: number;
+  atMs: number;
+  roomId: number;
+};
 
 const isFinitePosition = (position: PresenceVector): boolean =>
   Number.isFinite(position.x) && Number.isFinite(position.y) && Number.isFinite(position.z);
 
-const oxygenStatusFromCollective = (collectiveOxygen: number): OxygenStatus => {
-  if (collectiveOxygen <= 0) return 'collapsed';
-  if (collectiveOxygen <= 25) return 'critical';
-  return 'stable';
+const distanceSq = (a: PresenceVector, b: PresenceVector): number => {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  const dz = a.z - b.z;
+  return dx * dx + dy * dy + dz * dz;
 };
 
-const tryAcquireRecalculationLease = (now: number, leaseMs: number): boolean => {
-  if (typeof window === 'undefined') return true;
-  try {
-    const current = Number(window.localStorage.getItem(RECALCULATE_LEASE_KEY) ?? 0);
-    if (Number.isFinite(current) && now - current < leaseMs) return false;
-    window.localStorage.setItem(RECALCULATE_LEASE_KEY, String(now));
-    return true;
-  } catch {
-    return true;
-  }
+const quantizeCoordinate = (value: number): number => Math.round(value * 10) / 10;
+
+const quantizePosition = ({ x, y, z }: PresenceVector): PresenceVector => ({
+  x: quantizeCoordinate(x),
+  y: quantizeCoordinate(y),
+  z: quantizeCoordinate(z),
+});
+
+const detectMobile = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  return width < 768 || (width <= 1100 && height <= 540) || (coarsePointer && width < 1180);
 };
 
 export const usePresencePositionSync = ({
@@ -43,13 +62,10 @@ export const usePresencePositionSync = ({
   getPosition,
   enabled,
 }: UsePresencePositionSyncInput): void => {
-  const updateIntervalMs = useOxygenStore((state) => state.updateIntervalMs);
   const isOfflineFallback = useOxygenStore((state) => state.isOfflineFallback);
-  const setOxygenState = useOxygenStore((state) => state.setOxygenState);
-  const triggerCollapse = useOxygenStore((state) => state.triggerCollapse);
   const latestInputRef = useRef({ dayIndex, getPosition });
-  const lastRecalculateAtRef = useRef(0);
-  const lastRecalculateDayRef = useRef<number | null>(null);
+  const lastPublishedRef = useRef<PublishedPresence | null>(null);
+  const cancelRoomDisconnectRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     latestInputRef.current = { dayIndex, getPosition };
@@ -59,84 +75,78 @@ export const usePresencePositionSync = ({
     if (!enabled || !sessionId || sessionId.startsWith('local_') || isOfflineFallback) return undefined;
 
     let cancelled = false;
-    const recalculateIntervalMs =
-      updateIntervalMs >= 3_000 ? RECALCULATE_MOBILE_INTERVAL_MS : RECALCULATE_DESKTOP_INTERVAL_MS;
+    const isMobile = detectMobile();
+    const minWriteIntervalMs = isMobile ? MOBILE_MIN_WRITE_INTERVAL_MS : DESKTOP_MIN_WRITE_INTERVAL_MS;
 
-    const tick = async () => {
+    const sync = async (force = false) => {
       if (cancelled) return;
+
       const latest = latestInputRef.current;
-      const position = latest.getPosition();
-      if (!isFinitePosition(position)) return;
+      const rawPosition = latest.getPosition();
+      if (!isFinitePosition(rawPosition)) return;
 
-      try {
-        const response = await updatePresence({
-          sessionId,
-          dayIndex: latest.dayIndex,
-          position,
-          clientTimestamp: Date.now(),
-        });
+      const data = useCovidStore.getState().data[latest.dayIndex];
+      const position = quantizePosition(rawPosition);
+      const now = Date.now();
+      const roomId = getPresenceRoomId(latest.dayIndex);
+      const previous = lastPublishedRef.current;
 
-        setOxygenState({
-          oxygen: response.oxygen,
-          collectiveOxygen: response.collectiveOxygen,
-          status: response.worldStatus,
-        });
+      if (!force && previous) {
+        const movedEnough = distanceSq(position, previous.position) >= POSITION_DELTA_SQ;
+        const dayChangedEnough = Math.abs(latest.dayIndex - previous.dayIndex) >= DAY_INDEX_DELTA;
+        const heartbeatDue = now - previous.atMs >= HEARTBEAT_INTERVAL_MS;
+        const minIntervalPassed = now - previous.atMs >= minWriteIntervalMs;
 
-        if (response.shouldReset) {
-          triggerCollapse(response.message ?? 'Sua presença foi removida da paisagem.');
-          return;
-        }
-      } catch {
-        return;
+        if (!minIntervalPassed || (!movedEnough && !dayChangedEnough && !heartbeatDue)) return;
       }
 
-      const now = Date.now();
-      const shouldRecalculateByTime = now - lastRecalculateAtRef.current >= recalculateIntervalMs;
-      const shouldRecalculateByDay =
-        lastRecalculateDayRef.current === null || Math.abs(latest.dayIndex - lastRecalculateDayRef.current) >= 4;
-      if (!shouldRecalculateByTime && !shouldRecalculateByDay) return;
-      if (!tryAcquireRecalculationLease(now, 6_000)) return;
-
-      const currentData = useCovidStore.getState().data[latest.dayIndex];
-      if (!currentData) return;
-
       try {
-        const recalculated = await recalculateOxygen({
+        await writeRealtimePresence({
+          sessionId,
+          roomId,
+          previousRoomId: previous?.roomId,
+          lastSeenAt: now,
           dayIndex: latest.dayIndex,
-          cases: currentData.cases,
-          deaths: currentData.deaths,
+          cases: data?.cases ?? 0,
+          deaths: data?.deaths ?? 0,
+          position,
+          isMobile,
         });
-        lastRecalculateAtRef.current = now;
-        lastRecalculateDayRef.current = latest.dayIndex;
-        setOxygenState({
-          oxygen: useOxygenStore.getState().oxygen,
-          collectiveOxygen: recalculated.collectiveOxygen,
-          status: oxygenStatusFromCollective(recalculated.collectiveOxygen),
-        });
-        if (recalculated.collapsed && recalculated.collapsedSessionId === sessionId) {
-          triggerCollapse('A serra ficou sem ar. Sua presença foi removida da paisagem.');
+
+        if (!previous || previous.roomId !== roomId) {
+          const cancelCurrent = cancelRoomDisconnectRef.current;
+          cancelRoomDisconnectRef.current = null;
+          if (cancelCurrent) void cancelCurrent().catch(() => undefined);
+          cancelRoomDisconnectRef.current = await configurePresenceRoomOnDisconnect(sessionId, roomId);
         }
+
+        lastPublishedRef.current = {
+          position,
+          dayIndex: latest.dayIndex,
+          atMs: now,
+          roomId,
+        };
       } catch {
-        lastRecalculateAtRef.current = now;
-        lastRecalculateDayRef.current = latest.dayIndex;
+        // Presenca remota e opcional; se regras/RTDB falharem, a obra segue localmente.
       }
     };
 
-    void tick();
+    void sync(true);
     const interval = window.setInterval(() => {
-      void tick();
-    }, updateIntervalMs);
+      void sync();
+    }, minWriteIntervalMs);
 
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+
+      const currentRoomId = lastPublishedRef.current?.roomId;
+      lastPublishedRef.current = null;
+
+      const cancelRoomDisconnect = cancelRoomDisconnectRef.current;
+      cancelRoomDisconnectRef.current = null;
+      if (cancelRoomDisconnect) void cancelRoomDisconnect().catch(() => undefined);
+      if (currentRoomId !== undefined) void removeRealtimePresenceRoom(sessionId, currentRoomId).catch(() => undefined);
     };
-  }, [
-    enabled,
-    isOfflineFallback,
-    sessionId,
-    setOxygenState,
-    triggerCollapse,
-    updateIntervalMs,
-  ]);
+  }, [enabled, isOfflineFallback, sessionId]);
 };

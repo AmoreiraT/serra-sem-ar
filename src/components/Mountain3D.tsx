@@ -1,13 +1,5 @@
-import rockAOTexture from '@/assets/textures/rock/GroundDirtRocky020_AO_2K.jpg';
-import pathAOTexture from '@assets/textures/road/old_road_01_ambientOcclusion_1k.png';
-import pathDiffuseTexture from '@assets/textures/road/old_road_01_baseColor_1k.png';
-import pathHeightTexture from '@assets/textures/road/old_road_01_height_1k.png';
-import pathMetallicTexture from '@assets/textures/road/old_road_01_metallic_1k.png';
-import pathNormalTexture from '@assets/textures/road/old_road_01_normal_gl_1k.png';
-import pathRoughTexture from '@assets/textures/road/old_road_01_roughness_1k.png';
-import rockDiffuseTexture from '@assets/textures/rock/GroundDirtRocky020_COL_2K.jpg';
-import rockRoughTexture from '@assets/textures/rock/GroundDirtRocky020_GLOSS_2K.jpg';
-import rockNormalTexture from '@assets/textures/rock/GroundDirtRocky020_NRM_2K.jpg';
+import rockBakedTexture from '@assets/textures/baked/rock_baked_1024.webp';
+import pathBakedTexture from '@assets/textures/baked/road_baked_512.webp';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody } from '@react-three/rapier';
 import { forwardRef, useEffect, useMemo, useRef } from 'react';
@@ -64,9 +56,9 @@ const FALLOFF_RADIUS = 55;
 const MIN_WALKWAY_BASE = -8.2;
 const WALKWAY_THICKNESS = 5.0;
 const PLATEAU_THICKNESS = 1.3;
-const WALKWAY_SURFACE_OFFSET = 0.28;
+const WALKWAY_SURFACE_OFFSET = 0.16;
 const WALKWAY_WIDTH_RATIO = 0.62;
-const WALKWAY_GROOVE_DEPTH = 0.18;
+const WALKWAY_GROOVE_DEPTH = 0.045;
 const WALKWAY_BEVEL_INNER = 2.8;
 const WALKWAY_BEVEL_OUTER = 4.2;
 const WALKWAY_TILE_U = 0.028;
@@ -347,8 +339,8 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
           const ripple = noise2D(point.x * 0.1, i * 0.022) * WALKWAY_RIPPLE_STRENGTH;
           y = walkwayHeight - WALKWAY_GROOVE_DEPTH + ripple;
         } else if (dist <= profile.plateauHalf) {
-          const centerT = (dist - profile.walkwayHalf) / profile.plateauRange;
-          const plateauEase = 1 - centerT * centerT * 0.18;
+          const centerT = THREE.MathUtils.clamp((dist - profile.walkwayHalf) / profile.plateauRange, 0, 1);
+          const plateauEase = centerT * centerT * (3 - 2 * centerT);
           const undulation =
             (Math.sin(point.x * 0.22 + z * 0.06) * 0.22 + Math.cos(point.x * 0.14 + z * 0.18) * 0.16) *
             (1 - centerT);
@@ -781,32 +773,33 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
     pathHeight,
     pathMetallic,
   } = useTextureLoader(
-    rockDiffuseTexture,
-    rockNormalTexture,
-    rockAOTexture,
-    rockRoughTexture,
-    pathDiffuseTexture,
-    pathNormalTexture,
-    pathAOTexture,
-    pathRoughTexture,
-    pathHeightTexture,
-    pathMetallicTexture
+    rockBakedTexture,
+    undefined,
+    undefined,
+    undefined,
+    pathBakedTexture
   );
 
   const anisotropyCap = qualityConfig.maxAnisotropy;
 
   useEffect(() => {
-    diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
-    diffuseMap.repeat.set(6, 3);
-    diffuseMap.anisotropy = Math.max(diffuseMap.anisotropy, anisotropyCap);
-    diffuseMap.colorSpace = THREE.SRGBColorSpace;
+    if (diffuseMap) {
+      diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
+      diffuseMap.repeat.set(6, 3);
+      diffuseMap.anisotropy = Math.max(diffuseMap.anisotropy, anisotropyCap);
+      diffuseMap.colorSpace = THREE.SRGBColorSpace;
+    }
 
-    normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
-    normalMap.repeat.set(6, 3);
-    normalMap.anisotropy = Math.max(normalMap.anisotropy, Math.max(2, anisotropyCap - 3));
+    if (normalMap) {
+      normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+      normalMap.repeat.set(6, 3);
+      normalMap.anisotropy = Math.max(normalMap.anisotropy, Math.max(2, anisotropyCap - 3));
+    }
 
-    aoMap.wrapS = aoMap.wrapT = THREE.RepeatWrapping;
-    aoMap.repeat.set(6, 3);
+    if (aoMap) {
+      aoMap.wrapS = aoMap.wrapT = THREE.RepeatWrapping;
+      aoMap.repeat.set(6, 3);
+    }
 
     if (roughnessMap) {
       roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
@@ -870,7 +863,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
             roughnessMap={roughnessMap}
             side={THREE.DoubleSide}
             roughness={0.92}
-            metalness={0.04}
+            metalness={0.02}
           />
         </mesh>
         {walkwayGeometry && pathDiffuse && (
@@ -882,14 +875,14 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
               roughnessMap={pathRough ?? undefined}
               metalnessMap={pathMetallic ?? undefined}
               displacementMap={pathHeight ?? undefined}
-              displacementScale={pathHeight ? 0.06 : 0}
-              displacementBias={pathHeight ? -0.015 : 0}
+              displacementScale={0}
+              displacementBias={0}
               side={THREE.DoubleSide}
               polygonOffset
               polygonOffsetFactor={-1}
               polygonOffsetUnits={-1}
-              roughness={0.68}
-              metalness={pathMetallic ? 0.25 : 0.08}
+              roughness={0.82}
+              metalness={0.03}
             />
           </mesh>
         )}

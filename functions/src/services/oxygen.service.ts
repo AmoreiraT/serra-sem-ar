@@ -6,7 +6,7 @@ import type {
   RecalculateOxygenResponse,
   WorldOxygenState,
 } from "../types/oxygen";
-import type {CollapseEvent} from "../types/presence";
+import type {CollapseEvent, RealtimePresence} from "../types/presence";
 import {clamp} from "../utils/clamp";
 import {parseWorldOxygenState} from "../utils/validation";
 import {
@@ -40,6 +40,7 @@ export const defaultWorldOxygenState = (): WorldOxygenState => ({
   normalizedDeaths: 0,
   pressure: oxygenConfig.baseDrain,
   status: "stable",
+  lastCollapse: null,
 });
 
 export const getWorldOxygenState = async (): Promise<WorldOxygenState> => {
@@ -93,6 +94,33 @@ const buildWorldState = (
   };
 };
 
+const medianNumber = (values: number[]): number => {
+  const sorted = values
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+  if (!sorted.length) return 0;
+
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[middle];
+  return (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+const oldestPresenceFrom = (presences: RealtimePresence[]): RealtimePresence | null => {
+  if (!presences.length) return null;
+  return presences.reduce((oldest, presence) =>
+    presence.joinedAt < oldest.joinedAt ? presence : oldest
+  );
+};
+
+const recordPeakOnlineUsersSafe = async (onlineUsersCount: number): Promise<void> => {
+  await recordPeakOnlineUsers(onlineUsersCount).catch((error: unknown) => {
+    console.warn(
+      "recordPeakOnlineUsers failed",
+      error instanceof Error ? error.message : "unknown_error"
+    );
+  });
+};
+
 const collapseMessage = (reason: CollapseReason): string => {
   if (reason === "too_many_users") {
     return "Presencas demais comprimiram o ar. A serra guardou uma ausencia.";
@@ -132,6 +160,83 @@ const writeWorldState = async (state: WorldOxygenState): Promise<void> => {
   await database().ref(WORLD_OXYGEN_PATH).set(state);
 };
 
+const completeOxygenCalculation = async (
+  input: RecalculateOxygenRequest,
+  alivePresences: RealtimePresence[],
+  now: number,
+  shouldRecordPeak: boolean
+): Promise<RecalculateOxygenResponse> => {
+  const onlineUsersCount = alivePresences.length;
+  const calculatedWorld = buildWorldState(input, onlineUsersCount, now);
+
+  if (shouldRecordPeak) {
+    await recordPeakOnlineUsersSafe(onlineUsersCount);
+  }
+
+  if (calculatedWorld.collectiveOxygen > oxygenConfig.collapseThreshold ||
+    onlineUsersCount === 0) {
+    await writeWorldState(calculatedWorld);
+    return {
+      onlineUsersCount,
+      collectiveOxygen: calculatedWorld.collectiveOxygen,
+      pressure: calculatedWorld.pressure,
+      collapsed: false,
+    };
+  }
+
+  const oldest = oldestPresenceFrom(alivePresences) ??
+    await findOldestAlivePresence(now);
+  if (!oldest) {
+    await writeWorldState(calculatedWorld);
+    return {
+      onlineUsersCount,
+      collectiveOxygen: calculatedWorld.collectiveOxygen,
+      pressure: calculatedWorld.pressure,
+      collapsed: false,
+    };
+  }
+
+  const reason: CollapseReason =
+    onlineUsersCount > oxygenConfig.maxOnlineUsersSoftLimit ?
+      "too_many_users" :
+      "collective_oxygen_below_zero";
+  const message = collapseMessage(reason);
+
+  await markPresenceAsphyxiated(oldest, now);
+  const collapseEvent = await createCollapseEvent(oldest.sessionId, reason, input, now, message);
+  await createOxygenMemorial({
+    sessionId: oldest.sessionId,
+    dayIndex: input.dayIndex,
+    position: oldest.position,
+    cases: input.cases,
+    deaths: input.deaths,
+    message,
+    type: reason === "too_many_users" ? "presence_removed" : "oxygen_collapse",
+  });
+  await recordDailyCollapse().catch((error: unknown) => {
+    console.warn("recordDailyCollapse failed", error instanceof Error ? error.message : "unknown_error");
+  });
+
+  const recalibratedWorld: WorldOxygenState = {
+    ...buildWorldState(input, Math.max(0, onlineUsersCount - 1), now),
+    lastCollapse: {
+      eventId: collapseEvent.eventId,
+      targetSessionId: collapseEvent.targetSessionId,
+      createdAt: collapseEvent.createdAt,
+      message: collapseEvent.message,
+    },
+  };
+  await writeWorldState(recalibratedWorld);
+
+  return {
+    onlineUsersCount: recalibratedWorld.onlineUsersCount,
+    collectiveOxygen: recalibratedWorld.collectiveOxygen,
+    pressure: recalibratedWorld.pressure,
+    collapsed: true,
+    collapsedSessionId: oldest.sessionId,
+  };
+};
+
 export const recalculateOxygen = async (
   input: RecalculateOxygenRequest
 ): Promise<RecalculateOxygenResponse> => {
@@ -151,63 +256,38 @@ export const recalculateOxygen = async (
   }
 
   const alivePresences = await listAlivePresences(now);
-  const onlineUsersCount = alivePresences.length;
-  const calculatedWorld = buildWorldState(input, onlineUsersCount, now);
-  await recordPeakOnlineUsers(onlineUsersCount).catch((error: unknown) => {
-    console.warn("recordPeakOnlineUsers failed", error instanceof Error ? error.message : "unknown_error");
-  });
-
-  if (calculatedWorld.collectiveOxygen > oxygenConfig.collapseThreshold || onlineUsersCount === 0) {
-    await writeWorldState(calculatedWorld);
-    return {
-      onlineUsersCount,
-      collectiveOxygen: calculatedWorld.collectiveOxygen,
-      pressure: calculatedWorld.pressure,
-      collapsed: false,
-    };
-  }
-
-  const oldest = await findOldestAlivePresence(now);
-  if (!oldest) {
-    await writeWorldState(calculatedWorld);
-    return {
-      onlineUsersCount,
-      collectiveOxygen: calculatedWorld.collectiveOxygen,
-      pressure: calculatedWorld.pressure,
-      collapsed: false,
-    };
-  }
-
-  const reason: CollapseReason =
-    onlineUsersCount > oxygenConfig.maxOnlineUsersSoftLimit ?
-      "too_many_users" :
-      "collective_oxygen_below_zero";
-  const message = collapseMessage(reason);
-
-  await markPresenceAsphyxiated(oldest, now);
-  await createCollapseEvent(oldest.sessionId, reason, input, now, message);
-  await createOxygenMemorial({
-    sessionId: oldest.sessionId,
-    dayIndex: input.dayIndex,
-    position: oldest.position,
-    cases: input.cases,
-    deaths: input.deaths,
-    message,
-    type: reason === "too_many_users" ? "presence_removed" : "oxygen_collapse",
-  });
-  await recordDailyCollapse().catch((error: unknown) => {
-    console.warn("recordDailyCollapse failed", error instanceof Error ? error.message : "unknown_error");
-  });
-
-  const recalibratedWorld = buildWorldState(input, Math.max(0, onlineUsersCount - 1), now);
-  await writeWorldState(recalibratedWorld);
-
-  return {
-    onlineUsersCount: recalibratedWorld.onlineUsersCount,
-    collectiveOxygen: recalibratedWorld.collectiveOxygen,
-    pressure: recalibratedWorld.pressure,
-    collapsed: true,
-    collapsedSessionId: oldest.sessionId,
-  };
+  return completeOxygenCalculation(input, alivePresences, now, false);
 };
 
+export const aggregateOxygenFromPresence = async (
+  now = Date.now()
+): Promise<RecalculateOxygenResponse> => {
+  const alivePresences = await listAlivePresences(now);
+
+  if (!alivePresences.length) {
+    const currentWorld = await getWorldOxygenState();
+    const emptyWorld: WorldOxygenState = {
+      ...defaultWorldOxygenState(),
+      updatedAt: now,
+      currentDayIndex: currentWorld.currentDayIndex,
+    };
+    await writeWorldState(emptyWorld);
+    return {
+      onlineUsersCount: 0,
+      collectiveOxygen: emptyWorld.collectiveOxygen,
+      pressure: emptyWorld.pressure,
+      collapsed: false,
+    };
+  }
+
+  const cases = medianNumber(alivePresences.map((presence) => presence.cases ?? 0));
+  const deaths = medianNumber(alivePresences.map((presence) => presence.deaths ?? 0));
+  const dayIndex = Math.round(medianNumber(alivePresences.map((presence) => presence.dayIndex)));
+
+  return completeOxygenCalculation(
+    {dayIndex, cases, deaths},
+    alivePresences,
+    now,
+    true
+  );
+};

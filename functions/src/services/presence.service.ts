@@ -1,6 +1,6 @@
-import { randomUUID } from "crypto";
-import { getDatabase } from "firebase-admin/database";
-import type { OxygenStatus } from "../types/oxygen";
+import {randomUUID} from "crypto";
+import {getDatabase} from "firebase-admin/database";
+import type {OxygenStatus} from "../types/oxygen";
 import type {
   JoinPresenceRequest,
   JoinPresenceResponse,
@@ -9,19 +9,21 @@ import type {
   UpdatePresenceRequest,
   UpdatePresenceResponse,
 } from "../types/presence";
-import { clamp } from "../utils/clamp";
-import { HttpError } from "../utils/http";
-import { isRecord, parseRealtimePresence } from "../utils/validation";
-import { recordDailySessionJoined } from "./memorial.service";
-import { oxygenConfig } from "./oxygen.config";
+import {clamp} from "../utils/clamp";
+import {HttpError} from "../utils/http";
+import {isRecord, parseRealtimePresence} from "../utils/validation";
+import {recordDailySessionJoined} from "./memorial.service";
+import {oxygenConfig} from "./oxygen.config";
 
 const PRESENCE_PATH = "realtimePresence";
+const PRESENCE_ROOMS_PATH = "presenceRooms";
+const PRESENCE_ROOM_SIZE_DAYS = 14;
 const WORLD_OXYGEN_PATH = "worldState/oxygen";
-const STALE_PRESENCE_MS = 45_000;
+const STALE_PRESENCE_MS = 90_000;
 const INITIAL_OXYGEN = 100;
-const DESKTOP_UPDATE_INTERVAL_MS = 2_000;
-const MOBILE_UPDATE_INTERVAL_MS = 3_500;
-const MIN_UPDATE_FLOOR_MS = 1_000;
+const DESKTOP_UPDATE_INTERVAL_MS = 5_000;
+const MOBILE_UPDATE_INTERVAL_MS = 8_000;
+const MIN_UPDATE_FLOOR_MS = 4_000;
 const RESET_MESSAGE = "A serra ficou sem ar. Sua presença foi removida da paisagem.";
 const STALE_MESSAGE = "A sessão perdeu o fôlego da rede e voltou ao início da serra.";
 
@@ -31,10 +33,13 @@ const database = () => getDatabase();
 
 const presenceRef = (sessionId: string) => database().ref(`${PRESENCE_PATH}/${sessionId}`);
 
+const presenceRoomPath = (dayIndex: number, sessionId: string): string =>
+  `${PRESENCE_ROOMS_PATH}/${Math.floor(Math.max(0, dayIndex) / PRESENCE_ROOM_SIZE_DAYS)}/${sessionId}`;
+
 export const recommendedUpdateIntervalMs = (isMobile: boolean): number =>
   isMobile ? MOBILE_UPDATE_INTERVAL_MS : DESKTOP_UPDATE_INTERVAL_MS;
 
-const defaultPosition = { x: 50, y: 30, z: 50 };
+const defaultPosition = {x: 50, y: 30, z: 50};
 
 export const joinPresence = async (input: JoinPresenceRequest): Promise<JoinPresenceResponse> => {
   const now = Date.now();
@@ -80,8 +85,17 @@ export const getPresence = async (sessionId: string): Promise<RealtimePresence |
 };
 
 export const leavePresence = async (sessionId: string): Promise<LeavePresenceResponse> => {
-  await presenceRef(sessionId).remove();
-  return { success: true };
+  const presence = await getPresence(sessionId);
+  const updates: Record<string, null> = {
+    [`${PRESENCE_PATH}/${sessionId}`]: null,
+  };
+
+  if (presence) {
+    updates[presenceRoomPath(presence.dayIndex, sessionId)] = null;
+  }
+
+  await database().ref().update(updates);
+  return {success: true};
 };
 
 export const listAlivePresences = async (now = Date.now()): Promise<RealtimePresence[]> => {
@@ -105,12 +119,13 @@ export const findOldestAlivePresence = async (now = Date.now()): Promise<Realtim
 };
 
 export const markPresenceAsphyxiated = async (presence: RealtimePresence, at: number): Promise<void> => {
-  await presenceRef(presence.sessionId).update({
-    status: "asphyxiated",
-    oxygen: 0,
-    asphyxiatedAt: at,
-    memorializedAt: at,
-    lastSeenAt: at,
+  await database().ref().update({
+    [`${PRESENCE_PATH}/${presence.sessionId}/status`]: "asphyxiated",
+    [`${PRESENCE_PATH}/${presence.sessionId}/oxygen`]: 0,
+    [`${PRESENCE_PATH}/${presence.sessionId}/asphyxiatedAt`]: at,
+    [`${PRESENCE_PATH}/${presence.sessionId}/memorializedAt`]: at,
+    [`${PRESENCE_PATH}/${presence.sessionId}/lastSeenAt`]: at,
+    [presenceRoomPath(presence.dayIndex, presence.sessionId)]: null,
   });
 };
 
@@ -135,7 +150,7 @@ const getWorldFallback = async (): Promise<{ collectiveOxygen: number; status: O
       100;
   const status = readWorldStatus(raw.status);
 
-  return { collectiveOxygen, status };
+  return {collectiveOxygen, status};
 };
 
 const calculateIndividualOxygen = (collectiveOxygen: number, isMobile: boolean): number => {
@@ -205,12 +220,17 @@ export const updatePresence = async (input: UpdatePresenceRequest): Promise<Upda
   }
 
   const oxygen = calculateIndividualOxygen(world.collectiveOxygen, presence.isMobile);
-  await presenceRef(input.sessionId).update({
+  const updates: Record<string, unknown> = {
     lastSeenAt: now,
     dayIndex: input.dayIndex,
     position: input.position,
     oxygen,
-  });
+  };
+
+  if (input.cases !== undefined) updates.cases = input.cases;
+  if (input.deaths !== undefined) updates.deaths = input.deaths;
+
+  await presenceRef(input.sessionId).update(updates);
 
   return {
     accepted: true,
@@ -229,15 +249,20 @@ export const cleanupStalePresenceRecords = async (now = Date.now()): Promise<num
   if (!isRecord(raw)) return 0;
 
   const updates: Record<string, null> = {};
+  let removedSessions = 0;
   Object.entries(raw).forEach(([sessionId, value]) => {
     const presence = parseRealtimePresence(value, sessionId);
     if (!presence || presence.lastSeenAt <= cutoff) {
+      removedSessions += 1;
       updates[`${PRESENCE_PATH}/${sessionId}`] = null;
+      if (presence) {
+        updates[presenceRoomPath(presence.dayIndex, sessionId)] = null;
+      }
     }
   });
 
   const paths = Object.keys(updates);
   if (!paths.length) return 0;
   await database().ref().update(updates);
-  return paths.length;
+  return removedSessions;
 };

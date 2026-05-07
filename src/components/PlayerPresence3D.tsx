@@ -1,31 +1,19 @@
 import { useFrame } from '@react-three/fiber';
-import { Timestamp, collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useAuth } from '../providers/AuthProvider';
-import { db } from '../services/firebaseConfig';
+import { useMultiplayerPresence } from '../hooks/useMultiplayerPresence';
+import { getPresenceRoomIdsForDay, listenToPresenceRooms } from '../services/firebaseRealtime';
 import { useCovidStore } from '../stores/covidStore';
+import { useOxygenStore } from '../stores/oxygenStore';
 
-const PRESENCE_COLLECTION = 'playerPresence';
-const CONFIG_COLLECTION = 'config';
-const PRESENCE_SETTINGS_DOC = 'presenceSettings';
-const PRESENCE_TTL_MS = 18_000;
-const MAX_REMOTE_PLAYERS = 80;
-const POSITION_DELTA_EPSILON_SQ = 0.04;
 const FOOTPRINT_STEP_DISTANCE = 0.9;
 const FOOTPRINT_POSITION_DELTA_EPSILON_SQ = FOOTPRINT_STEP_DISTANCE * FOOTPRINT_STEP_DISTANCE;
 const MAX_FOOTPRINTS = 10;
-const DATE_INDEX_DELTA_EPSILON = 1;
-const STALE_FILTER_REFRESH_MS = 5_000;
-const DEFAULT_WRITE_INTERVAL_MS = 2_500;
-const DEFAULT_HEARTBEAT_INTERVAL_MS = 12_000;
-const DEFAULT_FOOTPRINT_WRITE_INTERVAL_MS = 5_000;
-const DEFAULT_FOOTPRINT_HEARTBEAT_INTERVAL_MS = 10_000;
+const REMOTE_PRESENCE_STALE_MS = 60_000;
 const CAMERA_TO_GROUND_OFFSET = 1.35;
 const FOOTPRINT_GROUND_LIFT = 0.012;
 const FOOTPRINT_WIDTH = 0.74;
 const FOOTPRINT_LENGTH = 0.68;
-const LOCAL_SESSION_KEY = 'serra-sem-ar-presence-id';
 
 // Flame simulation constants matching the reference implementation
 // https://g7495x.gitlab.io/webgl-particle-flame-three.js/
@@ -45,25 +33,7 @@ interface PresenceVector {
   z: number;
 }
 
-interface Footprint extends PresenceVector {}
-
-type PresenceDoc = {
-  sessionId?: string;
-  userId?: string | null;
-  displayName?: string | null;
-  color?: string;
-  position?: PresenceVector;
-  target?: PresenceVector;
-  footprints?: Footprint[];
-  currentDateIndex?: number;
-  updatedAtMs?: number;
-  expiresAt?: Timestamp;
-};
-
-type PresenceSettings = {
-  enabled: boolean;
-  writeIntervalMs: number;
-};
+type Footprint = PresenceVector;
 
 interface MarkerPresence {
   id: string;
@@ -77,20 +47,14 @@ interface MarkerPresence {
 
 type FlamePresence = MarkerPresence;
 
-type PublishedPresence = {
-  cameraPosition: [number, number, number];
-  cameraTarget: [number, number, number];
-  currentDateIndex: number;
-  atMs: number;
+type RemoteTrail = {
+  color: string;
   footprints: Footprint[];
+  lastSeenAt: number;
 };
 
 const palette = ['#4cc9ff', '#3a86ff', '#5ee7ff', '#7dd3fc', '#60a5fa', '#a5f3fc'];
 const footprintInkPalette = ['#4a0508', '#5f070b', '#741015', '#86171b', '#3c0407', '#69090d'];
-const DEFAULT_PRESENCE_SETTINGS: PresenceSettings = {
-  enabled: true,
-  writeIntervalMs: DEFAULT_WRITE_INTERVAL_MS,
-};
 
 const hashString = (value: string) => {
   let hash = 0;
@@ -101,58 +65,15 @@ const hashString = (value: string) => {
   return Math.abs(hash);
 };
 
-const getSessionId = () => {
-  if (typeof window === 'undefined') return `server-${Math.random().toString(36).slice(2)}`;
-
-  try {
-    const current = window.sessionStorage.getItem(LOCAL_SESSION_KEY);
-    if (current) return current;
-  } catch {
-    // Private browsing can make sessionStorage unavailable.
-  }
-
-  const randomId =
-    typeof globalThis.crypto?.randomUUID === 'function'
-      ? globalThis.crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const next = `presence-${randomId}`;
-
-  try {
-    window.sessionStorage.setItem(LOCAL_SESSION_KEY, next);
-  } catch {
-    // A non-persistent session id is still enough for the current visit.
-  }
-
-  return next;
-};
-
 const vectorFromArray = ([x, y, z]: [number, number, number]): PresenceVector => ({ x, y, z });
 
 const vectorToArray = ({ x, y, z }: PresenceVector): [number, number, number] => [x, y, z];
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const distanceSq = (a: [number, number, number], b: [number, number, number]) => {
   const dx = a[0] - b[0];
   const dy = a[1] - b[1];
   const dz = a[2] - b[2];
   return dx * dx + dy * dy + dz * dz;
-};
-
-const isPresenceFresh = (presence: PresenceDoc, now: number) =>
-  typeof presence.updatedAtMs === 'number' && now - presence.updatedAtMs <= PRESENCE_TTL_MS;
-
-const isPresenceVector = (value: unknown): value is PresenceVector => {
-  if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as Partial<PresenceVector>;
-  return (
-    typeof candidate.x === 'number' &&
-    Number.isFinite(candidate.x) &&
-    typeof candidate.y === 'number' &&
-    Number.isFinite(candidate.y) &&
-    typeof candidate.z === 'number' &&
-    Number.isFinite(candidate.z)
-  );
 };
 
 const resolvePresenceMode = (): PresenceMode => {
@@ -177,15 +98,6 @@ const appendFootprint = (footprints: Footprint[], next: Footprint, force = false
   }
 
   return [...footprints, next].slice(-MAX_FOOTPRINTS);
-};
-
-const getPresenceFootprints = (presence: PresenceDoc): Footprint[] => {
-  const footprints = Array.isArray(presence.footprints)
-    ? presence.footprints.filter(isPresenceVector).slice(-MAX_FOOTPRINTS)
-    : [];
-
-  if (footprints.length > 0) return footprints;
-  return presence.position && isPresenceVector(presence.position) ? [presence.position] : [];
 };
 
 const getFootprintHeading = (footprints: Footprint[], idx: number, fallbackId: string) => {
@@ -216,6 +128,32 @@ const createFootprintMarkers = (
     footprintIndex: idx,
     footprintCount: footprints.length,
   }));
+
+const buildRemoteMarkers = (
+  trails: Map<string, RemoteTrail>,
+  presenceMode: PresenceMode
+): MarkerPresence[] => {
+  const markers: MarkerPresence[] = [];
+
+  trails.forEach((trail, sessionId) => {
+    if (presenceMode === 'footprint') {
+      markers.push(...createFootprintMarkers(sessionId, trail.color, trail.footprints, false));
+      return;
+    }
+
+    const latest = trail.footprints[trail.footprints.length - 1];
+    if (!latest) return;
+    markers.push({
+      id: sessionId,
+      color: trail.color,
+      position: getFootprintGroundPosition(latest),
+      isLocal: false,
+      heading: getFootprintHeading(trail.footprints, trail.footprints.length - 1, sessionId),
+    });
+  });
+
+  return markers;
+};
 
 const createFootprintTexture = (id: string, isLocal: boolean) => {
   if (typeof document === 'undefined') return null;
@@ -362,19 +300,6 @@ const createFootprintTexture = (id: string, isLocal: boolean) => {
   return texture;
 };
 
-const useRollingPresenceCutoffMs = (ttlMs: number, refreshMs: number) => {
-  const [cutoffMs, setCutoffMs] = useState(() => Date.now() - ttlMs);
-
-  useEffect(() => {
-    const updateCutoff = () => setCutoffMs(Date.now() - ttlMs);
-    updateCutoff();
-    const interval = window.setInterval(updateCutoff, refreshMs);
-    return () => window.clearInterval(interval);
-  }, [refreshMs, ttlMs]);
-
-  return cutoffMs;
-};
-
 // Evenly distributed points on unit sphere surface (Fibonacci sphere algorithm).
 // Matches the reference implementation's fibonacciSpherePoints().
 const fibonacciSphere = (count: number): Float32Array => {
@@ -478,44 +403,37 @@ const getLocalFlamePosition = (
   return flamePosition.toArray() as [number, number, number];
 };
 
+const createLocalPresenceId = (): string => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return `local_presence_${globalThis.crypto.randomUUID()}`;
+  }
+
+  return `local_presence_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+};
+
 export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' }) => {
-  const { user } = useAuth();
-  const [presenceSettings, setPresenceSettings] = useState<PresenceSettings>(DEFAULT_PRESENCE_SETTINGS);
   const presenceMode = useMemo(resolvePresenceMode, []);
-  const sessionId = useMemo(getSessionId, []);
+  const activeSessionId = useOxygenStore((state) => state.sessionId);
+  const isOfflineFallback = useOxygenStore((state) => state.isOfflineFallback);
+  const fallbackSessionId = useMemo(createLocalPresenceId, []);
+  const sessionId = activeSessionId ?? fallbackSessionId;
   const color = useMemo(() => palette[hashString(sessionId) % palette.length], [sessionId]);
   const cameraPosition = useCovidStore((state) => state.cameraPosition);
   const cameraTarget = useCovidStore((state) => state.cameraTarget);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
-  const latestStateRef = useRef({ cameraPosition, cameraTarget, currentDateIndex });
-  const lastPublishedRef = useRef<PublishedPresence | null>(null);
+  const remoteTrailsRef = useRef<Map<string, RemoteTrail>>(new Map());
   const [localFootprints, setLocalFootprints] = useState<Footprint[]>(() => [vectorFromArray(cameraPosition)]);
   const [remotePresences, setRemotePresences] = useState<MarkerPresence[]>([]);
-  const [remotePlayerCount, setRemotePlayerCount] = useState(0);
-  const rollingCutoffMs = useRollingPresenceCutoffMs(PRESENCE_TTL_MS, STALE_FILTER_REFRESH_MS);
+  const roomIds = useMemo(() => getPresenceRoomIdsForDay(currentDateIndex), [currentDateIndex]);
+  const isPresenceEnabled = import.meta.env.VITE_ENABLE_PRESENCE !== 'false';
+  const getMultiplayerPosition = useCallback(() => vectorFromArray(useCovidStore.getState().cameraPosition), []);
+  const multiplayer = useMultiplayerPresence({
+    sessionId: activeSessionId,
+    dayIndex: currentDateIndex,
+    enabled: isPresenceEnabled && !isOfflineFallback,
+    getPosition: getMultiplayerPosition,
+  });
 
-  const isPresenceEnabled =
-    import.meta.env.VITE_ENABLE_PRESENCE !== 'false' && presenceSettings.enabled;
-
-  const effectiveWriteIntervalMs = useMemo(() => {
-    const base = clamp(presenceSettings.writeIntervalMs, 1_200, 60_000);
-    if (presenceMode === 'footprint') return Math.max(base, DEFAULT_FOOTPRINT_WRITE_INTERVAL_MS);
-
-    if (remotePlayerCount > 30) return base * 3;
-    if (remotePlayerCount > 10) return base * 2;
-    return base;
-  }, [presenceMode, presenceSettings.writeIntervalMs, remotePlayerCount]);
-
-  const effectiveHeartbeatIntervalMs = useMemo(() => {
-    if (presenceMode === 'flame' && remotePlayerCount > 30) return Number.POSITIVE_INFINITY;
-
-    const minHeartbeat =
-      presenceMode === 'footprint'
-        ? DEFAULT_FOOTPRINT_HEARTBEAT_INTERVAL_MS
-        : DEFAULT_HEARTBEAT_INTERVAL_MS;
-    const multiplier = presenceMode === 'footprint' ? 2 : 4;
-    return Math.max(minHeartbeat, effectiveWriteIntervalMs * multiplier);
-  }, [effectiveWriteIntervalMs, presenceMode, remotePlayerCount]);
   const localFlamePresence = useMemo<FlamePresence>(
     () => ({
       id: `${sessionId}-local`,
@@ -531,206 +449,83 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
   );
 
   useEffect(() => {
-    latestStateRef.current = { cameraPosition, cameraTarget, currentDateIndex };
-  }, [cameraPosition, cameraTarget, currentDateIndex]);
-
-  useEffect(() => {
     if (presenceMode !== 'footprint') return;
     setLocalFootprints((current) => appendFootprint(current, vectorFromArray(cameraPosition)));
   }, [cameraPosition, presenceMode]);
 
   useEffect(() => {
-    const settingsRef = doc(db, CONFIG_COLLECTION, PRESENCE_SETTINGS_DOC);
-    const unsubscribe = onSnapshot(
-      settingsRef,
-      (snapshot) => {
-        const data = snapshot.data() as Partial<PresenceSettings> | undefined;
-        setPresenceSettings({
-          enabled:
-            typeof data?.enabled === 'boolean'
-              ? data.enabled
-              : DEFAULT_PRESENCE_SETTINGS.enabled,
-          writeIntervalMs:
-            typeof data?.writeIntervalMs === 'number' && Number.isFinite(data.writeIntervalMs)
-              ? clamp(data.writeIntervalMs, 1_200, 60_000)
-              : DEFAULT_PRESENCE_SETTINGS.writeIntervalMs,
-        });
-      },
-      () => {
-        setPresenceSettings(DEFAULT_PRESENCE_SETTINGS);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!isPresenceEnabled) {
-      lastPublishedRef.current = null;
-      return;
-    }
-
-    const ref = doc(db, PRESENCE_COLLECTION, sessionId);
-    let cancelled = false;
-
-    const removePresence = async () => {
-      await deleteDoc(ref).catch(() => undefined);
-    };
-
-    const publish = async (force = false) => {
-      if (cancelled) return;
-      const latest = latestStateRef.current;
-      const now = Date.now();
-      const previous = lastPublishedRef.current;
-
-      if (!force && previous) {
-        const movedEnough =
-          presenceMode === 'footprint'
-            ? distanceSq(latest.cameraPosition, previous.cameraPosition) > FOOTPRINT_POSITION_DELTA_EPSILON_SQ
-            : distanceSq(latest.cameraPosition, previous.cameraPosition) > POSITION_DELTA_EPSILON_SQ ||
-              distanceSq(latest.cameraTarget, previous.cameraTarget) > POSITION_DELTA_EPSILON_SQ;
-        const dateChangedEnough =
-          presenceMode === 'flame' &&
-          Math.abs(latest.currentDateIndex - previous.currentDateIndex) >= DATE_INDEX_DELTA_EPSILON;
-        const heartbeatDue =
-          Number.isFinite(effectiveHeartbeatIntervalMs) &&
-          now - previous.atMs >= effectiveHeartbeatIntervalMs;
-
-        if (!movedEnough && !dateChangedEnough && !heartbeatDue) return;
-      }
-
-      try {
-        const nextFootprint = vectorFromArray(latest.cameraPosition);
-        const previousFootprints = previous?.footprints ?? [];
-        const shouldAppendFootprint =
-          !previous ||
-          previousFootprints.length === 0 ||
-          distanceSq(vectorToArray(previousFootprints[previousFootprints.length - 1]), latest.cameraPosition) >
-            FOOTPRINT_POSITION_DELTA_EPSILON_SQ;
-        const footprints =
-          presenceMode === 'footprint' && shouldAppendFootprint
-            ? appendFootprint(previousFootprints, nextFootprint, true)
-            : presenceMode === 'footprint'
-              ? previousFootprints.slice(-MAX_FOOTPRINTS)
-              : [nextFootprint];
-
-        await setDoc(
-          ref,
-          {
-            sessionId,
-            userId: user?.uid ?? null,
-            displayName: user?.displayName ?? null,
-            color,
-            position: vectorFromArray(latest.cameraPosition),
-            target: vectorFromArray(latest.cameraTarget),
-            footprints,
-            currentDateIndex: latest.currentDateIndex,
-            updatedAtMs: now,
-            updatedAt: serverTimestamp(),
-            expiresAt: Timestamp.fromMillis(now + PRESENCE_TTL_MS),
-          },
-          { merge: true }
-        );
-        lastPublishedRef.current = {
-          cameraPosition: [...latest.cameraPosition] as [number, number, number],
-          cameraTarget: [...latest.cameraTarget] as [number, number, number],
-          currentDateIndex: latest.currentDateIndex,
-          atMs: now,
-          footprints,
-        };
-      } catch {
-        // Presence is optional; Firestore rules may not be deployed yet.
-      }
-    };
-
-    void publish(true);
-    const interval = window.setInterval(() => {
-      void publish();
-    }, effectiveWriteIntervalMs);
-
-    const handlePageExit = () => {
-      void removePresence();
-    };
-
-    window.addEventListener('pagehide', handlePageExit);
-    window.addEventListener('beforeunload', handlePageExit);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      window.removeEventListener('pagehide', handlePageExit);
-      window.removeEventListener('beforeunload', handlePageExit);
-      void removePresence();
-    };
-  }, [
-    color,
-    effectiveHeartbeatIntervalMs,
-    effectiveWriteIntervalMs,
-    isPresenceEnabled,
-    presenceMode,
-    sessionId,
-    user?.displayName,
-    user?.uid,
-  ]);
-
-  useEffect(() => {
-    if (!isPresenceEnabled) {
+    if (
+      !isPresenceEnabled ||
+      multiplayer.connected ||
+      !activeSessionId ||
+      isOfflineFallback ||
+      activeSessionId.startsWith('local_')
+    ) {
+      remoteTrailsRef.current.clear();
       setRemotePresences([]);
-      setRemotePlayerCount(0);
       return;
     }
 
-    const presenceQuery = query(
-      collection(db, PRESENCE_COLLECTION),
-      where('updatedAtMs', '>=', rollingCutoffMs),
-      orderBy('updatedAtMs', 'desc'),
-      limit(MAX_REMOTE_PLAYERS)
-    );
-    const unsubscribe = onSnapshot(
-      presenceQuery,
-      (snapshot) => {
+    // A presenca visual agora vem do RTDB: salas pequenas e efemeras reduzem leituras
+    // e deixam as chamas pesadas fora do fluxo normal de mobile e desktop.
+    const unsubscribe = listenToPresenceRooms(
+      roomIds,
+      (entries) => {
         const now = Date.now();
-        let nextPlayerCount = 0;
-        const next = snapshot.docs.flatMap((entry) => {
-          const payload = entry.data() as PresenceDoc;
-          if (
-            payload.sessionId === sessionId ||
-            entry.id === sessionId ||
-            !isPresenceFresh(payload, now) ||
-            !payload.position ||
-            !isPresenceVector(payload.position)
-          ) {
-            return [];
-          }
+        const trails = remoteTrailsRef.current;
 
-          nextPlayerCount += 1;
-          const markerColor = payload.color ?? palette[hashString(entry.id) % palette.length];
-
-          if (presenceMode === 'footprint') {
-            return createFootprintMarkers(entry.id, markerColor, getPresenceFootprints(payload), false);
-          }
-
-          return [
-            {
-              id: entry.id,
-              color: markerColor,
-              position: getFootprintGroundPosition(payload.position),
-              isLocal: false,
-              heading: getFootprintHeading([payload.position], 0, entry.id),
-            },
-          ];
+        entries.forEach((entry) => {
+          if (entry.sessionId === activeSessionId || entry.sessionId.startsWith('local_')) return;
+          const current = trails.get(entry.sessionId);
+          const markerColor = current?.color ?? palette[hashString(entry.sessionId) % palette.length];
+          trails.set(entry.sessionId, {
+            color: markerColor,
+            footprints: appendFootprint(current?.footprints ?? [], entry.position, !current),
+            lastSeenAt: entry.lastSeenAt,
+          });
         });
-        setRemotePresences(next);
-        setRemotePlayerCount(nextPlayerCount);
+
+        trails.forEach((trail, trailSessionId) => {
+          if (now - trail.lastSeenAt > REMOTE_PRESENCE_STALE_MS) {
+            trails.delete(trailSessionId);
+          }
+        });
+
+        setRemotePresences(buildRemoteMarkers(trails, presenceMode));
       },
       () => {
+        remoteTrailsRef.current.clear();
         setRemotePresences([]);
-        setRemotePlayerCount(0);
       }
     );
 
     return () => unsubscribe();
-  }, [isPresenceEnabled, presenceMode, rollingCutoffMs, sessionId]);
+  }, [activeSessionId, isOfflineFallback, isPresenceEnabled, multiplayer.connected, presenceMode, roomIds]);
+
+  useEffect(() => {
+    if (!multiplayer.connected || !activeSessionId) return;
+
+    const now = Date.now();
+    const trails = remoteTrailsRef.current;
+    multiplayer.peers.forEach((peer) => {
+      if (peer.sessionId === activeSessionId || peer.sessionId.startsWith('local_')) return;
+      const current = trails.get(peer.sessionId);
+      const markerColor = current?.color ?? palette[hashString(peer.sessionId) % palette.length];
+      trails.set(peer.sessionId, {
+        color: markerColor,
+        footprints: appendFootprint(current?.footprints ?? [], peer.position, !current),
+        lastSeenAt: peer.lastSeenAt,
+      });
+    });
+
+    trails.forEach((trail, trailSessionId) => {
+      if (now - trail.lastSeenAt > REMOTE_PRESENCE_STALE_MS) {
+        trails.delete(trailSessionId);
+      }
+    });
+
+    setRemotePresences(buildRemoteMarkers(trails, presenceMode));
+  }, [activeSessionId, multiplayer.connected, multiplayer.peers, presenceMode]);
 
   return (
     <group name={`player-presence-${presenceMode}`}>

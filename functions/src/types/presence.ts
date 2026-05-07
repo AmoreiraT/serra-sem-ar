@@ -14,6 +14,8 @@ export type RealtimePresence = {
   lastSeenAt: number;
   oxygen: number;
   dayIndex: number;
+  cases?: number;
+  deaths?: number;
   position: PresenceVector;
   status: PresenceStatus;
   userAgent?: string;
@@ -41,6 +43,8 @@ export type JoinPresenceResponse = {
 export type UpdatePresenceRequest = {
   sessionId: string;
   dayIndex: number;
+  cases?: number;
+  deaths?: number;
   position: PresenceVector;
   clientTimestamp: number;
 };
@@ -74,4 +78,3 @@ export type CollapseEvent = {
   createdAt: number;
   message: string;
 };
-

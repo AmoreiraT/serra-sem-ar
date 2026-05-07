@@ -1,11 +1,11 @@
 // useTextureLoader.ts
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
 const useTextureLoader = (
-  diffuseTexture: string,
-  normalTexture: string,
-  aoTexture: string,
+  diffuseTexture?: string,
+  normalTexture?: string,
+  aoTexture?: string,
   roughnessTexture?: string,
   pathDiffuseTexture?: string,
   pathNormalTexture?: string,
@@ -17,15 +17,15 @@ const useTextureLoader = (
   const textureLoader = useMemo(() => new THREE.TextureLoader(), []);
 
   const diffuseMap = useMemo(
-    () => textureLoader.load(diffuseTexture),
+    () => (diffuseTexture ? textureLoader.load(diffuseTexture) : undefined),
     [textureLoader, diffuseTexture]
   );
   const normalMap = useMemo(
-    () => textureLoader.load(normalTexture),
+    () => (normalTexture ? textureLoader.load(normalTexture) : undefined),
     [textureLoader, normalTexture]
   );
   const aoMap = useMemo(
-    () => textureLoader.load(aoTexture),
+    () => (aoTexture ? textureLoader.load(aoTexture) : undefined),
     [textureLoader, aoTexture]
   );
   const roughnessMap = useMemo(
@@ -57,6 +57,24 @@ const useTextureLoader = (
     () => (pathMetallicTexture ? textureLoader.load(pathMetallicTexture) : undefined),
     [textureLoader, pathMetallicTexture]
   );
+
+  useEffect(() => {
+    const textures = [
+      diffuseMap,
+      normalMap,
+      aoMap,
+      roughnessMap,
+      pathDiffuse,
+      pathNormal,
+      pathAO,
+      pathRough,
+      pathHeight,
+      pathMetallic,
+    ];
+    return () => {
+      textures.forEach((texture) => texture?.dispose());
+    };
+  }, [aoMap, diffuseMap, normalMap, pathAO, pathDiffuse, pathHeight, pathMetallic, pathNormal, pathRough, roughnessMap]);
 
   return {
     diffuseMap,

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import type { Object3D } from 'three';
 import { create } from 'zustand';
 import { MountainPoint, ProcessedCovidData } from '../types/covid';
 import { TerrainSampler } from '../utils/terrainSampler';
@@ -21,7 +21,7 @@ interface CovidStore {
   error: string | null;
   currentDateIndex: number;
   revealedX: number;
-  mountainMesh: THREE.Object3D | null;
+  mountainMesh: Object3D | null;
 
   setData: (data: ProcessedCovidData[]) => void;
   setMountainPoints: (points: MountainPoint[]) => void;
@@ -31,7 +31,7 @@ interface CovidStore {
   setError: (error: string | null) => void;
   setCurrentDateIndex: (index: number) => void;
   setRevealedX: (x: number) => void;
-  setMountainMesh: (mesh: THREE.Object3D | null) => void;
+  setMountainMesh: (mesh: Object3D | null) => void;
 
   cameraPosition: [number, number, number];
   cameraTarget: [number, number, number];

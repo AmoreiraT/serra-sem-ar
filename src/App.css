@@ -429,6 +429,34 @@
   overflow: hidden;
 }
 
+.app-shell[data-render-mode='2d'] .hud-mobile-header {
+  border-color: rgba(252, 211, 77, 0.16);
+  background: rgba(3, 3, 3, 0.46);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
+}
+
+.app-shell[data-render-mode='2d'] .hud-mobile-event {
+  width: min(53vw, 14.4rem);
+}
+
+.app-shell[data-render-mode='2d'] .hud-mobile-event-inner {
+  border-color: rgba(252, 211, 77, 0.24);
+  background: linear-gradient(154deg, rgba(4, 4, 3, 0.84), rgba(30, 15, 5, 0.78));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
+}
+
+.app-shell[data-render-mode='2d'] .hud-audio-toggle button {
+  min-width: 3.1rem;
+  height: 3.1rem;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(3, 3, 3, 0.58);
+  backdrop-filter: blur(8px);
+}
+
+.app-shell[data-render-mode='2d'] .hud-footer {
+  display: none;
+}
+
 @media (min-width: 640px) and (max-width: 1279px) {
   .app-shell .hud-mobile-bottom {
     justify-content: flex-start;

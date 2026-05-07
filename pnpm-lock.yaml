@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@geckos.io/client':
+        specifier: ^3.1.0
+        version: 3.1.0
       '@hookform/resolvers':
         specifier: ^5.0.1
         version: 5.2.1(react-hook-form@7.62.0(react@19.1.1))
@@ -773,6 +776,13 @@ packages:
 
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+
+  '@geckos.io/client@3.1.0':
+    resolution: {integrity: sha512-qaqnxRQn4/x0Op8Ytxe8W5kgvDRA7TndoiN2xNEWmY3l61KP8CA12eR4PH76mg37QO8QQBQHgWeB5Rn8JmzM4w==}
+    engines: {node: '>=18'}
+
+  '@geckos.io/common@3.1.0':
+    resolution: {integrity: sha512-ipdkDOudhPOLjBr1/rPm8ts1KlfduT0fdNwWDFVwk9bg3B8As7YD74rNpW9FRg4Kk69vsRL2MZqJXuS2djDmpw==}
 
   '@grpc/grpc-js@1.9.15':
     resolution: {integrity: sha512-nqE7Hc0AzI+euzUwDAy0aY5hCp10r734gMGRdU+qOPX0XSceI2ULrcXB5U2xSc5VkWwalCj4M7GzCAygZl2KoQ==}
@@ -1963,6 +1973,10 @@ packages:
 
   '@webgpu/types@0.1.64':
     resolution: {integrity: sha512-84kRIAGV46LJTlJZWxShiOrNL30A+9KokD7RB3dRCIqODFjodS5tCD5yyiZ8kIReGVZSDfA3XkkwyyOIF6K62A==}
+
+  '@yandeu/events@0.0.7':
+    resolution: {integrity: sha512-l78u4CooPw/WlN3H15bhOpims+gAsAkxbcjDn1GZ5oa+h9wqg+pBBzZos38xDeqKW/UVgPMkurVDPrf7JhhmTA==}
+    engines: {node: '>=18.2'}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -4128,6 +4142,14 @@ snapshots:
 
   '@floating-ui/utils@0.2.10': {}
 
+  '@geckos.io/client@3.1.0':
+    dependencies:
+      '@geckos.io/common': 3.1.0
+
+  '@geckos.io/common@3.1.0':
+    dependencies:
+      '@yandeu/events': 0.0.7
+
   '@grpc/grpc-js@1.9.15':
     dependencies:
       '@grpc/proto-loader': 0.7.15
@@ -5276,6 +5298,8 @@ snapshots:
       - supports-color
 
   '@webgpu/types@0.1.64': {}
+
+  '@yandeu/events@0.0.7': {}
 
   acorn-jsx@5.3.2(acorn@8.15.0):
     dependencies:

@@ -11,9 +11,12 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_MEASUREMENTID: string;
   readonly VITE_ENABLE_PRESENCE?: string;
   readonly VITE_PRESENCE_MODE?: 'flame' | 'footprint';
+  readonly VITE_ENABLE_MULTIPLAYER?: string;
+  readonly VITE_MULTIPLAYER_URL?: string;
   readonly VITE_ENABLE_OXYGEN?: string;
   readonly VITE_ENABLE_OXYGEN_MEMORIALS?: string;
   readonly VITE_PRESENCE_API_BASE_URL?: string;
+  readonly VITE_RENDER_MODE?: 'auto' | '2d' | '3d';
 
 }
 

@@ -11,6 +11,7 @@ import { MemorialPins3D } from './MemorialPins3D';
 import { MonthlyPlaques3D } from './MonthlyPlaques3D';
 import { Mountain3D } from './Mountain3D';
 import { PeakAudio3D } from './PeakAudio3D';
+import { PlayerPresence3D } from './PlayerPresence3D';
 import { MemorialMarkers } from './memorials/MemorialMarkers';
 
 interface Scene3DProps {
@@ -229,6 +230,7 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
             enabled={oxygenMemorialsEnabled}
             maxMarkers={isMobile ? 60 : 140}
           />
+          <PlayerPresence3D quality={mountainQuality} />
 
           <Suspense fallback={null}>
             <FirstPersonWalker eyeHeight={1.6} isMobile={isMobile} />

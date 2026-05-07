@@ -117,27 +117,30 @@ A geracao acontece em `src/components/Mountain3D.tsx`. O fluxo principal:
 
 ### Cloud Functions
 
-Cloud Functions exigem o plano Blaze. O memorial usa `createMemorial`; colapsos de oxigenio usam os endpoints REST em `/api`.
+Cloud Functions exigem o plano Blaze. O memorial usa `createMemorial`; a co-presenca usa RTDB direto depois do join e o oxigenio coletivo e agregado por Function agendada.
 
 ## Oxigenio Coletivo e presenca online
 
 O projeto usa um pipeline realtime com separacao entre estado efemero e permanente:
 
 - `POST /api/presence/join` cria uma sessao anonima e grava em RTDB.
-- `POST /api/presence/update` atualiza posicao no maximo em intervalo recomendado.
+- Depois do join, o cliente escreve direto no RTDB em updates raros, quantizados e acionados por movimento.
 - `POST /api/presence/leave` remove a presenca voluntariamente.
-- `POST /api/oxygen/recalculate` recalcula pressao e oxigenio coletivo.
+- `POST /api/presence/update` e `POST /api/oxygen/recalculate` ficam como compat/debug, mas nao sao chamados pelo frontend em navegacao normal.
+- `aggregateOxygenScheduled` roda a cada 1 minuto e recalcula pressao e oxigenio coletivo.
 - `cleanupStalePresence` roda a cada 5 minutos e remove sessoes antigas.
 
 ### Dados efemeros no Realtime Database
 
 ```txt
 /realtimePresence/{sessionId}
+/presenceRooms/{roomId}/{sessionId}
 /worldState/oxygen
-/collapseEvents/{eventId}
 ```
 
-A posicao 3D nao e gravada no Firestore e nao ha historico de movimento. O cliente usa `onDisconnect(...).remove()` como limpeza de conexao; a escrita critica continua centralizada nas Functions.
+A posicao 3D nao e gravada no Firestore e nao ha historico permanente de movimento. `/realtimePresence` e o estado canonico para o backend; `/presenceRooms` e publico, leve e dividido por salas de 14 dias para renderizar visitantes proximos. O cliente escuta somente a sala atual e as vizinhas.
+
+As posicoes sao quantizadas para 1 casa decimal. O cliente so escreve quando move pelo menos 2m, muda 7 dias na timeline ou vence o heartbeat de 45s. O intervalo minimo e 5s no desktop e 8s no mobile.
 
 ### Dados permanentes no Firestore
 
@@ -146,7 +149,7 @@ A posicao 3D nao e gravada no Firestore e nao ha historico de movimento. O clien
 /dailyStats/{dateKey}
 ```
 
-Firestore recebe apenas memoriais, estatisticas agregadas e registros criados por Function. Collapse events ficam no RTDB para notificacao efemera.
+Firestore recebe apenas memoriais, estatisticas agregadas e registros criados por Function. O ultimo colapso direcionado fica em `/worldState/oxygen.lastCollapse`, permitindo notificacao sem leitura publica de `/collapseEvents`.
 
 ### Oxigenio
 
@@ -165,6 +168,67 @@ maxOnlineUsersSoftLimit: 30
 
 Quando `collectiveOxygen <= 0`, o backend escolhe a presenca viva mais antiga, marca como `asphyxiated`, cria um evento `oxygen_depleted`, salva um memorial e recalibra o ar coletivo com uma presenca a menos.
 
+`OxygenBar` e `OxygenWorldStatus` escutam `/worldState/oxygen`. O oxigenio individual e derivado no cliente a partir do coletivo, sem chamadas recorrentes para `/api/oxygen/recalculate`.
+
+### Pegadas e performance
+
+`PlayerPresence3D` usa pegadas como modo padrao em mobile e desktop. Cada visitante gera marcadores 2D simples no chao, em vez de milhares de particulas de chamas. As chamas ainda podem ser forçadas com `VITE_PRESENCE_MODE=flame`, mas esse modo e pesado para Safari mobile.
+
+```bash
+VITE_PRESENCE_MODE=footprint # padrao recomendado
+VITE_ENABLE_PRESENCE=false   # desliga co-presenca remota, mantendo a obra local
+```
+
+### Renderizacao adaptativa
+
+Por padrao, a obra escolhe automaticamente entre dois caminhos visuais:
+
+- `3d`: WebGL completo, com montanha, ambiente, memoriais e efeitos para desktop.
+- `2d`: canvas bidimensional de baixa memoria para Safari/iOS/mobile/tablet.
+
+O modo 2D nao monta a cena WebGL e nao carrega as texturas grandes da montanha. Ele cria a ilusao de caminhada com estrada em perspectiva, serra em camadas, nevoa, pegadas de sangue e marcadores de co-presenca desenhados em canvas. A posicao continua sendo sincronizada no store e no RTDB, entao HUD, oxigenio e presenca permanecem ativos.
+
+```bash
+VITE_RENDER_MODE=auto # padrao: 2D apenas em mobile/tablet, 3D em desktop
+VITE_RENDER_MODE=2d   # forca o modo leve para testar no desktop
+VITE_RENDER_MODE=3d   # forca WebGL completo em aparelhos capazes
+```
+
+Esse caminho existe porque Safari movel pode encerrar paginas WebGL quando a memoria cresce. A troca para 2D reduz drasticamente geometria, texturas e uso de GPU, preservando a arte por composicao, profundidade falsa e movimento.
+
+### Texturas baked para WebGL
+
+A montanha 3D usa uma tecnica comum de jogos: bake de textura. Em vez de carregar varios mapas grandes de rocha/estrada (`baseColor`, `AO`, `normal`, `roughness`, `height`), o projeto gera uma textura WebP ja sombreada:
+
+```bash
+pnpm assets:bake-textures
+```
+
+O script `scripts/bake-game-textures.mjs` reduz e combina cor + oclusao ambiente em:
+
+- `src/assets/textures/baked/rock_baked_1024.webp`
+- `src/assets/textures/baked/road_baked_512.webp`
+
+Isso corta transferencia, memoria de GPU e custo de shader. O relevo visual continua vindo principalmente da geometria procedural da serra, das sombras e da nevoa, nao de mapas pesados de displacement.
+
+### Multiplayer opcional
+
+A obra tem um prototipo multiplayer em `multiplayer-server/`, usando WebRTC/geckos.io. Ele e opcional: quando `VITE_ENABLE_MULTIPLAYER` nao esta ativo ou o servidor cai, o app continua com o fallback RTDB de baixo custo.
+
+```bash
+pnpm multiplayer:install
+pnpm multiplayer:dev
+```
+
+No `.env` do frontend:
+
+```bash
+VITE_ENABLE_MULTIPLAYER=true
+VITE_MULTIPLAYER_URL=http://localhost:9208
+```
+
+Em producao, `VITE_MULTIPLAYER_URL` precisa ser HTTPS para nao cair em bloqueio de mixed content. O servidor envia apenas visitantes proximos, filtrando por sala de `dayIndex` e distancia. Mobile recebe snapshots com menor frequencia. MavonEngine foi estudado como caminho de evolucao para entidades/servidor autoritativo; por enquanto usamos diretamente geckos.io, a base de transporte citada pela propria documentacao do Mavon, para manter o prototipo pequeno e menos arriscado.
+
 ### UI
 
 - `OxygenBar` mostra o oxigenio individual.
@@ -180,14 +244,14 @@ VITE_ENABLE_OXYGEN_MEMORIALS=false
 VITE_PRESENCE_API_BASE_URL=/api
 ```
 
-Se Firebase/RTDB falhar no join, o app cria uma sessao local e mantem a obra funcionando sem sync remoto. Desktop recebe intervalo padrao de 2s; mobile recebe 3,5s.
+Se Firebase/RTDB falhar no join, o app cria uma sessao local e mantem a obra funcionando sem sync remoto. Em modo online, desktop escreve no RTDB no maximo a cada 5s; mobile no maximo a cada 8s.
 
 ### Relatorio curto de custo
 
-- Desktop: ate 30 updates de presenca por minuto por usuario.
-- Mobile: ate 18 updates de presenca por minuto por usuario.
-- Cada update aceito gera 1 write efemero no RTDB; nao ha write de posicao no Firestore.
-- Recalculo de oxigenio e tentado a cada 15s no desktop e 25s no mobile, com lease local e limite backend de 5s para writes globais em `/worldState/oxygen`.
+- Usuario parado: join + heartbeat RTDB raro, sem loop HTTP.
+- Usuario caminhando por 2 minutos: ate ~24 writes RTDB no desktop ou ~15 no mobile.
+- Cada update aceito grava o estado canonico em `/realtimePresence` e o marcador visual em `/presenceRooms`; nao ha write de posicao no Firestore.
+- Recalculo de oxigenio roda pela Function agendada uma vez por minuto e grava `/worldState/oxygen`.
 - Join gera 1 write em RTDB e 1 incremento agregado em `/dailyStats`.
 - Leave/onDisconnect gera 1 delete efemero no RTDB.
 - Colapso gera 1 update de presenca, 1 collapse event no RTDB, 1 memorial no Firestore e 1 incremento agregado.
@@ -200,7 +264,7 @@ Deploy das Functions e regras:
 cd functions
 pnpm install
 pnpm build
-firebase deploy --only functions:api,functions:cleanupStalePresence,functions:createMemorial
+firebase deploy --only functions:api,functions:aggregateOxygenScheduled,functions:cleanupStalePresence,functions:createMemorial
 firebase deploy --only database,firestore:rules,hosting
 ```
 
@@ -236,6 +300,7 @@ src/
   hooks/
     usePresenceSession.ts
     usePresencePositionSync.ts
+    useMultiplayerPresence.ts
     useOxygenCollapseListener.ts
   stores/
     oxygenStore.ts
@@ -248,6 +313,8 @@ functions/
   src/services/
   src/scheduled/
   src/index.ts
+multiplayer-server/
+  src/server.ts
 public/data/
   brasil-covid-daily.json
 ```
@@ -274,6 +341,10 @@ VITE_FIREBASE_APPID=...
 VITE_FIREBASE_DATABASEURL=...
 VITE_ENABLE_OXYGEN=true # opcional
 VITE_ENABLE_OXYGEN_MEMORIALS=true # opcional
+VITE_ENABLE_PRESENCE=true # opcional
+VITE_PRESENCE_MODE=footprint # opcional: footprint ou flame
+VITE_ENABLE_MULTIPLAYER=false # opcional
+VITE_MULTIPLAYER_URL=http://localhost:9208 # opcional
 VITE_PRESENCE_API_BASE_URL=/api # opcional
 ```
 

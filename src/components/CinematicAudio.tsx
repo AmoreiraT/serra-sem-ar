@@ -1,7 +1,10 @@
 import { cn } from '@/lib/utils';
 import { Volume2, VolumeX } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getPresenceRoomIdsForDay, listenToPresenceRooms } from '../services/firebaseRealtime';
 import { useCovidStore } from '../stores/covidStore';
+import { useOxygenStore } from '../stores/oxygenStore';
+import type { PresenceRoomEntry } from '../types/realtimePresence';
 import { Button } from './ui/button';
 
 const AUDIO_SOURCES = {
@@ -21,6 +24,8 @@ type Runtime = {
   context: AudioContext;
   master: GainNode;
   highAltitudeTimer: number;
+  presenceBreathTimer: number;
+  breathNoiseBuffer: AudioBuffer;
   cueBuffers: CueBuffers;
   teardown: () => void;
 };
@@ -31,6 +36,14 @@ type WindowWithAudioFallback = Window & {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
+const NEARBY_BREATH_RADIUS = 18;
+const NEARBY_BREATH_FULL_RADIUS = 3.5;
+
+type NearbyPresenceSignal = {
+  intensity: number;
+  pan: number;
+  updatedAt: number;
+};
 
 const createLoopingMedia = (
   context: AudioContext,
@@ -103,6 +116,103 @@ const playSpatialCueSample = (
   source.stop(startAt + duration + 0.02);
 };
 
+const createBreathNoiseBuffer = (context: AudioContext) => {
+  const duration = 1.55;
+  const frameCount = Math.floor(context.sampleRate * duration);
+  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
+  const data = buffer.getChannelData(0);
+  let filtered = 0;
+
+  for (let i = 0; i < frameCount; i += 1) {
+    const t = i / Math.max(1, frameCount - 1);
+    const envelope = Math.sin(Math.PI * t);
+    filtered = filtered * 0.86 + (Math.random() * 2 - 1) * 0.14;
+    data[i] = filtered * envelope;
+  }
+
+  return buffer;
+};
+
+const playPresenceBreath = (
+  context: AudioContext,
+  destination: AudioNode,
+  noiseBuffer: AudioBuffer,
+  signal: NearbyPresenceSignal
+) => {
+  const intensity = clamp(signal.intensity, 0, 1);
+  if (intensity <= 0.02) return;
+
+  const startAt = context.currentTime;
+  const source = context.createBufferSource();
+  const lowpass = context.createBiquadFilter();
+  const body = context.createBiquadFilter();
+  const panner = context.createStereoPanner();
+  const gain = context.createGain();
+  const duration = lerp(1.05, 1.46, intensity);
+
+  source.buffer = noiseBuffer;
+  source.playbackRate.value = lerp(0.72, 0.9, Math.random());
+  lowpass.type = 'lowpass';
+  lowpass.frequency.setValueAtTime(lerp(520, 980, intensity), startAt);
+  lowpass.Q.value = 0.8;
+  body.type = 'peaking';
+  body.frequency.value = 220;
+  body.Q.value = 0.9;
+  body.gain.value = 4.5;
+  panner.pan.value = clamp(signal.pan, -0.9, 0.9);
+
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(lerp(0.018, 0.12, intensity), startAt + 0.18);
+  gain.gain.setTargetAtTime(0.0001, startAt + duration * 0.55, 0.28);
+
+  source.connect(lowpass);
+  lowpass.connect(body);
+  body.connect(panner);
+  panner.connect(gain);
+  gain.connect(destination);
+
+  source.start(startAt, 0, duration);
+  source.stop(startAt + duration + 0.04);
+};
+
+const computeNearbyPresenceSignal = (
+  entries: PresenceRoomEntry[],
+  ownSessionId: string | null,
+  cameraPosition: [number, number, number]
+): NearbyPresenceSignal => {
+  let nearestDistance = Infinity;
+  let nearestDz = 0;
+  const now = Date.now();
+
+  entries.forEach((entry) => {
+    if (entry.sessionId === ownSessionId || entry.sessionId.startsWith('local_')) return;
+    if (now - entry.lastSeenAt > 60_000) return;
+    const dx = entry.position.x - cameraPosition[0];
+    const dy = (entry.position.y - cameraPosition[1]) * 0.35;
+    const dz = entry.position.z - cameraPosition[2];
+    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestDz = dz;
+    }
+  });
+
+  if (!Number.isFinite(nearestDistance) || nearestDistance > NEARBY_BREATH_RADIUS) {
+    return { intensity: 0, pan: 0, updatedAt: now };
+  }
+
+  const falloff = clamp(
+    1 - (nearestDistance - NEARBY_BREATH_FULL_RADIUS) / Math.max(1, NEARBY_BREATH_RADIUS - NEARBY_BREATH_FULL_RADIUS),
+    0,
+    1
+  );
+  return {
+    intensity: Math.pow(falloff, 1.35),
+    pan: clamp(nearestDz / Math.max(nearestDistance, 1), -1, 1),
+    updatedAt: now,
+  };
+};
+
 const getHighAltitudeIntensity = (
   mountainPoints: Array<{ y: number }>,
   currentDateIndex: number,
@@ -133,19 +243,40 @@ export const CinematicAudio = () => {
   const runtimeRef = useRef<Runtime | null>(null);
   const currentDateIndexRef = useRef(0);
   const cameraYRef = useRef(0);
+  const cameraPositionRef = useRef<[number, number, number]>([0, 0, 0]);
   const mountainPointsRef = useRef<Array<{ y: number }>>([]);
+  const presenceEntriesRef = useRef<PresenceRoomEntry[]>([]);
+  const nearbyPresenceRef = useRef<NearbyPresenceSignal>({ intensity: 0, pan: 0, updatedAt: 0 });
+  const lastPresenceBreathAtRef = useRef(0);
   const lastHighAltitudeCueAtRef = useRef(0);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const cameraPosition = useCovidStore((state) => state.cameraPosition);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
+  const sessionId = useOxygenStore((state) => state.sessionId);
+  const roomIds = useMemo(() => getPresenceRoomIdsForDay(currentDateIndex), [currentDateIndex]);
 
   const cueBuffersRef = useRef<CueBuffers>({});
 
   useEffect(() => {
     currentDateIndexRef.current = currentDateIndex;
     cameraYRef.current = cameraPosition[1];
+    cameraPositionRef.current = cameraPosition;
     mountainPointsRef.current = mountainPoints;
-  }, [cameraPosition, currentDateIndex, mountainPoints]);
+    nearbyPresenceRef.current = computeNearbyPresenceSignal(presenceEntriesRef.current, sessionId, cameraPosition);
+  }, [cameraPosition, currentDateIndex, mountainPoints, sessionId]);
+
+  useEffect(() => {
+    if (!isEnabled || !sessionId) {
+      presenceEntriesRef.current = [];
+      nearbyPresenceRef.current = { intensity: 0, pan: 0, updatedAt: Date.now() };
+      return undefined;
+    }
+
+    return listenToPresenceRooms(roomIds, (entries) => {
+      presenceEntriesRef.current = entries;
+      nearbyPresenceRef.current = computeNearbyPresenceSignal(entries, sessionId, cameraPositionRef.current);
+    });
+  }, [isEnabled, roomIds, sessionId]);
 
   const stopAudio = useCallback(() => {
     runtimeRef.current?.teardown();
@@ -165,6 +296,7 @@ export const CinematicAudio = () => {
 
       const context = new AudioContextConstructor();
       const master = context.createGain();
+      const breathNoiseBuffer = createBreathNoiseBuffer(context);
       master.gain.value = 0.56;
       master.connect(context.destination);
 
@@ -230,8 +362,23 @@ export const CinematicAudio = () => {
         }
       }, 950);
 
+      const presenceBreathTimer = window.setInterval(() => {
+        const runtime = runtimeRef.current;
+        if (!runtime) return;
+        const signal = nearbyPresenceRef.current;
+        if (signal.intensity <= 0.02 || Date.now() - signal.updatedAt > 4_500) return;
+
+        const now = runtime.context.currentTime;
+        const cooldown = lerp(3.2, 1.55, signal.intensity);
+        if (now - lastPresenceBreathAtRef.current < cooldown) return;
+
+        lastPresenceBreathAtRef.current = now;
+        playPresenceBreath(runtime.context, runtime.master, runtime.breathNoiseBuffer, signal);
+      }, 180);
+
       const teardown = () => {
         window.clearInterval(highAltitudeTimer);
+        window.clearInterval(presenceBreathTimer);
         thunder.pause();
         crowd.pause();
         thunder.removeAttribute('src');
@@ -246,6 +393,8 @@ export const CinematicAudio = () => {
         context,
         master,
         highAltitudeTimer,
+        presenceBreathTimer,
+        breathNoiseBuffer,
         cueBuffers: cueBuffersRef.current,
         teardown,
       };

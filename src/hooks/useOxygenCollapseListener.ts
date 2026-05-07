@@ -1,6 +1,21 @@
 import { useEffect, useRef } from 'react';
-import { listenForCollapseEvents, listenToWorldOxygen } from '../services/firebaseRealtime';
+import { listenToWorldOxygen } from '../services/firebaseRealtime';
 import { useOxygenStore } from '../stores/oxygenStore';
+
+const MOBILE_DRAIN_MULTIPLIER = 0.85;
+
+const detectMobile = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  return width < 768 || (width <= 1100 && height <= 540) || (coarsePointer && width < 1180);
+};
+
+const calculateIndividualOxygen = (collectiveOxygen: number): number => {
+  const drain = (100 - collectiveOxygen) * (detectMobile() ? MOBILE_DRAIN_MULTIPLIER : 1);
+  return Math.max(0, Math.min(100, 100 - drain));
+};
 
 export const useOxygenCollapseListener = (sessionId: string | null): void => {
   const triggerCollapse = useOxygenStore((state) => state.triggerCollapse);
@@ -10,24 +25,25 @@ export const useOxygenCollapseListener = (sessionId: string | null): void => {
   useEffect(() => {
     const unsubscribe = listenToWorldOxygen((world) => {
       setOxygenState({
-        oxygen: useOxygenStore.getState().oxygen,
+        oxygen: calculateIndividualOxygen(world.collectiveOxygen),
         collectiveOxygen: world.collectiveOxygen,
         status: world.status,
       });
+
+      const collapse = world.lastCollapse;
+      if (
+        !sessionId ||
+        sessionId.startsWith('local_') ||
+        !collapse ||
+        collapse.targetSessionId !== sessionId ||
+        seenEventsRef.current.has(collapse.eventId)
+      ) {
+        return;
+      }
+
+      seenEventsRef.current.add(collapse.eventId);
+      triggerCollapse(collapse.message);
     });
     return () => unsubscribe();
-  }, [setOxygenState]);
-
-  useEffect(() => {
-    if (!sessionId || sessionId.startsWith('local_')) return undefined;
-
-    const unsubscribe = listenForCollapseEvents(sessionId, (event) => {
-      if (seenEventsRef.current.has(event.eventId)) return;
-      seenEventsRef.current.add(event.eventId);
-      triggerCollapse(event.message);
-    });
-
-    return () => unsubscribe();
-  }, [sessionId, triggerCollapse]);
+  }, [sessionId, setOxygenState, triggerCollapse]);
 };
-

@@ -17,10 +17,16 @@
     "assets:process:cubemaps": "node scripts/pandemic-assets/06_build_cubemaps.mjs",
     "assets:manifest": "node scripts/pandemic-assets/07_build_indexes_and_report.mjs",
     "assets:validate": "node scripts/pandemic-assets/08_validate.mjs",
+    "assets:bake-textures": "node scripts/bake-game-textures.mjs",
     "assets:all": "pnpm assets:extract && pnpm assets:download && pnpm assets:classify && pnpm assets:process:images && pnpm assets:process:videos && pnpm assets:process:cubemaps && pnpm assets:manifest && pnpm assets:validate",
+    "multiplayer:install": "npm install --prefix multiplayer-server",
+    "multiplayer:dev": "npm run dev --prefix multiplayer-server",
+    "multiplayer:build": "npm run build --prefix multiplayer-server",
+    "multiplayer:start": "npm run start --prefix multiplayer-server",
     "presence:estimate-cost": "node scripts/estimate-presence-cost.mjs"
   },
   "dependencies": {
+    "@geckos.io/client": "^3.1.0",
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.10",
     "@radix-ui/react-alert-dialog": "^1.1.13",

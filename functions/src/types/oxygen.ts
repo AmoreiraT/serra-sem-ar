@@ -18,6 +18,13 @@ export type OxygenConfig = {
   maxOnlineUsersSoftLimit: number;
 };
 
+export type WorldOxygenCollapse = {
+  eventId: string;
+  targetSessionId: string;
+  createdAt: number;
+  message: string;
+};
+
 export type WorldOxygenState = {
   updatedAt: number;
   onlineUsersCount: number;
@@ -27,6 +34,7 @@ export type WorldOxygenState = {
   normalizedDeaths: number;
   pressure: number;
   status: OxygenStatus;
+  lastCollapse?: WorldOxygenCollapse | null;
 };
 
 export type RecalculateOxygenRequest = {
@@ -42,4 +50,3 @@ export type RecalculateOxygenResponse = {
   collapsed: boolean;
   collapsedSessionId?: string;
 };
-
