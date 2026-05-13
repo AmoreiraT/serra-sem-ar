@@ -202,8 +202,8 @@
     max-width: 24rem;
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 0.95rem;
-    background: rgba(0, 0, 0, 0.46);
-    backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(7px);
     padding: 0.85rem;
   }
 
@@ -217,10 +217,15 @@
   .intro-scrim {
     background: linear-gradient(
       180deg,
-      rgba(8, 6, 5, 0.76) 0%,
-      rgba(8, 6, 5, 0.9) 54%,
-      rgba(8, 6, 5, 0.98) 100%
+      rgba(8, 6, 5, 0.2) 0%,
+      rgba(8, 6, 5, 0.3) 42%,
+      rgba(8, 6, 5, 0.72) 100%
     );
+  }
+
+  .intro-bottom-fade {
+    height: 42%;
+    opacity: 0.72;
   }
 
   .intro-title {
@@ -429,6 +434,171 @@
   overflow: hidden;
 }
 
+.app-shell .hud-tablet-summary {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(8rem, 0.58fr) minmax(0, 1.42fr);
+  align-items: stretch;
+  gap: 0.7rem;
+}
+
+.app-shell .hud-tablet-brand {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  padding-right: 0.7rem;
+}
+
+.app-shell .hud-tablet-title {
+  overflow-wrap: anywhere;
+  font-size: 0.7rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgb(253 230 138);
+}
+
+.app-shell .hud-tablet-day {
+  margin-top: 0.16rem;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.app-shell .hud-tablet-metrics {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.app-shell .hud-tablet-metric {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  column-gap: 0.34rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 0.48rem 0.54rem;
+}
+
+.app-shell .hud-tablet-metric svg {
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+.app-shell .hud-tablet-metric span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.app-shell .hud-tablet-metric strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  line-height: 1.1;
+}
+
+.app-shell .hud-tablet-total {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell .tablet-event-card {
+  right: clamp(0.85rem, 1.8vw, 1.35rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.95rem);
+  width: min(26rem, 44vw);
+  max-width: calc(100vw - 9.5rem);
+}
+
+.app-shell .tablet-event-card-inner {
+  border-radius: 0.75rem;
+  border-color: rgba(252, 211, 77, 0.24);
+  background:
+    linear-gradient(145deg, rgba(8, 8, 7, 0.94), rgba(33, 20, 8, 0.9)),
+    rgba(0, 0, 0, 0.88);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.46);
+}
+
+.app-shell .tablet-event-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.app-shell[data-tablet-experience='true'] .hud-desktop-header,
+.app-shell[data-tablet-experience='true'] .hud-desktop-left,
+.app-shell[data-tablet-experience='true'] .hud-desktop-right {
+  display: none;
+}
+
+.app-shell[data-tablet-experience='true'] .hud-mobile-header {
+  display: flex;
+}
+
+.app-shell[data-tablet-experience='true'] .hud-tablet-header {
+  align-items: stretch;
+  gap: 0.85rem;
+  border-radius: 0 0 0.85rem 0.85rem;
+  background:
+    linear-gradient(180deg, rgba(10, 10, 10, 0.78), rgba(11, 8, 5, 0.68)),
+    rgba(0, 0, 0, 0.64);
+  padding: 0.62rem 0.72rem;
+}
+
+.app-shell[data-tablet-experience='true'] .hud-tablet-actions {
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.app-shell[data-tablet-experience='true'] .hud-mobile-bottom {
+  right: auto;
+  width: auto;
+  padding-left: clamp(0.95rem, 2vw, 1.35rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.95rem);
+}
+
+.app-shell[data-tablet-experience='true'] .hud-joystick {
+  transform-origin: left bottom;
+}
+
+.app-shell[data-tablet-experience='true'] .hud-footer {
+  display: none;
+}
+
+.app-shell[data-tablet-experience='true'] .hud-audio-toggle {
+  top: calc(env(safe-area-inset-top, 0px) + 5.45rem);
+  right: clamp(0.85rem, 1.8vw, 1.35rem);
+}
+
+.app-shell[data-tablet-experience='true'] .hud-oxygen-bar {
+  top: calc(env(safe-area-inset-top, 0px) + 5.95rem);
+}
+
+.app-shell[data-tablet-experience='true'] .hud-oxygen-status {
+  top: calc(env(safe-area-inset-top, 0px) + 9.1rem);
+}
+
+.app-shell[data-tablet-experience='true'] .hud-sheet {
+  left: auto;
+  right: clamp(0.85rem, 1.8vw, 1.35rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.95rem);
+  width: min(28rem, 46vw);
+  padding: 0;
+}
+
 .app-shell[data-render-mode='2d'] .hud-mobile-header {
   border-color: rgba(252, 211, 77, 0.16);
   background: rgba(3, 3, 3, 0.46);
@@ -469,6 +639,60 @@
 
   .app-shell .hud-mobile-event-inner {
     min-height: auto;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-shell[data-tablet-experience='true'] .hud-tablet-summary {
+    grid-template-columns: minmax(6.2rem, 0.42fr) minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .app-shell[data-tablet-experience='true'] .hud-tablet-brand {
+    padding-right: 0.5rem;
+  }
+
+  .app-shell[data-tablet-experience='true'] .hud-tablet-title {
+    font-size: 0.64rem;
+    letter-spacing: 0.2em;
+  }
+
+  .app-shell[data-tablet-experience='true'] .hud-tablet-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-shell[data-tablet-experience='true'] .hud-tablet-total {
+    display: none;
+  }
+
+  .app-shell[data-tablet-experience='true'] .tablet-event-card {
+    width: min(23rem, 56vw);
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .app-shell[data-tablet-experience='true'] .hud-tablet-summary {
+    grid-template-columns: minmax(7.2rem, 0.36fr) minmax(0, 1fr);
+  }
+
+  .app-shell[data-tablet-experience='true'] .hud-tablet-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-shell[data-tablet-experience='true'] .hud-tablet-total {
+    display: grid;
+  }
+
+  .app-shell[data-tablet-experience='true'] .hud-oxygen-bar {
+    top: calc(env(safe-area-inset-top, 0px) + 8.8rem);
+  }
+
+  .app-shell[data-tablet-experience='true'] .hud-oxygen-status {
+    top: calc(env(safe-area-inset-top, 0px) + 12.2rem);
+  }
+
+  .app-shell[data-tablet-experience='true'] .tablet-event-card {
+    width: min(24rem, 58vw);
   }
 }
 

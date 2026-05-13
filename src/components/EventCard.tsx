@@ -2,11 +2,14 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ExternalLink, Info, PlayCircle, TextQuote } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { CovidEventAttachment } from '../data/covidEvents';
-import { covidEvents, covidEventsByDate } from '../data/covidEvents';
+import {
+  formatCovidEventDatePtBr,
+  getCovidEventForTimelineIndex,
+  type CovidEventAttachment,
+} from '../data/covidEvents';
 import { useCovidStore } from '../stores/covidStore';
 
-type EventCardLayout = 'floating' | 'sheet' | 'mobile';
+type EventCardLayout = 'floating' | 'sheet' | 'mobile' | 'tablet';
 
 interface EventCardProps {
   layout?: EventCardLayout;
@@ -18,44 +21,18 @@ export const EventCard = ({ layout = 'floating', className, onExpand }: EventCar
   const { data, currentDateIndex } = useCovidStore();
   const isSheet = layout === 'sheet';
   const isMobileCompact = layout === 'mobile';
-  const isExpandedView = isSheet || !isMobileCompact;
+  const isTabletPopover = layout === 'tablet';
+  const isExpandedView = isSheet || isTabletPopover || !isMobileCompact;
 
-  const eventsByIndex = useMemo(() => {
-    if (!data.length) return [];
-
-    return covidEvents
-      .map((event) => {
-        const index = data.findIndex((item) => item.date.toISOString().slice(0, 10) === event.date);
-        if (index === -1) return null;
-        return { event, index };
-      })
-      .filter((entry): entry is { event: (typeof covidEvents)[number]; index: number } => entry !== null)
-      .sort((a, b) => a.index - b.index);
-  }, [data]);
-
-  const event = useMemo(() => {
-    if (!eventsByIndex.length) return null;
-
-    const upcoming = eventsByIndex.find((item) => item.index >= currentDateIndex);
-    const selected = upcoming ?? eventsByIndex[eventsByIndex.length - 1];
-    if (!selected) return null;
-
-    const isoDate = selected.event.date;
-    return covidEventsByDate.get(isoDate) ?? selected.event;
-  }, [currentDateIndex, eventsByIndex]);
+  const event = useMemo(() => getCovidEventForTimelineIndex(data, currentDateIndex), [currentDateIndex, data]);
   const formattedDate = useMemo(() => {
     if (!event) return '';
-    const safeDate = new Date(`${event.date}T00:00:00`);
-    return safeDate.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
+    return formatCovidEventDatePtBr(event.date);
   }, [event]);
   const visibleAttachments = useMemo(() => {
     if (!event?.attachments?.length) return [];
-    return isMobileCompact ? event.attachments.slice(0, 1) : event.attachments;
-  }, [event, isMobileCompact]);
+    return isMobileCompact || isTabletPopover ? event.attachments.slice(0, 1) : event.attachments;
+  }, [event, isMobileCompact, isTabletPopover]);
 
   return (
     <AnimatePresence mode="wait">
@@ -69,7 +46,9 @@ export const EventCard = ({ layout = 'floating', className, onExpand }: EventCar
           className={cn(
             isSheet
               ? 'w-full'
-              : isMobileCompact
+              : isTabletPopover
+                ? 'tablet-event-card pointer-events-none absolute z-20'
+                : isMobileCompact
                 ? 'hud-mobile-event pointer-events-none absolute xl:hidden'
                 : 'desktop-event-card pointer-events-none absolute bottom-6 left-6 z-10 w-[min(32vw,410px)] safe-bottom',
             className
@@ -80,6 +59,8 @@ export const EventCard = ({ layout = 'floating', className, onExpand }: EventCar
               'pointer-events-auto space-y-2 rounded-2xl border border-white/20 bg-black/85 text-white shadow-2xl backdrop-blur-md',
               isSheet
                 ? 'max-h-[60vh] overflow-auto p-3.5'
+                : isTabletPopover
+                  ? 'tablet-event-card-inner max-h-[42vh] overflow-auto p-3'
                 : isMobileCompact
                   ? 'hud-mobile-event-inner overflow-hidden p-2.5'
                   : 'max-h-[72vh] overflow-auto p-3.5 sm:max-h-[78vh] lg:max-h-none lg:overflow-visible'
@@ -90,7 +71,8 @@ export const EventCard = ({ layout = 'floating', className, onExpand }: EventCar
               <p
                 className={cn(
                   'hud-mobile-event-kicker text-[11px] uppercase',
-                  isMobileCompact ? 'text-[10px] tracking-[0.14em]' : 'truncate tracking-[0.35em]'
+                  isMobileCompact ? 'text-[10px] tracking-[0.14em]' : 'truncate tracking-[0.35em]',
+                  isTabletPopover && 'tracking-[0.24em]'
                 )}
               >
                 Registro Histórico
@@ -108,7 +90,8 @@ export const EventCard = ({ layout = 'floating', className, onExpand }: EventCar
               <h3
                 className={cn(
                   'hud-mobile-event-title break-words text-[15px] font-semibold leading-snug',
-                  isMobileCompact && 'line-clamp-2 text-[13px] leading-[1.22]'
+                  isMobileCompact && 'line-clamp-2 text-[13px] leading-[1.22]',
+                  isTabletPopover && 'text-[15px] leading-tight'
                 )}
               >
                 {event.title}
@@ -119,7 +102,8 @@ export const EventCard = ({ layout = 'floating', className, onExpand }: EventCar
               <p
                 className={cn(
                   'break-words text-[12px] leading-relaxed text-white/85',
-                  isMobileCompact && 'mobile-event-description'
+                  isMobileCompact && 'mobile-event-description',
+                  isTabletPopover && 'tablet-event-description'
                 )}
               >
                 {event.description}

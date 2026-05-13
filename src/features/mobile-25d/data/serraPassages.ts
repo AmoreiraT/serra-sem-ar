@@ -1,0 +1,161 @@
+import type { SerraPassage } from '../types/serraPassage';
+import { getMobile25DAssetTier } from '../utils/assetTier';
+
+const mobile25DAssetVersion = 'v=20260509-bake4';
+const currentTier = getMobile25DAssetTier();
+const fallbackTier = 'mobile-low';
+
+const versionAsset = (src: string): string => `${src}?${mobile25DAssetVersion}`;
+
+const buildPassageLayerSources = (fileName: string) => ({
+  src: versionAsset(`/assets/25d/passages/${currentTier}/${fileName}.webp`),
+  avifSrc: versionAsset(`/assets/25d/passages/${currentTier}/${fileName}.avif`),
+  fallbackSrc: versionAsset(`/assets/25d/passages/${fallbackTier}/${fileName}.webp`),
+  fallbackAvifSrc: versionAsset(`/assets/25d/passages/${fallbackTier}/${fileName}.avif`),
+});
+
+export const serraPassages: readonly SerraPassage[] = [
+  {
+    id: 'inicio',
+    title: 'O ar começa a faltar',
+    subtitle: 'A curva ainda parecia distante, mas a serra já se formava.',
+    dateRangeLabel: '2020 - primeiros registros',
+    casesLabel: 'casos em crescimento',
+    deathsLabel: 'mortes iniciando a subida',
+    mortalityTone: 'low',
+    progressStart: 0,
+    progressEnd: 0.16,
+    layers: [
+      {
+        id: 'inicio-back',
+        ...buildPassageLayerSources('inicio-back'),
+        alt: 'Silhueta inicial da serra gerada pelos primeiros dados da pandemia.',
+        depth: 0.15,
+        opacity: 0.78,
+        translateX: 0,
+        translateY: 0,
+        scale: 1,
+      },
+      {
+        id: 'inicio-front',
+        ...buildPassageLayerSources('inicio-front'),
+        alt: 'Plano frontal da montanha de dados no início da pandemia.',
+        depth: 0.35,
+        opacity: 0.56,
+        translateX: 0,
+        translateY: 4,
+        scale: 0.96,
+      },
+    ],
+  },
+  {
+    id: 'primeira-escalada',
+    title: 'A primeira escalada',
+    subtitle: 'Os números deixam de ser notícia e passam a desenhar relevo.',
+    dateRangeLabel: '2020 - escalada nacional',
+    casesLabel: 'contaminações se alargando',
+    deathsLabel: 'altura da montanha aumentando',
+    mortalityTone: 'warning',
+    progressStart: 0.16,
+    progressEnd: 0.34,
+    layers: [
+      {
+        id: 'primeira-escalada-back',
+        ...buildPassageLayerSources('primeira-escalada-back'),
+        alt: 'Serra intermediária com gradiente amarelo indicando agravamento.',
+        depth: 0.18,
+        opacity: 0.72,
+        translateX: 0,
+        translateY: 8,
+        scale: 0.95,
+      },
+      {
+        id: 'primeira-escalada-front',
+        ...buildPassageLayerSources('primeira-escalada-front'),
+        alt: 'Plano frontal da serra durante a primeira grande escalada.',
+        depth: 0.4,
+        opacity: 0.48,
+        translateX: 0,
+        translateY: 16,
+        scale: 0.9,
+      },
+    ],
+  },
+  {
+    id: 'colapso',
+    title: 'Colapso',
+    subtitle: 'A paisagem deixa de representar estatística e passa a representar ausência.',
+    dateRangeLabel: '2021 - crise sanitária',
+    casesLabel: 'base expandida',
+    deathsLabel: 'picos críticos',
+    mortalityTone: 'critical',
+    progressStart: 0.34,
+    progressEnd: 0.58,
+    layers: [
+      {
+        id: 'colapso-back',
+        ...buildPassageLayerSources('colapso-back'),
+        alt: 'Montanha crítica em vermelho profundo representando alta mortalidade.',
+        depth: 0.15,
+        opacity: 0.58,
+        translateX: 0,
+        translateY: 24,
+        scale: 0.84,
+      },
+      {
+        id: 'colapso-front',
+        ...buildPassageLayerSources('colapso-front'),
+        alt: 'Pico frontal da serra no período de colapso.',
+        depth: 0.48,
+        opacity: 0.42,
+        translateX: 0,
+        translateY: 32,
+        scale: 0.82,
+      },
+      {
+        id: 'colapso-memorial',
+        src: versionAsset('/assets/25d/overlays/cruzes-memoria.webp'),
+        avifSrc: versionAsset('/assets/25d/overlays/cruzes-memoria.avif'),
+        alt: 'Marcas memoriais para vidas perdidas.',
+        depth: 0.62,
+        opacity: 0.18,
+        translateX: 0,
+        translateY: 0,
+        scale: 1,
+      },
+    ],
+  },
+  {
+    id: 'ecos',
+    title: 'Ecos da serra',
+    subtitle: 'A descida não apaga a travessia: o relevo permanece como memória.',
+    dateRangeLabel: '2022 em diante',
+    casesLabel: 'ondas sucessivas',
+    deathsLabel: 'memória acumulada',
+    mortalityTone: 'mourning',
+    progressStart: 0.58,
+    progressEnd: 1,
+    layers: [
+      {
+        id: 'ecos-back',
+        ...buildPassageLayerSources('ecos-back'),
+        alt: 'Serra final em camadas escuras e silenciosas.',
+        depth: 0.16,
+        opacity: 0.68,
+        translateX: 0,
+        translateY: 8,
+        scale: 0.95,
+      },
+      {
+        id: 'ecos-front',
+        ...buildPassageLayerSources('ecos-front'),
+        alt: 'Plano final da serra como arquivo de memória.',
+        depth: 0.42,
+        opacity: 0.5,
+        translateX: 0,
+        translateY: 16,
+        scale: 0.9,
+      },
+    ],
+  },
+];

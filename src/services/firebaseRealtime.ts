@@ -70,9 +70,15 @@ const parsePresenceRoomEntries = (value: unknown): PresenceRoomEntry[] => {
 export const getPresenceRoomId = (dayIndex: number): number =>
   Math.floor(Math.max(0, dayIndex) / PRESENCE_ROOM_SIZE_DAYS);
 
-export const getPresenceRoomIdsForDay = (dayIndex: number): number[] => {
+export const getPresenceRoomIdsForDay = (dayIndex: number, radius = 1): number[] => {
   const current = getPresenceRoomId(dayIndex);
-  return [current - 1, current, current + 1].filter((roomId) => roomId >= 0);
+  const roomRadius = Math.max(0, Math.floor(radius));
+  const roomIds: number[] = [];
+  for (let offset = -roomRadius; offset <= roomRadius; offset += 1) {
+    const roomId = current + offset;
+    if (roomId >= 0) roomIds.push(roomId);
+  }
+  return roomIds;
 };
 
 const parseWorldStatus = (value: unknown): WorldOxygenState['status'] | null => {
@@ -170,6 +176,25 @@ export type WriteRealtimePresenceInput = {
   isMobile: boolean;
 };
 
+const createPresenceRoomEntry = ({
+  sessionId,
+  lastSeenAt,
+  dayIndex,
+  cases,
+  deaths,
+  position,
+  isMobile,
+}: Omit<WriteRealtimePresenceInput, 'roomId' | 'previousRoomId'>): PresenceRoomEntry => ({
+  sessionId,
+  lastSeenAt,
+  dayIndex,
+  cases,
+  deaths,
+  position,
+  status: 'alive',
+  isMobile,
+});
+
 export const writeRealtimePresence = async ({
   sessionId,
   roomId,
@@ -181,16 +206,15 @@ export const writeRealtimePresence = async ({
   position,
   isMobile,
 }: WriteRealtimePresenceInput): Promise<void> => {
-  const roomEntry: PresenceRoomEntry = {
+  const roomEntry = createPresenceRoomEntry({
     sessionId,
     lastSeenAt,
     dayIndex,
     cases,
     deaths,
     position,
-    status: 'alive',
     isMobile,
-  };
+  });
 
   const updates: Record<string, unknown> = {
     [`realtimePresence/${sessionId}/lastSeenAt`]: lastSeenAt,
@@ -210,6 +234,36 @@ export const writeRealtimePresence = async ({
   await updateRealtime(ref(realtimeDb), updates);
 };
 
+export const writeRealtimePresenceRoom = async ({
+  sessionId,
+  roomId,
+  previousRoomId,
+  lastSeenAt,
+  dayIndex,
+  cases,
+  deaths,
+  position,
+  isMobile,
+}: WriteRealtimePresenceInput): Promise<void> => {
+  const updates: Record<string, unknown> = {
+    [`presenceRooms/${roomId}/${sessionId}`]: createPresenceRoomEntry({
+      sessionId,
+      lastSeenAt,
+      dayIndex,
+      cases,
+      deaths,
+      position,
+      isMobile,
+    }),
+  };
+
+  if (previousRoomId !== undefined && previousRoomId !== null && previousRoomId !== roomId) {
+    updates[`presenceRooms/${previousRoomId}/${sessionId}`] = null;
+  }
+
+  await updateRealtime(ref(realtimeDb), updates);
+};
+
 export const removeRealtimePresenceRoom = async (sessionId: string, roomId: number): Promise<void> => {
   await remove(ref(realtimeDb, `presenceRooms/${roomId}/${sessionId}`));
 };
@@ -217,16 +271,18 @@ export const removeRealtimePresenceRoom = async (sessionId: string, roomId: numb
 export const listenToPresenceRooms = (
   roomIds: number[],
   onEntries: (entries: PresenceRoomEntry[]) => void,
-  onError?: () => void
+  onError?: () => void,
+  options: { staleMs?: number } = {}
 ): Unsubscribe => {
   const roomSnapshots = new Map<number, PresenceRoomEntry[]>();
   const emit = () => {
     const now = Date.now();
+    const staleMs = options.staleMs ?? PRESENCE_ROOM_STALE_MS;
     const bySession = new Map<string, PresenceRoomEntry>();
 
     roomSnapshots.forEach((entries) => {
       entries.forEach((entry) => {
-        if (now - entry.lastSeenAt > PRESENCE_ROOM_STALE_MS) return;
+        if (now - entry.lastSeenAt > staleMs) return;
         const current = bySession.get(entry.sessionId);
         if (!current || entry.lastSeenAt > current.lastSeenAt) {
           bySession.set(entry.sessionId, entry);

@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { CapsuleCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { isKeyboardNavigationBlocked, isKeyboardNavigationLocked, isNavigationLockedTarget } from '../lib/navigationLock';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
 
 interface PlayerProps {
@@ -199,7 +200,16 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
   }, [currentDateIndex, distanceFromDataIndex, walkwayLength, walkwayProfile]);
 
   useEffect(() => {
+    const resetKeyboardMovement = () => {
+      keyStateRef.current = { ...defaultKeyState };
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isKeyboardNavigationBlocked(event)) {
+        resetKeyboardMovement();
+        return;
+      }
+
       const key = event.key;
       if (FORWARD_KEYS.has(key)) keyStateRef.current.forward = true;
       if (BACKWARD_KEYS.has(key)) keyStateRef.current.backward = true;
@@ -209,6 +219,11 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      if (isKeyboardNavigationBlocked(event)) {
+        resetKeyboardMovement();
+        return;
+      }
+
       const key = event.key;
       if (FORWARD_KEYS.has(key)) keyStateRef.current.forward = false;
       if (BACKWARD_KEYS.has(key)) keyStateRef.current.backward = false;
@@ -261,6 +276,7 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
     const step = walkwayLength / Math.max(dataLength - 1, 1) * SCROLL_MULTIPLIER;
     const onWheel = (event: WheelEvent) => {
       if (!walkwayLength) return;
+      if (isNavigationLockedTarget(event.target)) return;
       event.preventDefault();
       const direction = event.deltaY < 0 ? -1 : 1;
       targetDistanceRef.current = THREE.MathUtils.clamp(
@@ -277,10 +293,19 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
     if (!walkwayLength || !walkwayProfile.length || !playerRef.current) return;
 
     const keyState = keyStateRef.current;
-    const moveIntent = (keyState.forward ? 1 : 0) - (keyState.backward ? 1 : 0);
-    const strafeIntent = (keyState.right ? 1 : 0) - (keyState.left ? 1 : 0);
+    const keyboardLocked = isKeyboardNavigationLocked();
+    if (keyboardLocked) {
+      keyState.forward = false;
+      keyState.backward = false;
+      keyState.left = false;
+      keyState.right = false;
+      keyState.run = false;
+    }
+    const isRunning = !keyboardLocked && keyState.run;
+    const moveIntent = keyboardLocked ? 0 : (keyState.forward ? 1 : 0) - (keyState.backward ? 1 : 0);
+    const strafeIntent = keyboardLocked ? 0 : (keyState.right ? 1 : 0) - (keyState.left ? 1 : 0);
 
-    const appliedSpeed = keyState.run ? MOVE_SPEED * RUN_MULTIPLIER : MOVE_SPEED;
+    const appliedSpeed = isRunning ? MOVE_SPEED * RUN_MULTIPLIER : MOVE_SPEED;
     const speed = appliedSpeed * delta;
     const strafeSpeed = STRAFE_SPEED * delta;
 
@@ -362,11 +387,11 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
     if (actions && defaultActionName) {
       const action = actions[defaultActionName];
       if (action) {
-        action.timeScale = THREE.MathUtils.lerp(action.timeScale, 0.4 + lastSpeedRef.current * (keyState.run ? 2.4 : 1.4), 1 - Math.exp(-5 * delta));
+        action.timeScale = THREE.MathUtils.lerp(action.timeScale, 0.4 + lastSpeedRef.current * (isRunning ? 2.4 : 1.4), 1 - Math.exp(-5 * delta));
       }
     }
 
-    const radius = FOLLOW_RADIUS * (keyState.run ? 0.92 : 1);
+    const radius = FOLLOW_RADIUS * (isRunning ? 0.92 : 1);
     const effectivePitch = pointerLockedRef.current ? pitchRef.current : THREE.MathUtils.lerp(pitchRef.current, THREE.MathUtils.degToRad(6), 1 - Math.exp(-3 * delta));
     const cosPitch = Math.cos(effectivePitch);
     const yaw = yawRef.current;

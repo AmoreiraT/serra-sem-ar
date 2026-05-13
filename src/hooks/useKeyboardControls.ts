@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react';
+import { isKeyboardNavigationBlocked, isNavigationLockedTarget } from '../lib/navigationLock';
 import { useCovidStore } from '../stores/covidStore';
 
 interface KeyboardControlsOptions {
@@ -22,6 +23,7 @@ export const useKeyboardControls = ({
   
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
     if (!enabled) return;
+    if (isKeyboardNavigationBlocked(event)) return;
     
     const [x, y, z] = cameraPosition;
     const [tx, ty, tz] = cameraTarget;
@@ -145,6 +147,7 @@ export const useKeyboardControls = ({
   
   const handleWheel = useCallback((event: WheelEvent) => {
     if (!enabled) return;
+    if (isNavigationLockedTarget(event.target)) return;
     
     event.preventDefault();
     const [x, y, z] = cameraPosition;

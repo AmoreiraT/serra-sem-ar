@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import roadMobileTextureUrl from '../assets/textures/baked/road_mobile_192.webp';
 import { covidEvents } from '../data/covidEvents';
+import { isKeyboardNavigationBlocked, isKeyboardNavigationLocked } from '../lib/navigationLock';
 import {
   getPresenceRoomId,
   getPresenceRoomIdsForDay,
@@ -8,6 +9,7 @@ import {
 } from '../services/firebaseRealtime';
 import { useCovidStore } from '../stores/covidStore';
 import { useOxygenStore } from '../stores/oxygenStore';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
 import type { MountainPoint, ProcessedCovidData } from '../types/covid';
 import type { PresenceRoomEntry } from '../types/realtimePresence';
 
@@ -949,6 +951,9 @@ export const Scene2D = () => {
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const sessionId = useOxygenStore((state) => state.sessionId);
+  const roomRadius = usePerformanceProfileStore((state) => state.profile.presence.roomRadius);
+  const presenceStaleMs = usePerformanceProfileStore((state) => state.profile.presence.staleMs);
+  const maxRemoteUsers = usePerformanceProfileStore((state) => state.profile.presence.maxRemoteUsers);
   const currentRoomId = getPresenceRoomId(currentDateIndex);
   const [remoteEntries, setRemoteEntries] = useState<PresenceRoomEntry[]>([]);
 
@@ -1017,15 +1022,30 @@ export const Scene2D = () => {
   }, []);
 
   useEffect(() => {
-    const roomIds = getPresenceRoomIdsForDay(currentRoomId * 14);
+    const roomIds = getPresenceRoomIdsForDay(currentRoomId * 14, roomRadius);
+    const maxEntries = Math.max(1, Math.floor(maxRemoteUsers));
     return listenToPresenceRooms(roomIds, (entries) => {
       const ownSession = sessionIdRef.current;
-      setRemoteEntries(entries.filter((entry) => entry.sessionId !== ownSession).slice(0, MAX_REMOTE_MARKERS));
-    });
-  }, [currentRoomId]);
+      setRemoteEntries(
+        entries
+          .filter((entry) => entry.sessionId !== ownSession)
+          .sort((a, b) => b.lastSeenAt - a.lastSeenAt)
+          .slice(0, Math.min(MAX_REMOTE_MARKERS, maxEntries))
+      );
+    }, undefined, { staleMs: presenceStaleMs });
+  }, [currentRoomId, maxRemoteUsers, presenceStaleMs, roomRadius]);
 
   useEffect(() => {
+    const resetKeyboardMovement = () => {
+      keyStateRef.current = { ...DEFAULT_KEYS };
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isKeyboardNavigationBlocked(event)) {
+        resetKeyboardMovement();
+        return;
+      }
+
       if (event.key === 'w' || event.key === 'W' || event.key === 'ArrowUp') keyStateRef.current.forward = true;
       if (event.key === 's' || event.key === 'S' || event.key === 'ArrowDown') keyStateRef.current.backward = true;
       if (event.key === 'a' || event.key === 'A' || event.key === 'ArrowLeft') keyStateRef.current.left = true;
@@ -1033,6 +1053,11 @@ export const Scene2D = () => {
       if (event.key === 'Shift') keyStateRef.current.run = true;
     };
     const handleKeyUp = (event: KeyboardEvent) => {
+      if (isKeyboardNavigationBlocked(event)) {
+        resetKeyboardMovement();
+        return;
+      }
+
       if (event.key === 'w' || event.key === 'W' || event.key === 'ArrowUp') keyStateRef.current.forward = false;
       if (event.key === 's' || event.key === 'S' || event.key === 'ArrowDown') keyStateRef.current.backward = false;
       if (event.key === 'a' || event.key === 'A' || event.key === 'ArrowLeft') keyStateRef.current.left = false;
@@ -1221,8 +1246,16 @@ export const Scene2D = () => {
       const joystickForward = clamp(-(state.mobileMoveInput[1] ?? 0), -1, 1);
       const joystickStrafe = clamp(state.mobileMoveInput[0] ?? 0, -1, 1);
       const keys = keyStateRef.current;
-      const keyboardForward = (keys.forward ? 1 : 0) - (keys.backward ? 1 : 0);
-      const keyboardStrafe = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      const keyboardLocked = isKeyboardNavigationLocked();
+      if (keyboardLocked) {
+        keys.forward = false;
+        keys.backward = false;
+        keys.left = false;
+        keys.right = false;
+        keys.run = false;
+      }
+      const keyboardForward = keyboardLocked ? 0 : (keys.forward ? 1 : 0) - (keys.backward ? 1 : 0);
+      const keyboardStrafe = keyboardLocked ? 0 : (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
       const forward = clamp(keyboardForward + joystickForward, -1, 1);
       const strafe = clamp(keyboardStrafe + joystickStrafe, -1, 1);
       const speed = keys.run || Math.abs(joystickForward) > 0.92 ? 42 : 26;

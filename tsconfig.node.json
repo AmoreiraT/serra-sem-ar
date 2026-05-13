@@ -5,7 +5,7 @@
     "skipLibCheck": true,
     "module": "ESNext",
   "moduleResolution": "bundler",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
@@ -14,4 +14,3 @@
   },
   "include": ["vite.config.ts"]
 }
-

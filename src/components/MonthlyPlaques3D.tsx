@@ -15,19 +15,27 @@ const BASE_RADIUS = 0.32 * PLAQUE_SCALE;
 const BASE_HEIGHT = 0.12 * PLAQUE_SCALE;
 const FORWARD_OFFSET = 4.2;
 const LATERAL_OFFSET = 2.8;
-const PLAQUE_TEXTURE_WIDTH = 768;
-const PLAQUE_TEXTURE_HEIGHT = 384;
+const PLAQUE_TEXTURE_SIZE = {
+  desktop: [768, 384],
+  mobile: [512, 256],
+} as const;
+
+interface MonthlyPlaques3DProps {
+  readonly quality?: 'desktop' | 'mobile';
+}
 
 const createPlaqueTexture = (
   monthLabel: string,
   dayLabel: string,
   casesLabel: string,
-  deathsLabel: string
+  deathsLabel: string,
+  quality: 'desktop' | 'mobile'
 ) => {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
-  canvas.width = PLAQUE_TEXTURE_WIDTH;
-  canvas.height = PLAQUE_TEXTURE_HEIGHT;
+  const [textureWidth, textureHeight] = PLAQUE_TEXTURE_SIZE[quality];
+  canvas.width = textureWidth;
+  canvas.height = textureHeight;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
@@ -199,7 +207,7 @@ type PlaqueData = {
   texture: THREE.CanvasTexture | null;
 };
 
-export const MonthlyPlaques3D = () => {
+export const MonthlyPlaques3D = ({ quality = 'desktop' }: MonthlyPlaques3DProps = {}) => {
   const data = useCovidStore((state) => state.data);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const revealedX = useCovidStore((state) => state.revealedX);
@@ -245,9 +253,13 @@ export const MonthlyPlaques3D = () => {
     });
 
     const ordered = Array.from(monthly.values()).sort((a, b) => a.index - b.index);
+    const visibleMonths =
+      quality === 'mobile'
+        ? ordered.filter((_, order) => order % 2 === 0 || order === ordered.length - 1)
+        : ordered;
     const upAxis = new THREE.Vector3(0, 1, 0);
 
-    return ordered
+    return visibleMonths
       .map(({ index, date, cases, deaths }, order) => {
         const point = mountainPoints[index];
         if (!point) return null;
@@ -288,7 +300,8 @@ export const MonthlyPlaques3D = () => {
           monthLabel,
           dayLabel,
           cases.toLocaleString('pt-BR'),
-          deaths.toLocaleString('pt-BR')
+          deaths.toLocaleString('pt-BR'),
+          quality
         );
 
         return {
@@ -305,7 +318,7 @@ export const MonthlyPlaques3D = () => {
         };
       })
       .filter(Boolean) as PlaqueData[];
-  }, [data, mountainPoints, terrainSampler, fontsReady]);
+  }, [data, mountainPoints, terrainSampler, fontsReady, quality]);
 
   useEffect(() => {
     return () => {

@@ -1,6 +1,6 @@
 import { Activity, CalendarDays, Mountain, Play, Skull } from 'lucide-react';
 import { useMemo } from 'react';
-import capaUrl from '../assets/jpg/docs/capa.png';
+import capaUrl from '../assets/jpg/docs/capa-1280.webp';
 import { useCovidStore } from '../stores/covidStore';
 import { Button } from './ui/button';
 
@@ -36,12 +36,12 @@ export const IntroPresentation = ({ onEnter }: IntroPresentationProps) => {
       <img
         src={capaUrl}
         alt=""
-        className="intro-background absolute inset-0 h-full w-full object-cover opacity-45"
+        className="intro-background absolute inset-0 h-full w-full object-cover opacity-70"
         loading="eager"
         decoding="async"
       />
-      <div className="intro-scrim absolute inset-0 bg-[linear-gradient(90deg,rgba(8,6,5,0.96)_0%,rgba(8,6,5,0.78)_42%,rgba(8,6,5,0.28)_100%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#120d0a] to-transparent" />
+      <div className="intro-scrim absolute inset-0 bg-[linear-gradient(90deg,rgba(8,6,5,0.72)_0%,rgba(8,6,5,0.48)_42%,rgba(8,6,5,0.18)_100%)]" />
+      <div className="intro-bottom-fade absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#120d0a]/70 to-transparent" />
 
       <section className="intro-content relative z-10 flex min-h-screen items-end px-5 py-7 sm:px-8 sm:py-10 lg:items-center lg:px-14">
         <div className="intro-shell w-full max-w-5xl">

@@ -93,6 +93,9 @@ export const MemorialPanel = ({ layout = 'floating', className }: MemorialPanelP
 
   return (
     <div
+      data-navigation-lock="true"
+      onKeyDown={(event) => event.stopPropagation()}
+      onKeyUp={(event) => event.stopPropagation()}
       className={cn(
         'pointer-events-auto space-y-3 overflow-auto rounded-2xl border border-white/20 bg-black/85 p-4 text-white shadow-2xl backdrop-blur-md',
         isSheet

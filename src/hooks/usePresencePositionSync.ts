@@ -4,9 +4,11 @@ import {
   getPresenceRoomId,
   removeRealtimePresenceRoom,
   writeRealtimePresence,
+  writeRealtimePresenceRoom,
 } from '../services/firebaseRealtime';
 import { useCovidStore } from '../stores/covidStore';
 import { useOxygenStore } from '../stores/oxygenStore';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
 import type { PresenceVector } from '../types/realtimePresence';
 
 export type UsePresencePositionSyncInput = {
@@ -16,17 +18,16 @@ export type UsePresencePositionSyncInput = {
   enabled: boolean;
 };
 
-const DESKTOP_MIN_WRITE_INTERVAL_MS = 5_000;
-const MOBILE_MIN_WRITE_INTERVAL_MS = 8_000;
-const HEARTBEAT_INTERVAL_MS = 45_000;
-const POSITION_DELTA_METERS = 2;
-const POSITION_DELTA_SQ = POSITION_DELTA_METERS * POSITION_DELTA_METERS;
-const DAY_INDEX_DELTA = 7;
+const FULL_HEARTBEAT_FLOOR_MS = 5_000;
+const FULL_HEARTBEAT_CEILING_MS = 12_000;
+const HEARTBEAT_INTERVAL_MS = 28_000;
+const DAY_INDEX_DELTA = 2;
 
 type PublishedPresence = {
   position: PresenceVector;
   dayIndex: number;
   atMs: number;
+  fullAtMs: number;
   roomId: number;
 };
 
@@ -48,14 +49,6 @@ const quantizePosition = ({ x, y, z }: PresenceVector): PresenceVector => ({
   z: quantizeCoordinate(z),
 });
 
-const detectMobile = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
-  return width < 768 || (width <= 1100 && height <= 540) || (coarsePointer && width < 1180);
-};
-
 export const usePresencePositionSync = ({
   sessionId,
   dayIndex,
@@ -63,6 +56,13 @@ export const usePresencePositionSync = ({
   enabled,
 }: UsePresencePositionSyncInput): void => {
   const isOfflineFallback = useOxygenStore((state) => state.isOfflineFallback);
+  const updateIntervalMs = useOxygenStore((state) => state.updateIntervalMs);
+  const runtimeDeviceClass = usePerformanceProfileStore((state) => state.deviceClass);
+  const activeRoomWriteIntervalMs = usePerformanceProfileStore(
+    (state) => state.profile.presence.activeRoomWriteIntervalMs
+  );
+  const idleRoomWriteIntervalMs = usePerformanceProfileStore((state) => state.profile.presence.idleRoomWriteIntervalMs);
+  const positionDeltaMeters = usePerformanceProfileStore((state) => state.profile.presence.positionDeltaMeters);
   const latestInputRef = useRef({ dayIndex, getPosition });
   const lastPublishedRef = useRef<PublishedPresence | null>(null);
   const cancelRoomDisconnectRef = useRef<(() => Promise<void>) | null>(null);
@@ -75,8 +75,12 @@ export const usePresencePositionSync = ({
     if (!enabled || !sessionId || sessionId.startsWith('local_') || isOfflineFallback) return undefined;
 
     let cancelled = false;
-    const isMobile = detectMobile();
-    const minWriteIntervalMs = isMobile ? MOBILE_MIN_WRITE_INTERVAL_MS : DESKTOP_MIN_WRITE_INTERVAL_MS;
+    const isMobile = runtimeDeviceClass === 'phone';
+    const positionDeltaSq = positionDeltaMeters * positionDeltaMeters;
+    const fullHeartbeatMs = Math.max(
+      FULL_HEARTBEAT_FLOOR_MS,
+      Math.min(FULL_HEARTBEAT_CEILING_MS, updateIntervalMs)
+    );
 
     const sync = async (force = false) => {
       if (cancelled) return;
@@ -90,18 +94,30 @@ export const usePresencePositionSync = ({
       const now = Date.now();
       const roomId = getPresenceRoomId(latest.dayIndex);
       const previous = lastPublishedRef.current;
+      const previousFullAt = previous?.fullAtMs ?? 0;
 
+      let shouldWriteRoom = force || !previous;
+      let shouldWriteFullPresence = force || !previous;
       if (!force && previous) {
-        const movedEnough = distanceSq(position, previous.position) >= POSITION_DELTA_SQ;
+        const movedEnough = distanceSq(position, previous.position) >= positionDeltaSq;
         const dayChangedEnough = Math.abs(latest.dayIndex - previous.dayIndex) >= DAY_INDEX_DELTA;
-        const heartbeatDue = now - previous.atMs >= HEARTBEAT_INTERVAL_MS;
-        const minIntervalPassed = now - previous.atMs >= minWriteIntervalMs;
+        const roomChanged = roomId !== previous.roomId;
+        const heartbeatDue = now - previousFullAt >= HEARTBEAT_INTERVAL_MS;
+        const fullPresenceDue = now - previousFullAt >= fullHeartbeatMs;
+        const activeRoomIntervalPassed = now - previous.atMs >= activeRoomWriteIntervalMs;
+        const idleRoomIntervalPassed = now - previous.atMs >= idleRoomWriteIntervalMs;
 
-        if (!minIntervalPassed || (!movedEnough && !dayChangedEnough && !heartbeatDue)) return;
+        shouldWriteRoom =
+          roomChanged ||
+          (activeRoomIntervalPassed && (movedEnough || dayChangedEnough)) ||
+          (idleRoomIntervalPassed && heartbeatDue);
+        shouldWriteFullPresence = roomChanged || dayChangedEnough || (fullPresenceDue && (movedEnough || heartbeatDue));
+
+        if (!shouldWriteRoom && !shouldWriteFullPresence) return;
       }
 
       try {
-        await writeRealtimePresence({
+        const payload = {
           sessionId,
           roomId,
           previousRoomId: previous?.roomId,
@@ -111,7 +127,13 @@ export const usePresencePositionSync = ({
           deaths: data?.deaths ?? 0,
           position,
           isMobile,
-        });
+        };
+
+        if (shouldWriteFullPresence) {
+          await writeRealtimePresence(payload);
+        } else {
+          await writeRealtimePresenceRoom(payload);
+        }
 
         if (!previous || previous.roomId !== roomId) {
           const cancelCurrent = cancelRoomDisconnectRef.current;
@@ -124,6 +146,7 @@ export const usePresencePositionSync = ({
           position,
           dayIndex: latest.dayIndex,
           atMs: now,
+          fullAtMs: shouldWriteFullPresence ? now : previousFullAt,
           roomId,
         };
       } catch {
@@ -134,7 +157,7 @@ export const usePresencePositionSync = ({
     void sync(true);
     const interval = window.setInterval(() => {
       void sync();
-    }, minWriteIntervalMs);
+    }, activeRoomWriteIntervalMs);
 
     return () => {
       cancelled = true;
@@ -148,5 +171,14 @@ export const usePresencePositionSync = ({
       if (cancelRoomDisconnect) void cancelRoomDisconnect().catch(() => undefined);
       if (currentRoomId !== undefined) void removeRealtimePresenceRoom(sessionId, currentRoomId).catch(() => undefined);
     };
-  }, [enabled, isOfflineFallback, sessionId]);
+  }, [
+    activeRoomWriteIntervalMs,
+    enabled,
+    idleRoomWriteIntervalMs,
+    isOfflineFallback,
+    positionDeltaMeters,
+    runtimeDeviceClass,
+    sessionId,
+    updateIntervalMs,
+  ]);
 };

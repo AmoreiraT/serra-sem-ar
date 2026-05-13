@@ -17,7 +17,7 @@ export const OxygenBar = () => {
   const widthClass = `oxygen-fill-${Math.max(0, Math.min(100, widthStep))}`;
 
   return (
-    <div className="pointer-events-none absolute left-3 top-[5.2rem] z-20 w-[min(72vw,280px)] sm:left-4 sm:top-24 xl:top-32">
+    <div className="hud-oxygen-bar pointer-events-none absolute left-3 top-[5.2rem] z-20 w-[min(72vw,280px)] sm:left-4 sm:top-24 xl:top-32">
       <div className="rounded-md border border-white/15 bg-black/62 px-3 py-2 text-white shadow-xl backdrop-blur-md">
         <div className="mb-1.5 flex items-center justify-between gap-3">
           <span className="text-[10px] uppercase tracking-[0.26em] text-white/68">Oxigenio</span>
@@ -41,4 +41,3 @@ export const OxygenBar = () => {
 };
 
 export default OxygenBar;
-

@@ -27,6 +27,16 @@ const MIN_UPDATE_FLOOR_MS = 4_000;
 const RESET_MESSAGE = "A serra ficou sem ar. Sua presença foi removida da paisagem.";
 const STALE_MESSAGE = "A sessão perdeu o fôlego da rede e voltou ao início da serra.";
 
+type CleanupStalePresenceOptions = {
+  includePresenceRooms?: boolean;
+};
+
+export type CleanupStalePresenceResult = {
+  removedPresenceSessions: number;
+  removedPresenceRoomEntries: number;
+  removedTotal: number;
+};
+
 export const getPresenceStaleCutoff = (now = Date.now()): number => now - STALE_PRESENCE_MS;
 
 const database = () => getDatabase();
@@ -35,6 +45,18 @@ const presenceRef = (sessionId: string) => database().ref(`${PRESENCE_PATH}/${se
 
 const presenceRoomPath = (dayIndex: number, sessionId: string): string =>
   `${PRESENCE_ROOMS_PATH}/${Math.floor(Math.max(0, dayIndex) / PRESENCE_ROOM_SIZE_DAYS)}/${sessionId}`;
+
+const parsePresenceRoomEntry = (
+  value: unknown,
+  fallbackSessionId: string
+): {sessionId: string; lastSeenAt: number} | null => {
+  if (!isRecord(value)) return null;
+  const sessionId = typeof value.sessionId === "string" ? value.sessionId : fallbackSessionId;
+  if (typeof sessionId !== "string" || !sessionId.startsWith("presence_")) return null;
+  if (value.status !== "alive") return null;
+  if (typeof value.lastSeenAt !== "number" || !Number.isFinite(value.lastSeenAt)) return null;
+  return {sessionId, lastSeenAt: value.lastSeenAt};
+};
 
 export const recommendedUpdateIntervalMs = (isMobile: boolean): number =>
   isMobile ? MOBILE_UPDATE_INTERVAL_MS : DESKTOP_UPDATE_INTERVAL_MS;
@@ -242,27 +264,63 @@ export const updatePresence = async (input: UpdatePresenceRequest): Promise<Upda
   };
 };
 
-export const cleanupStalePresenceRecords = async (now = Date.now()): Promise<number> => {
+export const cleanupStalePresenceRecords = async (
+  now = Date.now(),
+  options: CleanupStalePresenceOptions = {}
+): Promise<CleanupStalePresenceResult> => {
   const cutoff = getPresenceStaleCutoff(now);
   const snapshot = await database().ref(PRESENCE_PATH).orderByChild("lastSeenAt").endAt(cutoff).get();
   const raw: unknown = snapshot.val();
-  if (!isRecord(raw)) return 0;
 
   const updates: Record<string, null> = {};
   let removedSessions = 0;
-  Object.entries(raw).forEach(([sessionId, value]) => {
-    const presence = parseRealtimePresence(value, sessionId);
-    if (!presence || presence.lastSeenAt <= cutoff) {
-      removedSessions += 1;
-      updates[`${PRESENCE_PATH}/${sessionId}`] = null;
-      if (presence) {
-        updates[presenceRoomPath(presence.dayIndex, sessionId)] = null;
+
+  if (isRecord(raw)) {
+    Object.entries(raw).forEach(([sessionId, value]) => {
+      const presence = parseRealtimePresence(value, sessionId);
+      if (!presence || presence.lastSeenAt <= cutoff) {
+        removedSessions += 1;
+        updates[`${PRESENCE_PATH}/${sessionId}`] = null;
+        if (presence) {
+          updates[presenceRoomPath(presence.dayIndex, sessionId)] = null;
+        }
       }
+    });
+  }
+
+  let removedRoomEntries = 0;
+  if (options.includePresenceRooms) {
+    const roomsSnapshot = await database().ref(PRESENCE_ROOMS_PATH).get();
+    const roomsRaw: unknown = roomsSnapshot.val();
+
+    if (isRecord(roomsRaw)) {
+      Object.entries(roomsRaw).forEach(([roomId, roomValue]) => {
+        const roomPath = `${PRESENCE_ROOMS_PATH}/${roomId}`;
+        if (!isRecord(roomValue)) {
+          updates[roomPath] = null;
+          removedRoomEntries += 1;
+          return;
+        }
+
+        Object.entries(roomValue).forEach(([sessionId, entryValue]) => {
+          const entry = parsePresenceRoomEntry(entryValue, sessionId);
+          if (!entry || entry.lastSeenAt <= cutoff) {
+            updates[`${roomPath}/${sessionId}`] = null;
+            removedRoomEntries += 1;
+          }
+        });
+      });
     }
-  });
+  }
 
   const paths = Object.keys(updates);
-  if (!paths.length) return 0;
-  await database().ref().update(updates);
-  return removedSessions;
+  if (paths.length) {
+    await database().ref().update(updates);
+  }
+
+  return {
+    removedPresenceSessions: removedSessions,
+    removedPresenceRoomEntries: removedRoomEntries,
+    removedTotal: removedSessions + removedRoomEntries,
+  };
 };

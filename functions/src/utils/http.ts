@@ -33,7 +33,7 @@ export class HttpError extends Error {
 
 export const applyCors = (request: HttpRequest, response: HttpResponse): boolean => {
   response.set("Access-Control-Allow-Origin", "*");
-  response.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  response.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   response.set("Access-Control-Allow-Headers", "Content-Type");
   response.set("Access-Control-Max-Age", "3600");
 
@@ -43,6 +43,12 @@ export const applyCors = (request: HttpRequest, response: HttpResponse): boolean
   }
 
   return false;
+};
+
+export const requireGet = (request: HttpRequest): void => {
+  if (request.method !== "GET") {
+    throw new HttpError(405, "method_not_allowed");
+  }
 };
 
 export const requirePost = (request: HttpRequest): void => {

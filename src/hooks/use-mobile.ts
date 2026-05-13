@@ -9,12 +9,22 @@ const getIsMobileViewport = () => {
 
     const width = window.innerWidth;
     const height = window.innerHeight;
+    const shortSide = Math.min(width, height);
+    const longSide = Math.max(width, height);
     const hasMobilePointer = window.matchMedia('(pointer: coarse)').matches;
+    const userAgent = navigator.userAgent;
+    const maxTouchPoints = navigator.maxTouchPoints || 0;
+    const isIPad = /iPad/.test(userAgent) || (navigator.platform === 'MacIntel' && maxTouchPoints > 1);
+    const isAndroidTablet = /Android/i.test(userAgent) && !/Mobile/i.test(userAgent);
+    const hasTabletUserAgent = isIPad || isAndroidTablet || /Tablet|Silk|Kindle|KF[A-Z0-9]+|SM-T|Tab/i.test(userAgent);
     const isNarrow = width < MOBILE_BREAKPOINT;
     const isPhoneLandscape = width <= MOBILE_LANDSCAPE_MAX_WIDTH && height <= MOBILE_LANDSCAPE_MAX_HEIGHT;
-    const isTouchTablet = hasMobilePointer && width < 1180;
+    const isTouchTablet =
+        hasMobilePointer &&
+        (hasTabletUserAgent || (shortSide >= 560 && longSide >= 800));
+    const isCompactTouch = hasMobilePointer && width < 1180;
 
-    return isNarrow || isPhoneLandscape || isTouchTablet;
+    return isNarrow || isPhoneLandscape || isCompactTouch || isTouchTablet;
 };
 
 export function useIsMobile() {

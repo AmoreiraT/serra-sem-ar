@@ -1,12 +1,14 @@
 import { Sky, Stats } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { EnvironmentQuality } from '../environment/UrbanVoidEnvironment';
 import { UrbanVoidEnvironment } from '../environment/UrbanVoidEnvironment';
 import { RENDER_PROFILE_CHANGE_EVENT, WEBGL_FALLBACK_STORAGE_KEY } from '../hooks/useRenderProfile';
+import { isKeyboardNavigationBlocked, isKeyboardNavigationLocked } from '../lib/navigationLock';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
+import type { MountainPoint } from '../types/covid';
 import { EventMarkers3D } from './EventMarkers3D';
 import { MemorialPins3D } from './MemorialPins3D';
 import { MonthlyPlaques3D } from './MonthlyPlaques3D';
@@ -15,9 +17,19 @@ import { PeakAudio3D } from './PeakAudio3D';
 import { PlayerPresence3D } from './PlayerPresence3D';
 import { MemorialMarkers } from './memorials/MemorialMarkers';
 
-interface Scene3DProps {
-  enableControls?: boolean;
-  showStats?: boolean;
+export type Scene3DBakePassageId = 'inicio' | 'primeira-escalada' | 'colapso' | 'ecos';
+export type Scene3DBakeLayer = 'back' | 'front';
+
+export interface Scene3DBakeOptions {
+  readonly passageId: Scene3DBakePassageId;
+  readonly layer: Scene3DBakeLayer;
+  readonly transparent?: boolean;
+}
+
+export interface Scene3DProps {
+  readonly enableControls?: boolean;
+  readonly showStats?: boolean;
+  readonly bake?: Scene3DBakeOptions;
 }
 
 type MovementState = {
@@ -45,12 +57,110 @@ type SceneProfile = {
   environmentQuality: EnvironmentQuality;
 };
 
+type CameraPreset = {
+  position: [number, number, number];
+  target: [number, number, number];
+  fov: number;
+};
+
+const bakeCameraProgressByPassage: Record<Scene3DBakePassageId, number> = {
+  inicio: 0.08,
+  'primeira-escalada': 0.25,
+  colapso: 0.46,
+  ecos: 0.78,
+};
+
+const bakeRevealProgressByPassage: Record<Scene3DBakePassageId, number> = {
+  inicio: 0.16,
+  'primeira-escalada': 0.34,
+  colapso: 0.58,
+  ecos: 1,
+};
+
+const bakeClipProgressByPassage: Record<Scene3DBakePassageId, readonly [number, number]> = {
+  inicio: [0, 0.18],
+  'primeira-escalada': [0.14, 0.36],
+  colapso: [0.32, 0.6],
+  ecos: [0.58, 1],
+};
+
+const getBakeCameraPreset = (
+  bakeOptions: Scene3DBakeOptions | undefined,
+  mountainPoints: readonly MountainPoint[]
+): CameraPreset | null => {
+  if (!bakeOptions) return null;
+
+  const first = mountainPoints[0];
+  const last = mountainPoints[mountainPoints.length - 1] ?? first;
+  const minX = first?.x ?? -320;
+  const maxX = last?.x ?? 320;
+  const progress = bakeCameraProgressByPassage[bakeOptions.passageId];
+  const x = THREE.MathUtils.lerp(minX, maxX, progress);
+  const isFront = bakeOptions.layer === 'front';
+
+  return {
+    position: isFront ? [x, 18, 150] : [x - 56, 30, 216],
+    target: isFront ? [x, 10, -24] : [x + 22, 14, -22],
+    fov: isFront ? 30 : 32,
+  };
+};
+
+const getBakeRevealX = (
+  bakeOptions: Scene3DBakeOptions | undefined,
+  mountainPoints: readonly MountainPoint[]
+): number | null => {
+  if (!bakeOptions || mountainPoints.length === 0) return null;
+
+  const first = mountainPoints[0];
+  const last = mountainPoints[mountainPoints.length - 1] ?? first;
+  const minX = first?.x ?? 0;
+  const maxX = last?.x ?? minX;
+  const progress = bakeRevealProgressByPassage[bakeOptions.passageId];
+
+  return THREE.MathUtils.lerp(minX, maxX, progress);
+};
+
+const getBakeClipXRange = (
+  bakeOptions: Scene3DBakeOptions | undefined,
+  mountainPoints: readonly MountainPoint[]
+): readonly [number, number] | null => {
+  if (!bakeOptions || mountainPoints.length === 0) return null;
+
+  const first = mountainPoints[0];
+  const last = mountainPoints[mountainPoints.length - 1] ?? first;
+  const minX = first?.x ?? 0;
+  const maxX = last?.x ?? minX;
+  const [startProgress, endProgress] = bakeClipProgressByPassage[bakeOptions.passageId];
+
+  return [
+    THREE.MathUtils.lerp(minX, maxX, startProgress),
+    THREE.MathUtils.lerp(minX, maxX, endProgress),
+  ];
+};
+
+const useDocumentVisible = (): boolean => {
+  const [visible, setVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
+    const handleVisibilityChange = () => setVisible(!document.hidden);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  return visible;
+};
+
 const getSceneProfile = (): SceneProfile => {
   if (typeof window === 'undefined') {
     return {
       isMobile: false,
       isConstrained: false,
-      dpr: [1, 1.4],
+      dpr: [1, 1.5],
       shadows: true,
       mountainQuality: 'desktop',
       environmentQuality: 'full',
@@ -62,18 +172,38 @@ const getSceneProfile = (): SceneProfile => {
   const pixelRatio = window.devicePixelRatio || 1;
   const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const isMobile = width < 768;
+  const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  const shortSide = Math.min(width, height);
+  const longSide = Math.max(width, height);
+  const isTabletViewport =
+    hasCoarsePointer &&
+    shortSide >= 680 &&
+    longSide >= 900 &&
+    longSide <= 1440;
+  const isTouchViewport = width < 768 || (hasCoarsePointer && (width < 1180 || isTabletViewport));
+  const isMobile = isTouchViewport;
   const isTabletOrShort = width < 1100 || height < 760;
-  const isConstrained = isMobile || memory <= 4 || pixelRatio > 2 || height < 680;
+  const isConstrained = isTouchViewport || memory <= 4 || pixelRatio > 2 || height < 680;
 
-  if (isConstrained) {
+  if (isTouchViewport) {
     return {
       isMobile,
       isConstrained: true,
-      dpr: [0.9, 1],
+      dpr: isTabletViewport ? [0.82, 1] : [0.75, 1],
       shadows: false,
       mountainQuality: 'mobile',
-      environmentQuality: isMobile || reducedMotion || memory <= 3 ? 'lean' : 'balanced',
+      environmentQuality: isTabletViewport && !reducedMotion && memory > 4 ? 'balanced' : 'lean',
+    };
+  }
+
+  if (isConstrained) {
+    return {
+      isMobile: false,
+      isConstrained: true,
+      dpr: [0.85, 1],
+      shadows: false,
+      mountainQuality: 'mobile',
+      environmentQuality: reducedMotion || memory <= 3 ? 'lean' : 'balanced',
     };
   }
 
@@ -91,7 +221,7 @@ const getSceneProfile = (): SceneProfile => {
   return {
     isMobile,
     isConstrained: false,
-    dpr: [1, 1.45],
+    dpr: [1, 1.5],
     shadows: true,
     mountainQuality: 'desktop',
     environmentQuality: 'full',
@@ -108,12 +238,38 @@ const activateWebGLFallback = () => {
   window.dispatchEvent(new Event(RENDER_PROFILE_CHANGE_EVENT));
 };
 
-export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DProps) => {
+export const Scene3D = ({ enableControls = true, showStats = false, bake }: Scene3DProps) => {
   const mountainMesh = useCovidStore((state) => state.mountainMesh);
+  const mountainPoints = useCovidStore((state) => state.mountainPoints);
+  const setCameraPosition = useCovidStore((state) => state.setCameraPosition);
+  const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
   const mountainRef = useRef<THREE.Mesh>(null) as React.RefObject<THREE.Mesh>;
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>(() => getSceneProfile());
-  const initialCameraPosition = useMemo(() => useCovidStore.getState().cameraPosition, []);
-  const initialCameraTarget = useMemo(() => useCovidStore.getState().cameraTarget, []);
+  const documentVisible = useDocumentVisible();
+  const bakeCameraPreset = useMemo(() => getBakeCameraPreset(bake, mountainPoints), [bake, mountainPoints]);
+  const bakeRevealX = useMemo(() => getBakeRevealX(bake, mountainPoints), [bake, mountainPoints]);
+  const bakeClipXRange = useMemo(() => getBakeClipXRange(bake, mountainPoints), [bake, mountainPoints]);
+  const initialCameraPosition = useMemo(
+    () => bakeCameraPreset?.position ?? useCovidStore.getState().cameraPosition,
+    [bakeCameraPreset]
+  );
+  const initialCameraTarget = useMemo(
+    () => bakeCameraPreset?.target ?? useCovidStore.getState().cameraTarget,
+    [bakeCameraPreset]
+  );
+  const initialCameraFov = bakeCameraPreset?.fov ?? 60;
+  const bakeMode = Boolean(bake);
+  const controlsEnabled = enableControls && !bakeMode;
+  const transparentBake = Boolean(bake?.transparent);
+
+  const handleCameraSync = useCallback(
+    (position: [number, number, number], target: [number, number, number]) => {
+      if (!bakeMode) return;
+      setCameraPosition(position);
+      setCameraTarget(target);
+    },
+    [bakeMode, setCameraPosition, setCameraTarget]
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -175,31 +331,41 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
       <Canvas
         camera={{
           position: initialCameraPosition,
-          fov: 60,
+          fov: initialCameraFov,
           near: 0.1,
           far: 1000,
         }}
-        shadows={shadows}
-        dpr={dpr}
-        className="bg-gradient-to-b from-orange-900 to-amber-700"
+        shadows={shadows && !bakeMode}
+        dpr={bakeMode ? [1, 1.5] : dpr}
+        frameloop={bakeMode || documentVisible ? 'always' : 'never'}
+        gl={{
+          antialias: false,
+          alpha: transparentBake,
+          powerPreference: 'high-performance',
+          preserveDrawingBuffer: bakeMode,
+        }}
+        className={bakeMode ? 'bg-transparent' : 'bg-gradient-to-b from-orange-900 to-amber-700'}
       >
-        <color attach="background" args={['#130a05']} />
-        <Sky
-          distance={450000}
-          inclination={0.47}
-          azimuth={0.25}
-          turbidity={12}
-          rayleigh={1.8}
-          mieCoefficient={0.015}
-          mieDirectionalG={0.85}
-        />
+        {!transparentBake && <color attach="background" args={['#130a05']} />}
+        {!transparentBake && (
+          <Sky
+            distance={450000}
+            inclination={0.47}
+            azimuth={0.25}
+            turbidity={12}
+            rayleigh={1.8}
+            mieCoefficient={0.015}
+            mieDirectionalG={0.85}
+          />
+        )}
         <fogExp2 attach="fog" args={['#5f3c26', 0.0035]} />
         <CameraSync
           cameraPosition={initialCameraPosition}
           cameraTarget={initialCameraTarget}
+          onSync={handleCameraSync}
         />
-        <CameraGroundClamp enabled={enableControls} clearance={1.2} />
-        <MobileWebGLFallbackGuard enabled={isMobile} />
+        <CameraGroundClamp enabled={controlsEnabled} clearance={1.2} />
+        <MobileWebGLFallbackGuard enabled={!bakeMode && isMobile} />
 
         <hemisphereLight color="#fcc884" groundColor="#4c331e" intensity={0.6} />
         <directionalLight
@@ -217,39 +383,56 @@ export const Scene3D = ({ enableControls = true, showStats = false }: Scene3DPro
         />
         <pointLight position={[-60, 40, -40]} intensity={isMobile ? 0.4 : 0.6} color="#ff7a59" />
 
-        <UrbanVoidEnvironment
-          mountainRadius={calculatedRadius}
-          mountainCenter={mountainCenter}
-          seed={2020}
-          quality={environmentQuality}
-        />
+        {!bakeMode && (
+          <>
+            <UrbanVoidEnvironment
+              mountainRadius={calculatedRadius}
+              mountainCenter={mountainCenter}
+              seed={2020}
+              quality={environmentQuality}
+            />
 
-        <SurroundingTerrain
-          mountainRadius={calculatedRadius}
-          mountainCenter={mountainCenter}
-          quality={mountainQuality}
-        />
-        <PeakAudio3D />
+            <SurroundingTerrain
+              mountainRadius={calculatedRadius}
+              mountainCenter={mountainCenter}
+              quality={mountainQuality}
+            />
+          </>
+        )}
+        {!bakeMode && <PeakAudio3D />}
 
         <Physics gravity={[0, -9.81, 0]} colliders="trimesh">
           <Suspense fallback={null}>
-            <Mountain3D ref={mountainRef} quality={mountainQuality} />
+            <Mountain3D
+              ref={mountainRef}
+              quality={bakeMode ? 'desktop' : mountainQuality}
+              revealMode={bakeMode ? 'baked' : 'progressive'}
+              bakedRevealX={bakeRevealX ?? undefined}
+              bakedClipStartX={bakeClipXRange?.[0]}
+              bakedClipEndX={bakeClipXRange?.[1]}
+            />
           </Suspense>
-          <EventMarkers3D />
-          <MonthlyPlaques3D />
-          <MemorialPins3D />
-          <MemorialMarkers
-            enabled={oxygenMemorialsEnabled}
-            maxMarkers={isMobile ? 60 : 140}
-          />
-          <PlayerPresence3D quality={mountainQuality} />
+          {!bakeMode && (
+            <>
+              <EventMarkers3D />
+              <MonthlyPlaques3D quality={mountainQuality} />
+              <MemorialPins3D />
+              <MemorialMarkers
+                enabled={oxygenMemorialsEnabled}
+                maxMarkers={isMobile ? 60 : 140}
+              />
+              <PlayerPresence3D quality={mountainQuality} />
+            </>
+          )}
 
-          <Suspense fallback={null}>
-            <FirstPersonWalker eyeHeight={1.6} isMobile={isMobile} />
-          </Suspense>
+          {!bakeMode && (
+            <Suspense fallback={null}>
+              <FirstPersonWalker eyeHeight={1.6} isMobile={isMobile} />
+            </Suspense>
+          )}
         </Physics>
 
-        {showStats && <Stats />}
+        {showStats && import.meta.env.DEV && <Stats />}
       </Canvas>
     </div>
   );
@@ -411,6 +594,9 @@ function CameraSync({
     if (controls?.target instanceof THREE.Vector3) {
       controls.target.set(...cameraTarget);
       controls.update?.();
+    } else {
+      camera.lookAt(new THREE.Vector3(...cameraTarget));
+      camera.updateProjectionMatrix();
     }
     onSync?.(cameraPosition, cameraTarget);
   }, [camera, controls, cameraPosition, cameraTarget, onSync]);
@@ -584,7 +770,16 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
   }, [currentDateIndex, distanceFromDataIndex, distanceStep, walkwayLength, walkwayProfile]);
 
   useEffect(() => {
+    const resetKeyboardMovement = () => {
+      keyStateRef.current = { ...defaultMoveState };
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isKeyboardNavigationBlocked(event)) {
+        resetKeyboardMovement();
+        return;
+      }
+
       const key = event.key;
       if (key === 'w' || key === 'W' || key === 'ArrowUp') keyStateRef.current.forward = true;
       if (key === 's' || key === 'S' || key === 'ArrowDown') keyStateRef.current.backward = true;
@@ -594,6 +789,11 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      if (isKeyboardNavigationBlocked(event)) {
+        resetKeyboardMovement();
+        return;
+      }
+
       const key = event.key;
       if (key === 'w' || key === 'W' || key === 'ArrowUp') keyStateRef.current.forward = false;
       if (key === 's' || key === 'S' || key === 'ArrowDown') keyStateRef.current.backward = false;
@@ -772,11 +972,20 @@ function FirstPersonWalker({ eyeHeight = 1.6, isMobile = false }: { eyeHeight?: 
     const FLOOR_STICK_FORCE = 18;
 
     const keyState = keyStateRef.current;
+    const keyboardLocked = isKeyboardNavigationLocked();
+    if (keyboardLocked) {
+      keyState.forward = false;
+      keyState.backward = false;
+      keyState.left = false;
+      keyState.right = false;
+      keyState.run = false;
+    }
+
     const joystickForward = THREE.MathUtils.clamp(-(mobileMoveInput[1] ?? 0), -1, 1);
     const joystickStrafe = THREE.MathUtils.clamp(mobileMoveInput[0] ?? 0, -1, 1);
 
-    const keyboardForward = (keyState.forward ? 1 : 0) - (keyState.backward ? 1 : 0);
-    const keyboardStrafe = (keyState.right ? 1 : 0) - (keyState.left ? 1 : 0);
+    const keyboardForward = keyboardLocked ? 0 : (keyState.forward ? 1 : 0) - (keyState.backward ? 1 : 0);
+    const keyboardStrafe = keyboardLocked ? 0 : (keyState.right ? 1 : 0) - (keyState.left ? 1 : 0);
     const inputForward = THREE.MathUtils.clamp(keyboardForward + joystickForward, -1, 1);
     const inputStrafe = THREE.MathUtils.clamp(keyboardStrafe + joystickStrafe, -1, 1);
     const isRunning = keyState.run || (Math.abs(joystickForward) > 0.92 && isMobile);

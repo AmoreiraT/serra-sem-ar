@@ -5,11 +5,12 @@ import { useMultiplayerPresence } from '../hooks/useMultiplayerPresence';
 import { getPresenceRoomIdsForDay, listenToPresenceRooms } from '../services/firebaseRealtime';
 import { useCovidStore } from '../stores/covidStore';
 import { useOxygenStore } from '../stores/oxygenStore';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
+import { useRemotePresenceStore, type RemotePresenceAudioEntry } from '../stores/remotePresenceStore';
 
 const FOOTPRINT_STEP_DISTANCE = 0.9;
 const FOOTPRINT_POSITION_DELTA_EPSILON_SQ = FOOTPRINT_STEP_DISTANCE * FOOTPRINT_STEP_DISTANCE;
-const MAX_FOOTPRINTS = 10;
-const REMOTE_PRESENCE_STALE_MS = 60_000;
+const DEFAULT_MAX_FOOTPRINTS = 10;
 const CAMERA_TO_GROUND_OFFSET = 1.35;
 const FOOTPRINT_GROUND_LIFT = 0.012;
 const FOOTPRINT_WIDTH = 0.74;
@@ -91,13 +92,18 @@ const getFootprintGroundPosition = (point: PresenceVector): [number, number, num
   point.z,
 ];
 
-const appendFootprint = (footprints: Footprint[], next: Footprint, force = false): Footprint[] => {
+const appendFootprint = (
+  footprints: Footprint[],
+  next: Footprint,
+  force = false,
+  maxFootprints = DEFAULT_MAX_FOOTPRINTS
+): Footprint[] => {
   const last = footprints[footprints.length - 1];
   if (!force && last && distanceSq(vectorToArray(last), vectorToArray(next)) <= FOOTPRINT_POSITION_DELTA_EPSILON_SQ) {
     return footprints;
   }
 
-  return [...footprints, next].slice(-MAX_FOOTPRINTS);
+  return [...footprints, next].slice(-Math.max(1, Math.floor(maxFootprints)));
 };
 
 const getFootprintHeading = (footprints: Footprint[], idx: number, fallbackId: string) => {
@@ -153,6 +159,63 @@ const buildRemoteMarkers = (
   });
 
   return markers;
+};
+
+const mapRoomEntriesToAudioPresence = (
+  entries: Array<{
+    sessionId: string;
+    dayIndex: number;
+    position: PresenceVector;
+    isMobile: boolean;
+    lastSeenAt: number;
+  }>,
+  ownSessionId: string | null,
+  source: RemotePresenceAudioEntry['source']
+): RemotePresenceAudioEntry[] =>
+  entries
+    .filter((entry) => entry.sessionId !== ownSessionId && !entry.sessionId.startsWith('local_'))
+    .map((entry) => ({
+      sessionId: entry.sessionId,
+      dayIndex: entry.dayIndex,
+      position: entry.position,
+      isMobile: entry.isMobile,
+      lastSeenAt: entry.lastSeenAt,
+      source,
+    }));
+
+type RemotePresenceCandidate = {
+  sessionId: string;
+  position: PresenceVector;
+  lastSeenAt: number;
+};
+
+const distanceSqToCamera = (position: PresenceVector, cameraPosition: [number, number, number]): number => {
+  const dx = position.x - cameraPosition[0];
+  const dy = position.y - cameraPosition[1];
+  const dz = position.z - cameraPosition[2];
+  return dx * dx + dy * dy + dz * dz;
+};
+
+const selectRemotePresenceEntries = <Entry extends RemotePresenceCandidate>(
+  entries: Entry[],
+  ownSessionId: string | null,
+  cameraPosition: [number, number, number],
+  maxEntries: number,
+  staleMs: number,
+  now = Date.now()
+): Entry[] => {
+  const limit = Math.max(0, Math.floor(maxEntries));
+  if (!limit) return [];
+
+  return entries
+    .filter((entry) => entry.sessionId !== ownSessionId && !entry.sessionId.startsWith('local_'))
+    .filter((entry) => now - entry.lastSeenAt <= staleMs)
+    .sort((a, b) => {
+      const aScore = distanceSqToCamera(a.position, cameraPosition) + ((now - a.lastSeenAt) / 1000) * 2;
+      const bScore = distanceSqToCamera(b.position, cameraPosition) + ((now - b.lastSeenAt) / 1000) * 2;
+      return aScore === bScore ? b.lastSeenAt - a.lastSeenAt : aScore - bScore;
+    })
+    .slice(0, limit);
 };
 
 const createFootprintTexture = (id: string, isLocal: boolean) => {
@@ -421,10 +484,19 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
   const cameraPosition = useCovidStore((state) => state.cameraPosition);
   const cameraTarget = useCovidStore((state) => state.cameraTarget);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
+  const roomRadius = usePerformanceProfileStore((state) => state.profile.presence.roomRadius);
+  const presenceStaleMs = usePerformanceProfileStore((state) => state.profile.presence.staleMs);
+  const maxRemoteUsers = usePerformanceProfileStore((state) => state.profile.presence.maxRemoteUsers);
+  const maxRemoteFootprintsPerUser = usePerformanceProfileStore(
+    (state) => state.profile.presence.maxRemoteFootprintsPerUser
+  );
+  const setRemotePresenceEntries = useRemotePresenceStore((state) => state.setEntries);
+  const clearRemotePresenceEntries = useRemotePresenceStore((state) => state.clear);
+  const cameraPositionRef = useRef<[number, number, number]>(cameraPosition);
   const remoteTrailsRef = useRef<Map<string, RemoteTrail>>(new Map());
   const [localFootprints, setLocalFootprints] = useState<Footprint[]>(() => [vectorFromArray(cameraPosition)]);
   const [remotePresences, setRemotePresences] = useState<MarkerPresence[]>([]);
-  const roomIds = useMemo(() => getPresenceRoomIdsForDay(currentDateIndex), [currentDateIndex]);
+  const roomIds = useMemo(() => getPresenceRoomIdsForDay(currentDateIndex, roomRadius), [currentDateIndex, roomRadius]);
   const isPresenceEnabled = import.meta.env.VITE_ENABLE_PRESENCE !== 'false';
   const getMultiplayerPosition = useCallback(() => vectorFromArray(useCovidStore.getState().cameraPosition), []);
   const multiplayer = useMultiplayerPresence({
@@ -449,6 +521,10 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
   );
 
   useEffect(() => {
+    cameraPositionRef.current = cameraPosition;
+  }, [cameraPosition]);
+
+  useEffect(() => {
     if (presenceMode !== 'footprint') return;
     setLocalFootprints((current) => appendFootprint(current, vectorFromArray(cameraPosition)));
   }, [cameraPosition, presenceMode]);
@@ -463,6 +539,7 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
     ) {
       remoteTrailsRef.current.clear();
       setRemotePresences([]);
+      clearRemotePresenceEntries();
       return;
     }
 
@@ -473,59 +550,113 @@ export const PlayerPresence3D = ({ quality }: { quality: 'desktop' | 'mobile' })
       (entries) => {
         const now = Date.now();
         const trails = remoteTrailsRef.current;
+        const remoteEntries = selectRemotePresenceEntries(
+          entries,
+          activeSessionId,
+          cameraPositionRef.current,
+          maxRemoteUsers,
+          presenceStaleMs,
+          now
+        );
+        const allowedSessionIds = new Set(remoteEntries.map((entry) => entry.sessionId));
 
-        entries.forEach((entry) => {
-          if (entry.sessionId === activeSessionId || entry.sessionId.startsWith('local_')) return;
+        remoteEntries.forEach((entry) => {
           const current = trails.get(entry.sessionId);
           const markerColor = current?.color ?? palette[hashString(entry.sessionId) % palette.length];
           trails.set(entry.sessionId, {
             color: markerColor,
-            footprints: appendFootprint(current?.footprints ?? [], entry.position, !current),
+            footprints: appendFootprint(
+              current?.footprints ?? [],
+              entry.position,
+              !current,
+              maxRemoteFootprintsPerUser
+            ),
             lastSeenAt: entry.lastSeenAt,
           });
         });
 
         trails.forEach((trail, trailSessionId) => {
-          if (now - trail.lastSeenAt > REMOTE_PRESENCE_STALE_MS) {
+          if (!allowedSessionIds.has(trailSessionId) || now - trail.lastSeenAt > presenceStaleMs) {
             trails.delete(trailSessionId);
           }
         });
 
         setRemotePresences(buildRemoteMarkers(trails, presenceMode));
+        setRemotePresenceEntries(mapRoomEntriesToAudioPresence(remoteEntries, activeSessionId, 'rtdb'));
       },
       () => {
         remoteTrailsRef.current.clear();
         setRemotePresences([]);
-      }
+        clearRemotePresenceEntries();
+      },
+      { staleMs: presenceStaleMs }
     );
 
-    return () => unsubscribe();
-  }, [activeSessionId, isOfflineFallback, isPresenceEnabled, multiplayer.connected, presenceMode, roomIds]);
+    return () => {
+      unsubscribe();
+      clearRemotePresenceEntries();
+    };
+  }, [
+    activeSessionId,
+    clearRemotePresenceEntries,
+    isOfflineFallback,
+    isPresenceEnabled,
+    maxRemoteFootprintsPerUser,
+    maxRemoteUsers,
+    multiplayer.connected,
+    presenceStaleMs,
+    presenceMode,
+    roomIds,
+    setRemotePresenceEntries,
+  ]);
 
   useEffect(() => {
-    if (!multiplayer.connected || !activeSessionId) return;
+    if (!multiplayer.connected || !activeSessionId) {
+      if (multiplayer.connected === false) clearRemotePresenceEntries();
+      return;
+    }
 
     const now = Date.now();
     const trails = remoteTrailsRef.current;
-    multiplayer.peers.forEach((peer) => {
-      if (peer.sessionId === activeSessionId || peer.sessionId.startsWith('local_')) return;
+    const remotePeers = selectRemotePresenceEntries(
+      multiplayer.peers,
+      activeSessionId,
+      cameraPositionRef.current,
+      maxRemoteUsers,
+      presenceStaleMs,
+      now
+    );
+    const allowedSessionIds = new Set(remotePeers.map((peer) => peer.sessionId));
+
+    remotePeers.forEach((peer) => {
       const current = trails.get(peer.sessionId);
       const markerColor = current?.color ?? palette[hashString(peer.sessionId) % palette.length];
       trails.set(peer.sessionId, {
         color: markerColor,
-        footprints: appendFootprint(current?.footprints ?? [], peer.position, !current),
+        footprints: appendFootprint(current?.footprints ?? [], peer.position, !current, maxRemoteFootprintsPerUser),
         lastSeenAt: peer.lastSeenAt,
       });
     });
 
     trails.forEach((trail, trailSessionId) => {
-      if (now - trail.lastSeenAt > REMOTE_PRESENCE_STALE_MS) {
+      if (!allowedSessionIds.has(trailSessionId) || now - trail.lastSeenAt > presenceStaleMs) {
         trails.delete(trailSessionId);
       }
     });
 
     setRemotePresences(buildRemoteMarkers(trails, presenceMode));
-  }, [activeSessionId, multiplayer.connected, multiplayer.peers, presenceMode]);
+    setRemotePresenceEntries(mapRoomEntriesToAudioPresence(remotePeers, activeSessionId, 'multiplayer'));
+  }, [
+    activeSessionId,
+    clearRemotePresenceEntries,
+    maxRemoteFootprintsPerUser,
+    maxRemoteUsers,
+    multiplayer.connected,
+    multiplayer.peers,
+    presenceStaleMs,
+    presenceMode,
+    setRemotePresenceEntries,
+  ]);
 
   return (
     <group name={`player-presence-${presenceMode}`}>

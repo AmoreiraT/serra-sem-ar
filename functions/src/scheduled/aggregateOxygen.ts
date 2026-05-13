@@ -5,11 +5,11 @@ import {cleanupStalePresenceRecords} from "../services/presence.service";
 export const aggregateOxygenScheduled = onSchedule(
   {schedule: "every 1 minutes"},
   async () => {
-    const removedStaleSessions = await cleanupStalePresenceRecords();
+    const cleanup = await cleanupStalePresenceRecords();
     const result = await aggregateOxygenFromPresence();
 
     console.log("aggregateOxygenScheduled", {
-      removedStaleSessions,
+      removedStaleSessions: cleanup.removedPresenceSessions,
       onlineUsersCount: result.onlineUsersCount,
       collectiveOxygen: result.collectiveOxygen,
       pressure: result.pressure,

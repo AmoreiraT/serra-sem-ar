@@ -1,5 +1,6 @@
 import geckos, { type ClientChannel } from '@geckos.io/client';
 import { useEffect, useRef, useState } from 'react';
+import { detectClientDeviceClass } from '../core/device/clientDeviceClass';
 import type { PresenceVector } from '../types/realtimePresence';
 
 export type MultiplayerPeerState = {
@@ -88,14 +89,6 @@ const parseSnapshot = (value: unknown): ServerSnapshotMessage | null => {
   };
 };
 
-const detectMobile = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
-  return width < 768 || (width <= 1100 && height <= 540) || (coarsePointer && width < 1180);
-};
-
 const quantizeCoordinate = (value: number): number => Math.round(value * 10) / 10;
 
 const quantizePosition = ({ x, y, z }: PresenceVector): PresenceVector => ({
@@ -151,7 +144,8 @@ export const useMultiplayerPresence = ({
     }
 
     let cancelled = false;
-    const isMobile = detectMobile();
+    const clientClass = detectClientDeviceClass();
+    const isMobile = clientClass === 'phone';
     const channel = createChannel(serverUrl);
     const intervalMs = isMobile ? MOBILE_SEND_INTERVAL_MS : DESKTOP_SEND_INTERVAL_MS;
     let lastSentPosition: PresenceVector | null = null;
