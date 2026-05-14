@@ -3,8 +3,11 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { CapsuleCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { TABLET_PLAYER_MODEL_URL } from '../assets/tabletOptimizedAssets';
 import { isKeyboardNavigationBlocked, isKeyboardNavigationLocked, isNavigationLockedTarget } from '../lib/navigationLock';
+import { startPerformanceTrace } from '../services/performanceMonitoring';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
 
 interface PlayerProps {
   eyeHeight?: number;
@@ -104,7 +107,12 @@ const findWalkwaySample = (profile: WalkwaySample[], distance: number) => {
 
 export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
   const { camera, gl } = useThree();
-  const { scene, animations } = useGLTF(PLAYER_MODEL_URL);
+  const performanceProfile = usePerformanceProfileStore((state) => state.profile);
+  const playerModelUrl =
+    performanceProfile.deviceClass === 'tablet' && performanceProfile.render.assetVariant === 'tablet-ktx2-v1'
+      ? TABLET_PLAYER_MODEL_URL
+      : PLAYER_MODEL_URL;
+  const { scene, animations } = useGLTF(playerModelUrl, true, true);
   const model = useMemo(() => {
     const clone = scene.clone(true);
     clone.traverse((child) => {
@@ -146,6 +154,24 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
   const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
   const mountainMesh = useCovidStore((state) => state.mountainMesh);
   const terrainSampler = useCovidStore((state) => state.terrainSampler);
+
+  useEffect(() => {
+    const traceHandle = startPerformanceTrace('player_model_load', {
+      device_class: performanceProfile.deviceClass,
+      asset_variant: performanceProfile.render.assetVariant,
+      render_mode: performanceProfile.render.experience,
+      profile_version: performanceProfile.version,
+    });
+    traceHandle.putMetric('animation_count', animations.length);
+    traceHandle.stop({ status: 'loaded' });
+  }, [
+    animations.length,
+    performanceProfile.deviceClass,
+    performanceProfile.render.assetVariant,
+    performanceProfile.render.experience,
+    performanceProfile.version,
+    playerModelUrl,
+  ]);
 
   const walkwayLength = useMemo(() => {
     if (!walkwayProfile.length) return 0;
@@ -451,6 +477,7 @@ export const Player = ({ eyeHeight = 1.6 }: PlayerProps) => {
   );
 };
 
-useGLTF.preload(PLAYER_MODEL_URL);
+useGLTF.preload(PLAYER_MODEL_URL, true, true);
+useGLTF.preload(TABLET_PLAYER_MODEL_URL, true, true);
 
 export default Player;

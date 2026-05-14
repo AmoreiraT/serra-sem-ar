@@ -7,8 +7,11 @@ import type { EnvironmentQuality } from '../environment/UrbanVoidEnvironment';
 import { UrbanVoidEnvironment } from '../environment/UrbanVoidEnvironment';
 import { RENDER_PROFILE_CHANGE_EVENT, WEBGL_FALLBACK_STORAGE_KEY } from '../hooks/useRenderProfile';
 import { isKeyboardNavigationBlocked, isKeyboardNavigationLocked } from '../lib/navigationLock';
+import { startPerformanceTrace, type PerformanceTraceHandle } from '../services/performanceMonitoring';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
 import type { MountainPoint } from '../types/covid';
+import type { PerformanceProfile } from '../types/performanceProfile';
 import { EventMarkers3D } from './EventMarkers3D';
 import { MemorialPins3D } from './MemorialPins3D';
 import { MonthlyPlaques3D } from './MonthlyPlaques3D';
@@ -55,6 +58,31 @@ type SceneProfile = {
   shadows: boolean;
   mountainQuality: 'desktop' | 'mobile';
   environmentQuality: EnvironmentQuality;
+};
+
+const environmentQualityRank: Record<EnvironmentQuality, number> = {
+  lean: 0,
+  balanced: 1,
+  full: 2,
+};
+
+const lowerEnvironmentQuality = (localQuality: EnvironmentQuality, profileQuality: EnvironmentQuality): EnvironmentQuality =>
+  environmentQualityRank[profileQuality] < environmentQualityRank[localQuality] ? profileQuality : localQuality;
+
+const applyRenderProfile = (
+  sceneProfile: SceneProfile,
+  renderProfile: PerformanceProfile['render']
+): SceneProfile => {
+  const maxDpr = Number.isFinite(renderProfile.maxDpr) && renderProfile.maxDpr > 0 ? renderProfile.maxDpr : sceneProfile.dpr[1];
+  const dprMin = Math.min(sceneProfile.dpr[0], maxDpr);
+  const dprMax = Math.min(sceneProfile.dpr[1], maxDpr);
+
+  return {
+    ...sceneProfile,
+    dpr: [dprMin, Math.max(dprMin, dprMax)],
+    mountainQuality: renderProfile.mountainQuality === 'mobile' ? 'mobile' : sceneProfile.mountainQuality,
+    environmentQuality: lowerEnvironmentQuality(sceneProfile.environmentQuality, renderProfile.environmentQuality),
+  };
 };
 
 type CameraPreset = {
@@ -245,6 +273,7 @@ export const Scene3D = ({ enableControls = true, showStats = false, bake }: Scen
   const setCameraTarget = useCovidStore((state) => state.setCameraTarget);
   const mountainRef = useRef<THREE.Mesh>(null) as React.RefObject<THREE.Mesh>;
   const [sceneProfile, setSceneProfile] = useState<SceneProfile>(() => getSceneProfile());
+  const performanceProfile = usePerformanceProfileStore((state) => state.profile);
   const documentVisible = useDocumentVisible();
   const bakeCameraPreset = useMemo(() => getBakeCameraPreset(bake, mountainPoints), [bake, mountainPoints]);
   const bakeRevealX = useMemo(() => getBakeRevealX(bake, mountainPoints), [bake, mountainPoints]);
@@ -305,7 +334,11 @@ export const Scene3D = ({ enableControls = true, showStats = false, bake }: Scen
     };
   }, []);
 
-  const { dpr, isMobile, shadows, mountainQuality, environmentQuality } = sceneProfile;
+  const effectiveSceneProfile = useMemo(
+    () => applyRenderProfile(sceneProfile, performanceProfile.render),
+    [performanceProfile.render, sceneProfile]
+  );
+  const { dpr, isMobile, shadows, mountainQuality, environmentQuality } = effectiveSceneProfile;
   const oxygenMemorialsEnabled = import.meta.env.VITE_ENABLE_OXYGEN_MEMORIALS !== 'false';
 
   const calculatedRadius = useMemo(() => {
@@ -346,6 +379,13 @@ export const Scene3D = ({ enableControls = true, showStats = false, bake }: Scen
         }}
         className={bakeMode ? 'bg-transparent' : 'bg-gradient-to-b from-orange-900 to-amber-700'}
       >
+        {!bakeMode && (
+          <ScenePerformanceReporter
+            deviceClass={performanceProfile.deviceClass}
+            renderProfile={performanceProfile.render}
+            profileVersion={performanceProfile.version}
+          />
+        )}
         {!transparentBake && <color attach="background" args={['#130a05']} />}
         {!transparentBake && (
           <Sky
@@ -489,6 +529,43 @@ function MobileWebGLFallbackGuard({ enabled }: { enabled: boolean }) {
       monitor.fallbackActivated = true;
       activateWebGLFallback();
     }
+  });
+
+  return null;
+}
+
+function ScenePerformanceReporter({
+  deviceClass,
+  renderProfile,
+  profileVersion,
+}: {
+  deviceClass: PerformanceProfile['deviceClass'];
+  renderProfile: PerformanceProfile['render'];
+  profileVersion: PerformanceProfile['version'];
+}) {
+  const traceRef = useRef<PerformanceTraceHandle | null>(null);
+  const reportedRef = useRef(false);
+
+  useEffect(() => {
+    reportedRef.current = false;
+    const traceHandle = startPerformanceTrace('scene3d_start_to_first_frame', {
+      device_class: deviceClass,
+      asset_variant: renderProfile.assetVariant,
+      render_mode: renderProfile.experience,
+      profile_version: profileVersion,
+    });
+    traceRef.current = traceHandle;
+
+    return () => {
+      traceHandle.stop({ status: reportedRef.current ? 'complete' : 'cancelled' });
+      if (traceRef.current === traceHandle) traceRef.current = null;
+    };
+  }, [deviceClass, profileVersion, renderProfile.assetVariant, renderProfile.experience]);
+
+  useFrame(() => {
+    if (reportedRef.current) return;
+    reportedRef.current = true;
+    traceRef.current?.stop({ status: 'first_frame' });
   });
 
   return null;

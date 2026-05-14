@@ -8,6 +8,7 @@ import { CinematicAudio } from './components/CinematicAudio';
 import { ControlsHelp } from './components/ControlsHelp';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { EventCard } from './components/EventCard';
+import { FullscreenToggle } from './components/FullscreenToggle';
 import { InfoPanel } from './components/InfoPanel';
 import { IntroPresentation } from './components/IntroPresentation';
 import { LoadingScreen } from './components/LoadingScreen';
@@ -160,7 +161,7 @@ function AppContent() {
 
   usePerformanceProfile({
     deviceClass: runtimeDeviceClass,
-    enabled: hasEntered && presenceEnabled,
+    enabled: hasEntered,
   });
 
   usePresencePositionSync({
@@ -225,7 +226,10 @@ function AppContent() {
       <header className="app-header pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
         <div className="hud-desktop-header pointer-events-auto hidden flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:flex xl:gap-4 xl:px-6 xl:py-3">
           <InfoPanel variant="compact" />
-          <ControlsHelp variant="header" />
+          <div className="ml-auto flex items-center gap-2">
+            <FullscreenToggle />
+            <ControlsHelp variant="header" />
+          </div>
         </div>
         <div
           className={cn(
@@ -269,6 +273,7 @@ function AppContent() {
                 <span className="sr-only">Resumo</span>
               </Button>
             )}
+            <FullscreenToggle />
             <ControlsHelp variant="header" />
           </div>
         </div>

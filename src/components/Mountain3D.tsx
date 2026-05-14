@@ -6,8 +6,10 @@ import { forwardRef, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import * as THREE from 'three';
 import { BufferGeometry, Float32BufferAttribute, Mesh } from 'three';
+import { TABLET_OPTIMIZED_TEXTURES } from '../assets/tabletOptimizedAssets';
 import useTextureLoader from '../hooks/useTextureLoader';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
 import { MountainPoint } from '../types/covid';
 import { createTerrainSampler } from '../utils/terrainSampler';
 
@@ -141,6 +143,45 @@ const qualityMap: Record<QualityMode, QualitySettings> = {
   },
 };
 
+const fract = (value: number) => value - Math.floor(value);
+
+const createProceduralGroundTexture = (kind: 'rock' | 'road') => {
+  const size = 128;
+  const data = new Uint8Array(size * size * 4);
+  const base = kind === 'rock' ? [38, 27, 19] : [109, 88, 58];
+  const mid = kind === 'rock' ? [56, 42, 30] : [153, 127, 84];
+  const speck = kind === 'rock' ? [118, 104, 82] : [197, 172, 122];
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const idx = (y * size + x) * 4;
+      const grain = fract(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453);
+      const wideGrain = fract(Math.sin(x * 0.73 + y * 1.37) * 951.1357);
+      const pebble = grain > (kind === 'rock' ? 0.9 : 0.94) ? 1 : 0;
+      const shade = THREE.MathUtils.clamp(wideGrain * 0.55 + grain * 0.45, 0, 1);
+      const color = pebble ? speck : base.map((channel, channelIndex) => THREE.MathUtils.lerp(channel, mid[channelIndex], shade));
+
+      data[idx] = color[0];
+      data[idx + 1] = color[1];
+      data[idx + 2] = color[2];
+      data[idx + 3] = 255;
+    }
+  }
+
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(kind === 'rock' ? 6 : 1, kind === 'rock' ? 3 : 1);
+  texture.needsUpdate = true;
+  return texture;
+};
+
+const markTextureForUpload = (texture: THREE.Texture) => {
+  if (!(texture instanceof THREE.CompressedTexture)) {
+    texture.needsUpdate = true;
+  }
+};
+
 interface Mountain3DProps {
   quality?: QualityMode;
   revealMode?: 'progressive' | 'baked';
@@ -152,6 +193,8 @@ interface Mountain3DProps {
 export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(
   ({ quality = 'desktop', revealMode = 'progressive', bakedRevealX, bakedClipStartX, bakedClipEndX }, ref) => {
   const meshRef = useRef<Mesh>(null);
+  const mountainMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const walkwayMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const assignMeshRef = useCallback(
     (mesh: Mesh | null) => {
       meshRef.current = mesh;
@@ -836,6 +879,21 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(
     }
   });
 
+  const optimizedRockTexture = useMemo(
+    () => ({
+      ...TABLET_OPTIMIZED_TEXTURES.mountainRock,
+      original: rockBakedTexture,
+    }),
+    []
+  );
+  const optimizedRoadTexture = useMemo(
+    () => ({
+      ...TABLET_OPTIMIZED_TEXTURES.road,
+      original: pathBakedTexture,
+    }),
+    []
+  );
+
   const {
     diffuseMap,
     normalMap,
@@ -847,23 +905,31 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(
     pathRough,
     pathHeight,
     pathMetallic,
-  } = useTextureLoader(
-    rockBakedTexture,
-    undefined,
-    undefined,
-    undefined,
-    pathBakedTexture
+  } = useTextureLoader(optimizedRockTexture, undefined, undefined, undefined, optimizedRoadTexture);
+
+  const profileAnisotropyCap = usePerformanceProfileStore((state) => state.profile.render.textureMaxAnisotropy);
+  const anisotropyCap = Math.max(1, Math.min(qualityConfig.maxAnisotropy, profileAnisotropyCap));
+  const isBakedReveal = revealMode === 'baked';
+  const fallbackRockMap = useMemo(() => createProceduralGroundTexture('rock'), []);
+  const fallbackRoadMap = useMemo(() => createProceduralGroundTexture('road'), []);
+  const visibleDiffuseMap = isBakedReveal ? undefined : diffuseMap ?? fallbackRockMap;
+  const visiblePathDiffuse = isBakedReveal ? undefined : pathDiffuse ?? fallbackRoadMap;
+
+  useEffect(
+    () => () => {
+      fallbackRockMap.dispose();
+      fallbackRoadMap.dispose();
+    },
+    [fallbackRoadMap, fallbackRockMap]
   );
 
-  const anisotropyCap = qualityConfig.maxAnisotropy;
-  const isBakedReveal = revealMode === 'baked';
-
   useEffect(() => {
-    if (diffuseMap) {
-      diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
-      diffuseMap.repeat.set(6, 3);
-      diffuseMap.anisotropy = Math.max(diffuseMap.anisotropy, anisotropyCap);
-      diffuseMap.colorSpace = THREE.SRGBColorSpace;
+    if (visibleDiffuseMap) {
+      visibleDiffuseMap.wrapS = visibleDiffuseMap.wrapT = THREE.RepeatWrapping;
+      visibleDiffuseMap.repeat.set(6, 3);
+      visibleDiffuseMap.anisotropy = Math.max(visibleDiffuseMap.anisotropy, anisotropyCap);
+      visibleDiffuseMap.colorSpace = THREE.SRGBColorSpace;
+      markTextureForUpload(visibleDiffuseMap);
     }
 
     if (normalMap) {
@@ -882,11 +948,12 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(
       roughnessMap.repeat.set(6, 3);
     }
 
-    if (pathDiffuse) {
-      pathDiffuse.wrapS = pathDiffuse.wrapT = THREE.RepeatWrapping;
-      pathDiffuse.repeat.set(1, 1);
-      pathDiffuse.anisotropy = Math.max(pathDiffuse.anisotropy ?? 0, anisotropyCap);
-      pathDiffuse.colorSpace = THREE.SRGBColorSpace;
+    if (visiblePathDiffuse) {
+      visiblePathDiffuse.wrapS = visiblePathDiffuse.wrapT = THREE.RepeatWrapping;
+      visiblePathDiffuse.repeat.set(1, 1);
+      visiblePathDiffuse.anisotropy = Math.max(visiblePathDiffuse.anisotropy ?? 0, anisotropyCap);
+      visiblePathDiffuse.colorSpace = THREE.SRGBColorSpace;
+      markTextureForUpload(visiblePathDiffuse);
     }
 
     if (pathNormal) {
@@ -916,11 +983,11 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(
     }
   }, [
     anisotropyCap,
-    diffuseMap,
+    visibleDiffuseMap,
     normalMap,
     aoMap,
     roughnessMap,
-    pathDiffuse,
+    visiblePathDiffuse,
     pathNormal,
     pathAO,
     pathRough,
@@ -928,15 +995,33 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(
     pathMetallic,
   ]);
 
+  useEffect(() => {
+    if (mountainMaterialRef.current) mountainMaterialRef.current.needsUpdate = true;
+    if (walkwayMaterialRef.current) walkwayMaterialRef.current.needsUpdate = true;
+  }, [
+    isBakedReveal,
+    visibleDiffuseMap?.uuid,
+    normalMap?.uuid,
+    aoMap?.uuid,
+    roughnessMap?.uuid,
+    visiblePathDiffuse?.uuid,
+    pathNormal?.uuid,
+    pathAO?.uuid,
+    pathRough?.uuid,
+    pathHeight?.uuid,
+    pathMetallic?.uuid,
+  ]);
+
   return (
     <RigidBody type="fixed" colliders="trimesh" name="mountain-body">
       <group>
         <mesh ref={assignMeshRef} geometry={geometry} name="mountain" castShadow receiveShadow>
           <meshStandardMaterial
+            ref={mountainMaterialRef}
             color={isBakedReveal ? '#8f321c' : undefined}
             emissive={isBakedReveal ? '#1d0502' : undefined}
             emissiveIntensity={isBakedReveal ? 0.18 : 0}
-            map={isBakedReveal ? undefined : diffuseMap}
+            map={visibleDiffuseMap}
             normalMap={isBakedReveal ? undefined : normalMap}
             aoMap={isBakedReveal ? undefined : aoMap}
             roughnessMap={isBakedReveal ? undefined : roughnessMap}
@@ -945,10 +1030,11 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(
             metalness={0.02}
           />
         </mesh>
-        {!isBakedReveal && walkwayGeometry && pathDiffuse && (
+        {!isBakedReveal && walkwayGeometry && visiblePathDiffuse && (
           <mesh geometry={walkwayGeometry} castShadow receiveShadow renderOrder={1}>
             <meshStandardMaterial
-              map={pathDiffuse}
+              ref={walkwayMaterialRef}
+              map={visiblePathDiffuse}
               normalMap={pathNormal ?? undefined}
               aoMap={pathAO ?? undefined}
               roughnessMap={pathRough ?? undefined}

@@ -19,6 +19,15 @@ const profiles: Record<PerformanceDeviceClass, PerformanceProfile> = {
       nearRadius: 22,
       fullRadius: 2.8,
     },
+    render: {
+      experience: "3d",
+      assetVariant: "desktop-original",
+      preferCompressedTextures: false,
+      maxDpr: 1.5,
+      textureMaxAnisotropy: 10,
+      mountainQuality: "desktop",
+      environmentQuality: "full",
+    },
   },
   tablet: {
     version: 1,
@@ -38,6 +47,15 @@ const profiles: Record<PerformanceDeviceClass, PerformanceProfile> = {
       nearRadius: 22,
       fullRadius: 2.8,
     },
+    render: {
+      experience: "3d",
+      assetVariant: "tablet-ktx2-v1",
+      preferCompressedTextures: true,
+      maxDpr: 1,
+      textureMaxAnisotropy: 2,
+      mountainQuality: "mobile",
+      environmentQuality: "balanced",
+    },
   },
   phone: {
     version: 1,
@@ -56,6 +74,15 @@ const profiles: Record<PerformanceDeviceClass, PerformanceProfile> = {
       staleMs: 12_000,
       nearRadius: 16,
       fullRadius: 2.8,
+    },
+    render: {
+      experience: "2.5d",
+      assetVariant: "phone-25d-v1",
+      preferCompressedTextures: false,
+      maxDpr: 1,
+      textureMaxAnisotropy: 1,
+      mountainQuality: "mobile",
+      environmentQuality: "lean",
     },
   },
 };

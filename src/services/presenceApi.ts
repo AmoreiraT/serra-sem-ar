@@ -48,10 +48,30 @@ const requireDeviceClass = (value: unknown): PerformanceDeviceClass => {
   throw new Error('Perfil de performance invalido');
 };
 
+const requireRenderExperience = (value: unknown): PerformanceProfile['render']['experience'] => {
+  if (value === '3d' || value === '2.5d') return value;
+  throw new Error('Experiencia de render invalida');
+};
+
+const requireMountainQuality = (value: unknown): PerformanceProfile['render']['mountainQuality'] => {
+  if (value === 'desktop' || value === 'mobile') return value;
+  throw new Error('Qualidade de montanha invalida');
+};
+
+const requireEnvironmentQuality = (value: unknown): PerformanceProfile['render']['environmentQuality'] => {
+  if (value === 'full' || value === 'balanced' || value === 'lean') return value;
+  throw new Error('Qualidade de ambiente invalida');
+};
+
 const requireFiniteProfileNumber = (value: unknown, field: string): number => {
   const parsed = finiteNumber(value);
   if (parsed === null) throw new Error(`Campo de performance invalido: ${field}`);
   return parsed;
+};
+
+const requireProfileString = (value: unknown, field: string): string => {
+  if (typeof value === 'string' && value.trim().length > 0) return value;
+  throw new Error(`Campo de performance invalido: ${field}`);
 };
 
 const parseJoinPresenceResponse = (value: unknown): JoinPresenceResponse => {
@@ -125,13 +145,21 @@ const parseRecalculateOxygenResponse = (value: unknown): RecalculateOxygenRespon
 };
 
 const parsePerformanceProfile = (value: unknown): PerformanceProfile => {
-  if (!isRecord(value) || !isRecord(value.presence) || !isRecord(value.audio) || value.version !== 1) {
+  if (
+    !isRecord(value) ||
+    !isRecord(value.presence) ||
+    !isRecord(value.audio) ||
+    !isRecord(value.render) ||
+    value.version !== 1
+  ) {
     throw new Error('Perfil de performance incompleto');
   }
 
+  const deviceClass = requireDeviceClass(value.deviceClass);
+
   return {
     version: 1,
-    deviceClass: requireDeviceClass(value.deviceClass),
+    deviceClass,
     presence: {
       roomRadius: requireFiniteProfileNumber(value.presence.roomRadius, 'presence.roomRadius'),
       staleMs: requireFiniteProfileNumber(value.presence.staleMs, 'presence.staleMs'),
@@ -155,6 +183,18 @@ const parsePerformanceProfile = (value: unknown): PerformanceProfile => {
       staleMs: requireFiniteProfileNumber(value.audio.staleMs, 'audio.staleMs'),
       nearRadius: requireFiniteProfileNumber(value.audio.nearRadius, 'audio.nearRadius'),
       fullRadius: requireFiniteProfileNumber(value.audio.fullRadius, 'audio.fullRadius'),
+    },
+    render: {
+      experience: requireRenderExperience(value.render.experience),
+      assetVariant: requireProfileString(value.render.assetVariant, 'render.assetVariant'),
+      preferCompressedTextures: value.render.preferCompressedTextures === true,
+      maxDpr: requireFiniteProfileNumber(value.render.maxDpr, 'render.maxDpr'),
+      textureMaxAnisotropy: requireFiniteProfileNumber(
+        value.render.textureMaxAnisotropy,
+        'render.textureMaxAnisotropy'
+      ),
+      mountainQuality: requireMountainQuality(value.render.mountainQuality),
+      environmentQuality: requireEnvironmentQuality(value.render.environmentQuality),
     },
   };
 };
