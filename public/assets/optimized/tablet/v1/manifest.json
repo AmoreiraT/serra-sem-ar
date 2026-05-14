@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-14T00:07:28.908Z",
+  "basePath": "/assets/optimized/tablet/v1",
+  "model": {
+    "input": "src/assets/glb/player/source/player.glb",
+    "output": "/assets/optimized/tablet/v1/models/player.tablet.glb",
+    "bytes": 1486852
+  },
+  "textures": [
+    {
+      "id": "serra-rock-baked",
+      "role": "color",
+      "runtimeCritical": true,
+      "maxSize": 1024,
+      "width": 1024,
+      "height": 1024,
+      "webp": "/assets/optimized/tablet/v1/textures/serra-rock-baked.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/serra-rock-baked.ktx2",
+      "webpBytes": 242814,
+      "ktx2Bytes": 216778
+    },
+    {
+      "id": "serra-rock-baked-512",
+      "role": "color",
+      "runtimeCritical": true,
+      "maxSize": 512,
+      "width": 512,
+      "height": 512,
+      "webp": "/assets/optimized/tablet/v1/textures/serra-rock-baked-512.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/serra-rock-baked-512.ktx2",
+      "webpBytes": 68344,
+      "ktx2Bytes": 70377
+    },
+    {
+      "id": "road-baked",
+      "role": "color",
+      "runtimeCritical": true,
+      "maxSize": 1024,
+      "width": 512,
+      "height": 512,
+      "webp": "/assets/optimized/tablet/v1/textures/road-baked.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/road-baked.ktx2",
+      "webpBytes": 26226,
+      "ktx2Bytes": 62986
+    },
+    {
+      "id": "terrain-albedo",
+      "role": "color",
+      "runtimeCritical": false,
+      "maxSize": 1536,
+      "width": 1536,
+      "height": 1536,
+      "webp": "/assets/optimized/tablet/v1/textures/terrain-albedo.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/terrain-albedo.ktx2",
+      "webpBytes": 284290,
+      "ktx2Bytes": 451093
+    },
+    {
+      "id": "terrain-normal",
+      "role": "normal",
+      "runtimeCritical": false,
+      "maxSize": 1024,
+      "width": 1024,
+      "height": 1024,
+      "webp": "/assets/optimized/tablet/v1/textures/terrain-normal.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/terrain-normal.ktx2",
+      "webpBytes": 2316132,
+      "ktx2Bytes": 1218798
+    },
+    {
+      "id": "terrain-ao",
+      "role": "data",
+      "runtimeCritical": false,
+      "maxSize": 1024,
+      "width": 1024,
+      "height": 1024,
+      "webp": "/assets/optimized/tablet/v1/textures/terrain-ao.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/terrain-ao.ktx2",
+      "webpBytes": 877252,
+      "ktx2Bytes": 197153
+    },
+    {
+      "id": "terrain-roughness",
+      "role": "data",
+      "runtimeCritical": false,
+      "maxSize": 1024,
+      "width": 1024,
+      "height": 1024,
+      "webp": "/assets/optimized/tablet/v1/textures/terrain-roughness.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/terrain-roughness.ktx2",
+      "webpBytes": 634280,
+      "ktx2Bytes": 182688
+    },
+    {
+      "id": "road-basecolor",
+      "role": "color",
+      "runtimeCritical": false,
+      "maxSize": 1024,
+      "width": 1024,
+      "height": 1024,
+      "webp": "/assets/optimized/tablet/v1/textures/road-basecolor.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/road-basecolor.ktx2",
+      "webpBytes": 26632,
+      "ktx2Bytes": 114691
+    },
+    {
+      "id": "road-normal",
+      "role": "normal",
+      "runtimeCritical": false,
+      "maxSize": 1024,
+      "width": 1024,
+      "height": 1024,
+      "webp": "/assets/optimized/tablet/v1/textures/road-normal.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/road-normal.ktx2",
+      "webpBytes": 1060884,
+      "ktx2Bytes": 669813
+    },
+    {
+      "id": "road-ao",
+      "role": "data",
+      "runtimeCritical": false,
+      "maxSize": 1024,
+      "width": 1024,
+      "height": 1024,
+      "webp": "/assets/optimized/tablet/v1/textures/road-ao.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/road-ao.ktx2",
+      "webpBytes": 706886,
+      "ktx2Bytes": 199782
+    },
+    {
+      "id": "road-roughness",
+      "role": "data",
+      "runtimeCritical": false,
+      "maxSize": 1024,
+      "width": 1024,
+      "height": 1024,
+      "webp": "/assets/optimized/tablet/v1/textures/road-roughness.webp",
+      "ktx2": "/assets/optimized/tablet/v1/textures/road-roughness.ktx2",
+      "webpBytes": 309238,
+      "ktx2Bytes": 127770
+    }
+  ]
+}

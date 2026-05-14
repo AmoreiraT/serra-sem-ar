@@ -11,6 +11,7 @@ import type {
   UpdatePresenceRequest,
   UpdatePresenceResponse,
 } from '../types/realtimePresence';
+import type { PerformanceDeviceClass, PerformanceProfile } from '../types/performanceProfile';
 
 const API_BASE_URL = import.meta.env.VITE_PRESENCE_API_BASE_URL ?? '/api';
 
@@ -40,6 +41,37 @@ const requireResetReason = (value: unknown): UpdatePresenceResponse['resetReason
   if (value === undefined) return undefined;
   if (value === 'asphyxiated' || value === 'presence_removed' || value === 'stale_session') return value;
   throw new Error('Motivo de reset invalido');
+};
+
+const requireDeviceClass = (value: unknown): PerformanceDeviceClass => {
+  if (value === 'desktop' || value === 'tablet' || value === 'phone') return value;
+  throw new Error('Perfil de performance invalido');
+};
+
+const requireRenderExperience = (value: unknown): PerformanceProfile['render']['experience'] => {
+  if (value === '3d' || value === '2.5d') return value;
+  throw new Error('Experiencia de render invalida');
+};
+
+const requireMountainQuality = (value: unknown): PerformanceProfile['render']['mountainQuality'] => {
+  if (value === 'desktop' || value === 'mobile') return value;
+  throw new Error('Qualidade de montanha invalida');
+};
+
+const requireEnvironmentQuality = (value: unknown): PerformanceProfile['render']['environmentQuality'] => {
+  if (value === 'full' || value === 'balanced' || value === 'lean') return value;
+  throw new Error('Qualidade de ambiente invalida');
+};
+
+const requireFiniteProfileNumber = (value: unknown, field: string): number => {
+  const parsed = finiteNumber(value);
+  if (parsed === null) throw new Error(`Campo de performance invalido: ${field}`);
+  return parsed;
+};
+
+const requireProfileString = (value: unknown, field: string): string => {
+  if (typeof value === 'string' && value.trim().length > 0) return value;
+  throw new Error(`Campo de performance invalido: ${field}`);
 };
 
 const parseJoinPresenceResponse = (value: unknown): JoinPresenceResponse => {
@@ -112,6 +144,61 @@ const parseRecalculateOxygenResponse = (value: unknown): RecalculateOxygenRespon
   };
 };
 
+const parsePerformanceProfile = (value: unknown): PerformanceProfile => {
+  if (
+    !isRecord(value) ||
+    !isRecord(value.presence) ||
+    !isRecord(value.audio) ||
+    !isRecord(value.render) ||
+    value.version !== 1
+  ) {
+    throw new Error('Perfil de performance incompleto');
+  }
+
+  const deviceClass = requireDeviceClass(value.deviceClass);
+
+  return {
+    version: 1,
+    deviceClass,
+    presence: {
+      roomRadius: requireFiniteProfileNumber(value.presence.roomRadius, 'presence.roomRadius'),
+      staleMs: requireFiniteProfileNumber(value.presence.staleMs, 'presence.staleMs'),
+      maxRemoteUsers: requireFiniteProfileNumber(value.presence.maxRemoteUsers, 'presence.maxRemoteUsers'),
+      maxRemoteFootprintsPerUser: requireFiniteProfileNumber(
+        value.presence.maxRemoteFootprintsPerUser,
+        'presence.maxRemoteFootprintsPerUser'
+      ),
+      activeRoomWriteIntervalMs: requireFiniteProfileNumber(
+        value.presence.activeRoomWriteIntervalMs,
+        'presence.activeRoomWriteIntervalMs'
+      ),
+      idleRoomWriteIntervalMs: requireFiniteProfileNumber(
+        value.presence.idleRoomWriteIntervalMs,
+        'presence.idleRoomWriteIntervalMs'
+      ),
+      positionDeltaMeters: requireFiniteProfileNumber(value.presence.positionDeltaMeters, 'presence.positionDeltaMeters'),
+    },
+    audio: {
+      maxPeers: requireFiniteProfileNumber(value.audio.maxPeers, 'audio.maxPeers'),
+      staleMs: requireFiniteProfileNumber(value.audio.staleMs, 'audio.staleMs'),
+      nearRadius: requireFiniteProfileNumber(value.audio.nearRadius, 'audio.nearRadius'),
+      fullRadius: requireFiniteProfileNumber(value.audio.fullRadius, 'audio.fullRadius'),
+    },
+    render: {
+      experience: requireRenderExperience(value.render.experience),
+      assetVariant: requireProfileString(value.render.assetVariant, 'render.assetVariant'),
+      preferCompressedTextures: value.render.preferCompressedTextures === true,
+      maxDpr: requireFiniteProfileNumber(value.render.maxDpr, 'render.maxDpr'),
+      textureMaxAnisotropy: requireFiniteProfileNumber(
+        value.render.textureMaxAnisotropy,
+        'render.textureMaxAnisotropy'
+      ),
+      mountainQuality: requireMountainQuality(value.render.mountainQuality),
+      environmentQuality: requireEnvironmentQuality(value.render.environmentQuality),
+    },
+  };
+};
+
 export const joinPresence = async (payload: JoinPresenceRequest): Promise<JoinPresenceResponse> => {
   const response = await presenceHttp.post<unknown>('/presence/join', payload);
   return parseJoinPresenceResponse(response.data);
@@ -134,10 +221,18 @@ export const recalculateOxygen = async (
   return parseRecalculateOxygenResponse(response.data);
 };
 
+export const fetchPerformanceProfile = async (
+  deviceClass: PerformanceDeviceClass
+): Promise<PerformanceProfile> => {
+  const response = await presenceHttp.get<unknown>('/performance/profile', {
+    params: { device: deviceClass },
+  });
+  return parsePerformanceProfile(response.data);
+};
+
 export const sendLeavePresenceBeacon = (payload: LeavePresenceRequest): boolean => {
   if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') return false;
   const base = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
   const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
   return navigator.sendBeacon(`${base}/presence/leave`, blob);
 };
-

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useEnvironmentStore } from '../stores/environmentStore';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
 import { PandemicTexture, PandemicTextureState } from '../types/environment';
 
 const uniqueUrls = (urls: ReadonlyArray<string>): ReadonlyArray<string> => {
@@ -15,7 +16,9 @@ const uniqueUrls = (urls: ReadonlyArray<string>): ReadonlyArray<string> => {
 };
 
 export const usePandemicTextures = (urls: ReadonlyArray<string>): PandemicTextureState => {
-  const anisotropy = useEnvironmentStore((state) => state.textureAnisotropy);
+  const environmentAnisotropy = useEnvironmentStore((state) => state.textureAnisotropy);
+  const profileAnisotropyCap = usePerformanceProfileStore((state) => state.profile.render.textureMaxAnisotropy);
+  const anisotropy = Math.max(1, Math.min(environmentAnisotropy, profileAnisotropyCap));
   const [textures, setTextures] = useState<ReadonlyArray<PandemicTexture>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

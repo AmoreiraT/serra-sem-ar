@@ -3,6 +3,7 @@ import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {HttpsError, onCall, onRequest} from "firebase-functions/v2/https";
 import {setGlobalOptions} from "firebase-functions/v2/options";
 import {handleOxygenRecalculate} from "./http/oxygenRecalculate";
+import {handlePerformanceProfile} from "./http/performanceProfile";
 import {handlePresenceJoin} from "./http/presenceJoin";
 import {handlePresenceLeave} from "./http/presenceLeave";
 import {handlePresenceUpdate} from "./http/presenceUpdate";
@@ -61,6 +62,10 @@ export const api = onRequest(async (request, response) => {
     }
     if (routePath === "/oxygen/recalculate") {
       await handleOxygenRecalculate(httpRequest, httpResponse);
+      return;
+    }
+    if (routePath === "/performance/profile") {
+      handlePerformanceProfile(httpRequest, httpResponse);
       return;
     }
 

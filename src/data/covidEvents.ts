@@ -16,6 +16,23 @@ export interface CovidEvent {
   attachments?: CovidEventAttachment[];
 }
 
+interface DatePointLike {
+  date: Date;
+}
+
+interface CovidEventTimelineEntry {
+  event: CovidEvent;
+  index: number;
+}
+
+export interface CovidEventTimelinePoint {
+  id: string;
+  date: string;
+  title: string;
+  index: number;
+  progress: number;
+}
+
 export const covidEvents: CovidEvent[] = [
   {
     date: '2020-02-25',
@@ -372,3 +389,51 @@ export const covidEvents: CovidEvent[] = [
 export const covidEventsByDate = new Map<string, CovidEvent>(
   covidEvents.map((event) => [event.date, event])
 );
+
+export const formatCovidEventDatePtBr = (eventDate: string): string =>
+  new Date(`${eventDate}T00:00:00`).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
+export const getCovidEventForTimelineIndex = (
+  data: readonly DatePointLike[],
+  currentDateIndex: number
+): CovidEvent | null => {
+  if (!data.length) return null;
+
+  const eventsByIndex = mapCovidEventsToTimeline(data);
+
+  if (!eventsByIndex.length) return null;
+
+  const clampedIndex = Math.max(0, Math.min(currentDateIndex, data.length - 1));
+  const upcoming = eventsByIndex.find((item) => item.index >= clampedIndex);
+  return (upcoming ?? eventsByIndex[eventsByIndex.length - 1]).event;
+};
+
+export const getCovidEventTimelinePoints = (
+  data: readonly DatePointLike[]
+): readonly CovidEventTimelinePoint[] => {
+  if (data.length <= 1) {
+    return [];
+  }
+
+  return mapCovidEventsToTimeline(data).map(({ event, index }) => ({
+    id: event.date,
+    date: event.date,
+    title: event.title,
+    index,
+    progress: index / (data.length - 1),
+  }));
+};
+
+const mapCovidEventsToTimeline = (data: readonly DatePointLike[]): readonly CovidEventTimelineEntry[] =>
+  covidEvents
+    .map((event) => {
+      const index = data.findIndex((item) => item.date.toISOString().slice(0, 10) === event.date);
+      if (index === -1) return null;
+      return { event, index };
+    })
+    .filter((entry): entry is CovidEventTimelineEntry => entry !== null)
+    .sort((a, b) => a.index - b.index);

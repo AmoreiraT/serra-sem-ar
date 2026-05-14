@@ -1,32 +1,38 @@
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, Info, Pin, X } from 'lucide-react';
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { Info, Pin, X } from 'lucide-react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
 import { CinematicAudio } from './components/CinematicAudio';
 import { ControlsHelp } from './components/ControlsHelp';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { EventCard } from './components/EventCard';
+import { FullscreenToggle } from './components/FullscreenToggle';
 import { InfoPanel } from './components/InfoPanel';
 import { IntroPresentation } from './components/IntroPresentation';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MemorialPanel } from './components/MemorialPanel';
 import { MobileMoveJoystick } from './components/MobileMoveJoystick';
-import { Scene2D } from './components/Scene2D';
 import { OxygenBar } from './components/oxygen/OxygenBar';
 import { OxygenCollapseOverlay } from './components/oxygen/OxygenCollapseOverlay';
 import { OxygenWorldStatus } from './components/oxygen/OxygenWorldStatus';
 import { Button } from './components/ui/button';
+import { getDeviceProfile } from './core/device/deviceProfile';
+import { getIsTabletViewport } from './core/device/clientDeviceClass';
+import { MobileSerra25D } from './features/mobile-25d/components/MobileSerra25D';
+import { SerraError } from './features/shared/components/SerraError';
+import { SerraLoading } from './features/shared/components/SerraLoading';
 import { useCovidData } from './hooks/useCovidData';
 import { useOxygenCollapseListener } from './hooks/useOxygenCollapseListener';
+import { usePerformanceProfile } from './hooks/usePerformanceProfile';
 import { usePresencePositionSync } from './hooks/usePresencePositionSync';
 import { usePresenceSession } from './hooks/usePresenceSession';
-import { useRenderProfile } from './hooks/useRenderProfile';
 import { AuthProvider } from './providers/AuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
 import { useCovidStore } from './stores/covidStore';
 import { useOxygenStore } from './stores/oxygenStore';
+import type { Scene3DBakeLayer, Scene3DBakeOptions, Scene3DBakePassageId } from './components/Scene3D';
 
 const SCENE_IMPORT_RELOAD_KEY = 'serra-sem-ar-scene-import-reload';
 
@@ -57,28 +63,114 @@ const loadScene3D = async () => {
 const Scene3D = lazy(loadScene3D);
 const isPresenceEnabled = () => import.meta.env.VITE_ENABLE_PRESENCE !== 'false';
 
+const bakePassageIds: readonly Scene3DBakePassageId[] = ['inicio', 'primeira-escalada', 'colapso', 'ecos'];
+const bakeLayers: readonly Scene3DBakeLayer[] = ['back', 'front'];
+
+const isBakePassageId = (value: string | null): value is Scene3DBakePassageId =>
+  value !== null && bakePassageIds.includes(value as Scene3DBakePassageId);
+
+const isBakeLayer = (value: string | null): value is Scene3DBakeLayer =>
+  value !== null && bakeLayers.includes(value as Scene3DBakeLayer);
+
+const useTabletViewport = () => {
+  const [isTabletViewport, setIsTabletViewport] = useState(getIsTabletViewport);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    let frame = 0;
+    const sync = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        setIsTabletViewport((current) => {
+          const next = getIsTabletViewport();
+          return current === next ? current : next;
+        });
+      });
+    };
+
+    const pointerQuery = window.matchMedia('(pointer: coarse)');
+    pointerQuery.addEventListener('change', sync);
+    window.addEventListener('resize', sync);
+    window.addEventListener('orientationchange', sync);
+    sync();
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      pointerQuery.removeEventListener('change', sync);
+      window.removeEventListener('resize', sync);
+      window.removeEventListener('orientationchange', sync);
+    };
+  }, []);
+
+  return isTabletViewport;
+};
+
+const getBakeOptions = (): Scene3DBakeOptions | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const bakeRequested = window.location.pathname === '/bake' || searchParams.get('bake') === '1';
+
+  if (!bakeRequested) {
+    return null;
+  }
+
+  const passageParam = searchParams.get('passage');
+  const layerParam = searchParams.get('layer');
+
+  return {
+    passageId: isBakePassageId(passageParam) ? passageParam : 'inicio',
+    layer: isBakeLayer(layerParam) ? layerParam : 'front',
+    transparent: searchParams.get('transparent') === '1',
+  };
+};
+
 function AppContent() {
   const { isLoading, error } = useCovidData();
+  const deviceProfile = useMemo(() => getDeviceProfile(), []);
+  const bakeOptions = useMemo(() => getBakeOptions(), []);
   const [mobilePanel, setMobilePanel] = useState<'event' | 'memorial' | 'header' | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
+  const [experimental3D, setExperimental3D] = useState(false);
   const isMobile = useIsMobile();
-  const renderProfile = useRenderProfile();
+  const isTabletViewport = useTabletViewport();
   const presenceEnabled = isPresenceEnabled();
+  const isBakeMode = bakeOptions !== null;
+  const forceTablet3D = deviceProfile.isTablet || isTabletViewport;
+  const mobile25DDefault =
+    !experimental3D &&
+    !forceTablet3D &&
+    (deviceProfile.renderMode === 'mobile-25d' || deviceProfile.renderMode === 'safe-static');
+  const immersive3DActive = !isBakeMode && !mobile25DDefault;
+  const isTabletExperience = immersive3DActive && isMobile && forceTablet3D;
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
+  const mobileMoveInput = useCovidStore((state) => state.mobileMoveInput);
   const shouldReset = useOxygenStore((state) => state.shouldReset);
-  const presenceSession = usePresenceSession({ enabled: hasEntered && presenceEnabled });
+  const presenceSession = usePresenceSession({ enabled: hasEntered && presenceEnabled && immersive3DActive });
+  const isMobileMoving = Math.hypot(mobileMoveInput[0], mobileMoveInput[1]) > 0.12;
+  const mobileHudState = mobilePanel ? 'reading' : isMobileMoving ? 'moving' : 'idle';
+  const activeRenderMode = forceTablet3D ? 'desktop-3d' : experimental3D ? 'mobile-3d-experimental' : deviceProfile.renderMode;
+  const runtimeDeviceClass = forceTablet3D ? 'tablet' : isMobile ? 'phone' : 'desktop';
   const getPresencePosition = useCallback(() => {
     const [x, y, z] = useCovidStore.getState().cameraPosition;
     return { x, y, z };
   }, []);
 
+  usePerformanceProfile({
+    deviceClass: runtimeDeviceClass,
+    enabled: hasEntered,
+  });
+
   usePresencePositionSync({
     sessionId: presenceSession.sessionId,
     dayIndex: currentDateIndex,
     getPosition: getPresencePosition,
-    enabled: hasEntered && presenceEnabled && !shouldReset,
+    enabled: hasEntered && presenceEnabled && immersive3DActive && !shouldReset,
   });
-  useOxygenCollapseListener(presenceEnabled ? presenceSession.sessionId : null);
+  useOxygenCollapseListener(presenceEnabled && immersive3DActive ? presenceSession.sessionId : null);
 
   const toggleMobilePanel = (panel: 'event' | 'memorial' | 'header') => {
     setMobilePanel((current) => (current === panel ? null : panel));
@@ -89,18 +181,19 @@ function AppContent() {
   const closeMobilePanel = () => setMobilePanel(null);
 
   if (isLoading) {
-    return <LoadingScreen message="Carregando dados da COVID-19 no Brasil..." />;
+    return <SerraLoading message="Carregando dados da COVID-19 no Brasil..." />;
   }
 
   if (error) {
+    return <SerraError message={error.message} />;
+  }
+
+  if (isBakeMode) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-red-900 to-red-600 text-white">
-        <div className="text-center space-y-4">
-          <AlertCircle className="w-16 h-16 mx-auto text-red-300" />
-          <h2 className="text-2xl font-bold">Erro ao Carregar Dados</h2>
-          <p className="text-lg opacity-80">Não foi possível carregar os dados da COVID-19.</p>
-          <p className="text-sm opacity-60">{error.message}</p>
-        </div>
+      <div className="h-screen w-screen overflow-hidden bg-transparent">
+        <Suspense fallback={<SerraLoading message="Preparando bake da serra..." />}>
+          <Scene3D enableControls={false} showStats={false} bake={bakeOptions} />
+        </Suspense>
       </div>
     );
   }
@@ -109,16 +202,47 @@ function AppContent() {
     return <IntroPresentation onEnter={() => setHasEntered(true)} />;
   }
 
+  if (mobile25DDefault) {
+    return (
+      <ErrorBoundary>
+        <MobileSerra25D
+          reducedMotion={deviceProfile.renderMode === 'safe-static'}
+          showExperimental3D={deviceProfile.renderMode === 'mobile-25d'}
+          onOpenExperimental3D={() => setExperimental3D(true)}
+        />
+      </ErrorBoundary>
+    );
+  }
+
   return (
-    <div className="app-shell relative h-screen w-full overflow-hidden bg-black" data-render-mode={renderProfile.mode}>
+    <div
+      className="app-shell relative h-screen w-full overflow-hidden bg-black"
+      data-device-class={isTabletExperience ? 'tablet' : experimental3D ? 'mobile-experimental' : 'desktop'}
+      data-mobile-hud-state={isMobile ? mobileHudState : undefined}
+      data-render-mode={activeRenderMode}
+      data-render-reason={experimental3D ? 'explicit-experimental-3d' : 'device-profile'}
+      data-tablet-experience={isTabletExperience ? 'true' : undefined}
+    >
       <header className="app-header pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6 sm:pt-4">
         <div className="hud-desktop-header pointer-events-auto hidden flex-wrap items-center justify-between gap-3 rounded-b-2xl bg-black/55 px-4 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:flex xl:gap-4 xl:px-6 xl:py-3">
           <InfoPanel variant="compact" />
-          <ControlsHelp variant="header" />
-        </div>
-        <div className="hud-mobile-header pointer-events-auto flex items-center gap-2 rounded-b-2xl bg-black/55 px-3 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:hidden">
-          <InfoPanel variant="mini" />
           <div className="ml-auto flex items-center gap-2">
+            <FullscreenToggle />
+            <ControlsHelp variant="header" />
+          </div>
+        </div>
+        <div
+          className={cn(
+            'hud-mobile-header pointer-events-auto flex items-center gap-2 rounded-b-2xl bg-black/55 px-3 py-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10 xl:hidden',
+            isTabletExperience && 'hud-tablet-header'
+          )}
+        >
+          {isTabletExperience ? (
+            <InfoPanel variant="tablet" />
+          ) : (
+            <InfoPanel variant="mini" />
+          )}
+          <div className="hud-mobile-secondary-actions hud-tablet-actions ml-auto flex items-center gap-2">
             <Button
               size="icon"
               variant="outline"
@@ -133,20 +257,23 @@ function AppContent() {
               <Pin className="h-4 w-4" />
               <span className="sr-only">Memorial</span>
             </Button>
-            <Button
-              size="icon"
-              variant="outline"
-              aria-pressed={mobilePanel === 'header'}
-              onClick={() => toggleMobilePanel('header')}
-              title="Resumo"
-              className={cn(
-                'h-9 w-9 rounded-full border border-white/20 bg-black/75 text-white shadow-lg backdrop-blur-sm transition hover:bg-white/10',
-                mobilePanel === 'header' && 'border-amber-300 bg-amber-500 text-black hover:bg-amber-400'
-              )}
-            >
-              <Info className="h-4 w-4" />
-              <span className="sr-only">Resumo</span>
-            </Button>
+            {!isTabletExperience && (
+              <Button
+                size="icon"
+                variant="outline"
+                aria-pressed={mobilePanel === 'header'}
+                onClick={() => toggleMobilePanel('header')}
+                title="Resumo"
+                className={cn(
+                  'h-9 w-9 rounded-full border border-white/20 bg-black/75 text-white shadow-lg backdrop-blur-sm transition hover:bg-white/10',
+                  mobilePanel === 'header' && 'border-amber-300 bg-amber-500 text-black hover:bg-amber-400'
+                )}
+              >
+                <Info className="h-4 w-4" />
+                <span className="sr-only">Resumo</span>
+              </Button>
+            )}
+            <FullscreenToggle />
             <ControlsHelp variant="header" />
           </div>
         </div>
@@ -154,14 +281,9 @@ function AppContent() {
 
       <ErrorBoundary>
         <div className="relative h-full">
-          {renderProfile.mode === '2d' ? (
-            <Scene2D />
-          ) : (
-            // Em aparelhos fortes a obra usa WebGL completo; em Safari/mobile o canvas 2D evita estouro de memoria.
-            <Suspense fallback={<LoadingScreen message="Preparando a serra 3D..." />}>
-              <Scene3D enableControls showStats={false} />
-            </Suspense>
-          )}
+          <Suspense fallback={<LoadingScreen message="Preparando a serra 3D..." />}>
+            <Scene3D enableControls showStats={false} />
+          </Suspense>
           <CinematicAudio />
           <OxygenBar />
           <OxygenWorldStatus />
@@ -174,16 +296,23 @@ function AppContent() {
           </div>
 
           {isMobile && (
-            <div className="hud-mobile-bottom xl:hidden absolute inset-x-0 bottom-0 z-20 px-3 pb-3 safe-bottom-pad sm:px-4 sm:pb-4">
+            <div
+              className="hud-mobile-bottom xl:hidden absolute inset-x-0 bottom-0 z-20 px-3 pb-3 safe-bottom-pad sm:px-4 sm:pb-4"
+              data-mobile-hud-state={mobileHudState}
+            >
               <div
                 className="hud-joystick relative shrink-0 max-[380px]:scale-90 max-[340px]:scale-75"
                 data-joystick-control="true"
               >
                 <MobileMoveJoystick />
               </div>
-              <EventCard layout="mobile" onExpand={openHistoricalPanel} className="hud-mobile-event-slot" />
+              {!isTabletExperience && (
+                <EventCard layout="mobile" onExpand={openHistoricalPanel} className="hud-mobile-event-slot" />
+              )}
             </div>
           )}
+
+          {isTabletExperience && <EventCard layout="tablet" />}
 
           <AnimatePresence>
             {mobilePanel && (

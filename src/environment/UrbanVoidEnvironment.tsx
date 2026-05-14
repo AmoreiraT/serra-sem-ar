@@ -8,6 +8,7 @@ import { useMarkdownImageExtractor } from '../hooks/useMarkdownImageExtractor';
 import { usePandemicAssetIndexes } from '../hooks/usePandemicAssetIndexes';
 import { usePandemicTextures } from '../hooks/usePandemicTextures';
 import { useEnvironmentStore } from '../stores/environmentStore';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
 import { EnvironmentBand, LayeredLayoutItem, MemoryVideoEntry, PandemicAssetMetadata, SpatialLayoutItem } from '../types/environment';
 import { UrbanLayer } from './UrbanLayer';
 import {
@@ -345,7 +346,9 @@ export const UrbanVoidEnvironment = ({
 }: UrbanVoidEnvironmentProps) => {
   const setSeed = useEnvironmentStore((state) => state.setSeed);
   const setTextureAnisotropy = useEnvironmentStore((state) => state.setTextureAnisotropy);
+  const profileAnisotropyCap = usePerformanceProfileStore((state) => state.profile.render.textureMaxAnisotropy);
   const qualityConfig = environmentQualityMap[quality];
+  const effectiveAnisotropy = Math.max(1, Math.min(qualityConfig.anisotropy, profileAnisotropyCap));
 
   const { indexA, indexB, indexAll, assetsById, loadAssetById } = usePandemicAssetIndexes();
 
@@ -354,8 +357,8 @@ export const UrbanVoidEnvironment = ({
 
   useEffect(() => {
     setSeed(seed);
-    setTextureAnisotropy(qualityConfig.anisotropy);
-  }, [qualityConfig.anisotropy, seed, setSeed, setTextureAnisotropy]);
+    setTextureAnisotropy(effectiveAnisotropy);
+  }, [effectiveAnisotropy, seed, setSeed, setTextureAnisotropy]);
 
   useEffect(() => {
     let cancelled = false;

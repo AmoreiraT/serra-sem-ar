@@ -1,12 +1,14 @@
 import { Calendar, Skull, TrendingUp } from 'lucide-react';
 import { useMemo } from 'react';
+import { cn } from '../lib/utils';
 import { useCovidStore } from '../stores/covidStore';
 
 interface InfoPanelProps {
-  variant?: 'floating' | 'compact' | 'mini';
+  variant?: 'floating' | 'compact' | 'mini' | 'tablet';
+  className?: string;
 }
 
-export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
+export const InfoPanel = ({ variant = 'floating', className }: InfoPanelProps = {}) => {
   const data = useCovidStore((state) => state.data);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
 
@@ -28,7 +30,7 @@ export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
 
   if (variant === 'mini') {
     return (
-      <div className="flex min-w-0 flex-col">
+      <div className={cn('flex min-w-0 flex-col', className)}>
         <span className="text-[10px] uppercase tracking-[0.32em] text-amber-200">Serra Sem Ar</span>
         <span className="text-[12px] text-white/70">
           {currentData.date.toLocaleDateString('pt-BR')}
@@ -37,9 +39,47 @@ export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
     );
   }
 
+  if (variant === 'tablet') {
+    const dayLabel = `${currentDateIndex + 1}/${data.length}`;
+
+    return (
+      <div className={cn('hud-tablet-summary', className)}>
+        <div className="hud-tablet-brand">
+          <span className="hud-tablet-title">Serra Sem Ar</span>
+          <span className="hud-tablet-day">Dia {dayLabel}</span>
+        </div>
+        <div className="hud-tablet-metrics" aria-label="Dados do dia selecionado">
+          <div className="hud-tablet-metric">
+            <Calendar className="h-3.5 w-3.5 text-blue-300" />
+            <span>Data</span>
+            <strong>{currentData.date.toLocaleDateString('pt-BR')}</strong>
+          </div>
+          <div className="hud-tablet-metric">
+            <TrendingUp className="h-3.5 w-3.5 text-orange-300" />
+            <span>Casos dia</span>
+            <strong className="text-orange-200">{currentData.cases.toLocaleString('pt-BR')}</strong>
+          </div>
+          <div className="hud-tablet-metric">
+            <Skull className="h-3.5 w-3.5 text-red-300" />
+            <span>Mortes dia</span>
+            <strong className="text-red-200">{currentData.deaths.toLocaleString('pt-BR')}</strong>
+          </div>
+          <div className="hud-tablet-metric hud-tablet-total">
+            <span>Total casos</span>
+            <strong>{totalStats.totalCases.toLocaleString('pt-BR')}</strong>
+          </div>
+          <div className="hud-tablet-metric hud-tablet-total">
+            <span>Total mortes</span>
+            <strong>{totalStats.totalDeaths.toLocaleString('pt-BR')}</strong>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (variant === 'compact') {
     return (
-      <div className="flex w-full flex-wrap items-center gap-4 rounded-xl border border-white/20 bg-black/80 px-4 py-3 text-white backdrop-blur-md shadow-lg sm:px-5">
+      <div className={cn('flex w-full flex-wrap items-center gap-4 rounded-xl border border-white/20 bg-black/80 px-4 py-3 text-white backdrop-blur-md shadow-lg sm:px-5', className)}>
         <div className="flex max-w-xs flex-col gap-1">
           <span className="text-[13px] uppercase tracking-[0.32em] text-amber-200 sm:text-[14px]">Serra Sem Ar</span>
           <span className="text-[12px] leading-relaxed text-white/75 sm:text-[11px]">
@@ -96,7 +136,7 @@ export const InfoPanel = ({ variant = 'floating' }: InfoPanelProps = {}) => {
   }
 
   return (
-    <div className="absolute left-4 top-4 w-55 max-w-sm rounded-xl border border-white/15 bg-black/85 p-6 text-white shadow-xl backdrop-blur-sm">
+    <div className={cn('absolute left-4 top-4 w-55 max-w-sm rounded-xl border border-white/15 bg-black/85 p-6 text-white shadow-xl backdrop-blur-sm', className)}>
       <h3 className="mb-4 text-center text-2xl font-bold">SERRA SEM AR</h3>
       <div className="space-y-4">
         <p className="mb-4 text-sm leading-relaxed text-white/80">

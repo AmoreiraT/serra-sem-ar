@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { detectClientDeviceClass } from '../core/device/clientDeviceClass';
 import { configurePresenceOnDisconnect } from '../services/firebaseRealtime';
 import { joinPresence, leavePresence, sendLeavePresenceBeacon } from '../services/presenceApi';
 import { useOxygenStore } from '../stores/oxygenStore';
@@ -17,14 +18,6 @@ type PresenceSessionHookState = {
 const CLIENT_ID_KEY = 'serra-sem-ar-client-id';
 
 const isOxygenEnabled = () => import.meta.env.VITE_ENABLE_OXYGEN !== 'false';
-
-const detectMobile = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
-  return width < 768 || (width <= 1100 && height <= 540) || (coarsePointer && width < 1180);
-};
 
 const createUuid = (): string => {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
@@ -84,7 +77,7 @@ export const usePresenceSession = ({ enabled = true }: UsePresenceSessionInput =
     setIsJoining(true);
 
     const start = async () => {
-      const isMobile = detectMobile();
+      const isMobile = detectClientDeviceClass() === 'phone';
       try {
         const response = await joinPresence({
           clientId: getClientId(),
@@ -108,7 +101,7 @@ export const usePresenceSession = ({ enabled = true }: UsePresenceSessionInput =
         cancelDisconnectRef.current = await configurePresenceOnDisconnect(response.sessionId);
       } catch {
         if (cancelled) return;
-        const fallbackInterval = detectMobile() ? 5_000 : 3_000;
+        const fallbackInterval = detectClientDeviceClass() === 'phone' ? 5_000 : 3_000;
         const fallbackSessionId = createLocalFallbackSessionId();
         activeSessionRef.current = fallbackSessionId;
         setSession(fallbackSessionId, Date.now());
@@ -154,4 +147,3 @@ export const usePresenceSession = ({ enabled = true }: UsePresenceSessionInput =
     rejoin,
   };
 };
-

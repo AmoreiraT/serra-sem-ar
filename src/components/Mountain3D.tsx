@@ -2,12 +2,14 @@ import rockBakedTexture from '@assets/textures/baked/rock_baked_1024.webp';
 import pathBakedTexture from '@assets/textures/baked/road_baked_512.webp';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody } from '@react-three/rapier';
-import { forwardRef, useEffect, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import * as THREE from 'three';
 import { BufferGeometry, Float32BufferAttribute, Mesh } from 'three';
+import { TABLET_OPTIMIZED_TEXTURES } from '../assets/tabletOptimizedAssets';
 import useTextureLoader from '../hooks/useTextureLoader';
 import { useCovidStore, WalkwaySample } from '../stores/covidStore';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
 import { MountainPoint } from '../types/covid';
 import { createTerrainSampler } from '../utils/terrainSampler';
 
@@ -79,8 +81,6 @@ const easeHeight = (t: number) => {
   return clamped * clamped * (3 - 2 * clamped);
 };
 
-const WALKWAY_SMOOTH_PASSES = 18;
-const WALKWAY_SMOOTH_INFLUENCE = 0.84;
 const RIDGE_SMOOTH_PASSES = 18;
 const RIDGE_SMOOTH_INFLUENCE = 0.76;
 const WIDTH_SMOOTH_PASSES = 14;
@@ -143,12 +143,73 @@ const qualityMap: Record<QualityMode, QualitySettings> = {
   },
 };
 
+const fract = (value: number) => value - Math.floor(value);
+
+const createProceduralGroundTexture = (kind: 'rock' | 'road') => {
+  const size = 128;
+  const data = new Uint8Array(size * size * 4);
+  const base = kind === 'rock' ? [38, 27, 19] : [109, 88, 58];
+  const mid = kind === 'rock' ? [56, 42, 30] : [153, 127, 84];
+  const speck = kind === 'rock' ? [118, 104, 82] : [197, 172, 122];
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const idx = (y * size + x) * 4;
+      const grain = fract(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453);
+      const wideGrain = fract(Math.sin(x * 0.73 + y * 1.37) * 951.1357);
+      const pebble = grain > (kind === 'rock' ? 0.9 : 0.94) ? 1 : 0;
+      const shade = THREE.MathUtils.clamp(wideGrain * 0.55 + grain * 0.45, 0, 1);
+      const color = pebble ? speck : base.map((channel, channelIndex) => THREE.MathUtils.lerp(channel, mid[channelIndex], shade));
+
+      data[idx] = color[0];
+      data[idx + 1] = color[1];
+      data[idx + 2] = color[2];
+      data[idx + 3] = 255;
+    }
+  }
+
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(kind === 'rock' ? 6 : 1, kind === 'rock' ? 3 : 1);
+  texture.needsUpdate = true;
+  return texture;
+};
+
+const markTextureForUpload = (texture: THREE.Texture) => {
+  if (!(texture instanceof THREE.CompressedTexture)) {
+    texture.needsUpdate = true;
+  }
+};
+
 interface Mountain3DProps {
   quality?: QualityMode;
+  revealMode?: 'progressive' | 'baked';
+  bakedRevealX?: number;
+  bakedClipStartX?: number;
+  bakedClipEndX?: number;
 }
 
-export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'desktop' }, ref) => {
-  const meshRef = (ref as React.RefObject<Mesh>) || useRef<Mesh>(null);
+export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(
+  ({ quality = 'desktop', revealMode = 'progressive', bakedRevealX, bakedClipStartX, bakedClipEndX }, ref) => {
+  const meshRef = useRef<Mesh>(null);
+  const mountainMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const walkwayMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const assignMeshRef = useCallback(
+    (mesh: Mesh | null) => {
+      meshRef.current = mesh;
+
+      if (typeof ref === 'function') {
+        ref(mesh);
+        return;
+      }
+
+      if (ref) {
+        ref.current = mesh;
+      }
+    },
+    [ref]
+  );
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const setRevealedX = useCovidStore((state) => state.setRevealedX);
   const setMountainMesh = useCovidStore((state) => state.setMountainMesh);
@@ -604,10 +665,10 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
   useEffect(() => {
     originalPositionsRef.current = originalPositions;
     walkwayBaselinesRef.current = walkwayBaselines;
-    segmentProgressRef.current = new Float32Array(timeSegments).fill(0);
-    segmentTargetRef.current = new Float32Array(timeSegments).fill(0);
+    segmentProgressRef.current = new Float32Array(timeSegments).fill(revealMode === 'baked' ? 1 : 0);
+    segmentTargetRef.current = new Float32Array(timeSegments).fill(revealMode === 'baked' ? 1 : 0);
     activeSegmentsRef.current.clear();
-  }, [originalPositions, walkwayBaselines, timeSegments]);
+  }, [originalPositions, revealMode, walkwayBaselines, timeSegments]);
 
   useEffect(() => {
     if (!mountainData || timeSegments <= 0 || row <= 0) {
@@ -632,6 +693,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
   }, [mountainData, originalPositions, topVertexCount, timeSegments, row, minX, maxX, zMin, zMax, setTerrainSampler]);
 
   useEffect(() => {
+    if (revealMode === 'baked') return;
     if (!geometry) return;
     const positions = geometry.getAttribute('position') as Float32BufferAttribute;
     if (!positions) return;
@@ -643,7 +705,57 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
 
     positions.needsUpdate = true;
     geometry.computeVertexNormals();
-  }, [geometry, topVertexCount, baselineY, timeSegments]);
+  }, [geometry, revealMode, topVertexCount, baselineY, timeSegments]);
+
+  useEffect(() => {
+    if (revealMode !== 'baked' || !geometry) return;
+    const positions = geometry.getAttribute('position') as Float32BufferAttribute;
+    if (!positions) return;
+    const positionArray = positions.array as Float32Array;
+    const clipStartX = bakedClipStartX ?? minX;
+    const clipEndX = bakedClipEndX ?? bakedRevealX ?? maxX;
+    const clipMinX = Math.min(clipStartX, clipEndX);
+    const clipMaxX = Math.max(clipStartX, clipEndX);
+
+    for (let segment = 0; segment < timeSegments; segment += 1) {
+      const segmentX = segmentXs[segment] ?? minX;
+      const useOriginalHeight = segmentX >= clipMinX && segmentX <= clipMaxX;
+      const collapsedX = segmentX < clipMinX ? clipMinX : clipMaxX;
+      const baseOffset = segment * row;
+
+      for (let zIndex = 0; zIndex < row; zIndex += 1) {
+        const vertexIndex = baseOffset + zIndex;
+        const xIndex = vertexIndex * 3;
+        const yIndex = xIndex + 1;
+        const bottomVertexIndex = topVertexCount + vertexIndex;
+        const bottomXIndex = bottomVertexIndex * 3;
+        const bottomYIndex = bottomXIndex + 1;
+
+        positionArray[xIndex] = useOriginalHeight ? originalPositions[xIndex] : collapsedX;
+        positionArray[yIndex] = useOriginalHeight ? originalPositions[yIndex] : baselineY;
+        positionArray[bottomXIndex] = useOriginalHeight ? originalPositions[bottomXIndex] : collapsedX;
+        positionArray[bottomYIndex] = useOriginalHeight ? originalPositions[bottomYIndex] : baselineY;
+      }
+    }
+
+    positions.needsUpdate = true;
+    geometry.computeVertexNormals();
+  }, [
+    bakedClipEndX,
+    bakedClipStartX,
+    bakedRevealX,
+    baselineY,
+    geometry,
+    maxX,
+    minX,
+    originalPositions,
+    revealMode,
+    row,
+    segmentXs,
+    timeSegments,
+    topVertexCount,
+    walkwayBaselines,
+  ]);
 
   useEffect(() => {
     if (meshRef.current) {
@@ -659,6 +771,11 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
   }, [setWalkwayProfile, walkwaySamples]);
 
   useEffect(() => {
+    if (revealMode === 'baked') {
+      setRevealedX(bakedClipEndX ?? bakedRevealX ?? maxX);
+      return;
+    }
+
     if (!geometry || !segmentXs.length || timeSegments === 0) return;
 
     if (segmentTargetRef.current.length !== timeSegments) {
@@ -697,9 +814,10 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
     if (maxActiveX > -Infinity) {
       setRevealedX(maxActiveX);
     }
-  }, [cameraX, geometry, segmentXs, setRevealedX, timeSegments]);
+  }, [bakedClipEndX, bakedRevealX, cameraX, geometry, maxX, revealMode, segmentXs, setRevealedX, timeSegments]);
 
   useFrame((_, delta) => {
+    if (revealMode === 'baked') return;
     if (!geometry) return;
     const positions = geometry.getAttribute('position') as Float32BufferAttribute;
     if (!positions) return;
@@ -761,6 +879,21 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
     }
   });
 
+  const optimizedRockTexture = useMemo(
+    () => ({
+      ...TABLET_OPTIMIZED_TEXTURES.mountainRock,
+      original: rockBakedTexture,
+    }),
+    []
+  );
+  const optimizedRoadTexture = useMemo(
+    () => ({
+      ...TABLET_OPTIMIZED_TEXTURES.road,
+      original: pathBakedTexture,
+    }),
+    []
+  );
+
   const {
     diffuseMap,
     normalMap,
@@ -772,22 +905,31 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
     pathRough,
     pathHeight,
     pathMetallic,
-  } = useTextureLoader(
-    rockBakedTexture,
-    undefined,
-    undefined,
-    undefined,
-    pathBakedTexture
+  } = useTextureLoader(optimizedRockTexture, undefined, undefined, undefined, optimizedRoadTexture);
+
+  const profileAnisotropyCap = usePerformanceProfileStore((state) => state.profile.render.textureMaxAnisotropy);
+  const anisotropyCap = Math.max(1, Math.min(qualityConfig.maxAnisotropy, profileAnisotropyCap));
+  const isBakedReveal = revealMode === 'baked';
+  const fallbackRockMap = useMemo(() => createProceduralGroundTexture('rock'), []);
+  const fallbackRoadMap = useMemo(() => createProceduralGroundTexture('road'), []);
+  const visibleDiffuseMap = isBakedReveal ? undefined : diffuseMap ?? fallbackRockMap;
+  const visiblePathDiffuse = isBakedReveal ? undefined : pathDiffuse ?? fallbackRoadMap;
+
+  useEffect(
+    () => () => {
+      fallbackRockMap.dispose();
+      fallbackRoadMap.dispose();
+    },
+    [fallbackRoadMap, fallbackRockMap]
   );
 
-  const anisotropyCap = qualityConfig.maxAnisotropy;
-
   useEffect(() => {
-    if (diffuseMap) {
-      diffuseMap.wrapS = diffuseMap.wrapT = THREE.RepeatWrapping;
-      diffuseMap.repeat.set(6, 3);
-      diffuseMap.anisotropy = Math.max(diffuseMap.anisotropy, anisotropyCap);
-      diffuseMap.colorSpace = THREE.SRGBColorSpace;
+    if (visibleDiffuseMap) {
+      visibleDiffuseMap.wrapS = visibleDiffuseMap.wrapT = THREE.RepeatWrapping;
+      visibleDiffuseMap.repeat.set(6, 3);
+      visibleDiffuseMap.anisotropy = Math.max(visibleDiffuseMap.anisotropy, anisotropyCap);
+      visibleDiffuseMap.colorSpace = THREE.SRGBColorSpace;
+      markTextureForUpload(visibleDiffuseMap);
     }
 
     if (normalMap) {
@@ -806,11 +948,12 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
       roughnessMap.repeat.set(6, 3);
     }
 
-    if (pathDiffuse) {
-      pathDiffuse.wrapS = pathDiffuse.wrapT = THREE.RepeatWrapping;
-      pathDiffuse.repeat.set(1, 1);
-      pathDiffuse.anisotropy = Math.max(pathDiffuse.anisotropy ?? 0, anisotropyCap);
-      pathDiffuse.colorSpace = THREE.SRGBColorSpace;
+    if (visiblePathDiffuse) {
+      visiblePathDiffuse.wrapS = visiblePathDiffuse.wrapT = THREE.RepeatWrapping;
+      visiblePathDiffuse.repeat.set(1, 1);
+      visiblePathDiffuse.anisotropy = Math.max(visiblePathDiffuse.anisotropy ?? 0, anisotropyCap);
+      visiblePathDiffuse.colorSpace = THREE.SRGBColorSpace;
+      markTextureForUpload(visiblePathDiffuse);
     }
 
     if (pathNormal) {
@@ -840,11 +983,11 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
     }
   }, [
     anisotropyCap,
-    diffuseMap,
+    visibleDiffuseMap,
     normalMap,
     aoMap,
     roughnessMap,
-    pathDiffuse,
+    visiblePathDiffuse,
     pathNormal,
     pathAO,
     pathRough,
@@ -852,24 +995,46 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
     pathMetallic,
   ]);
 
+  useEffect(() => {
+    if (mountainMaterialRef.current) mountainMaterialRef.current.needsUpdate = true;
+    if (walkwayMaterialRef.current) walkwayMaterialRef.current.needsUpdate = true;
+  }, [
+    isBakedReveal,
+    visibleDiffuseMap?.uuid,
+    normalMap?.uuid,
+    aoMap?.uuid,
+    roughnessMap?.uuid,
+    visiblePathDiffuse?.uuid,
+    pathNormal?.uuid,
+    pathAO?.uuid,
+    pathRough?.uuid,
+    pathHeight?.uuid,
+    pathMetallic?.uuid,
+  ]);
+
   return (
     <RigidBody type="fixed" colliders="trimesh" name="mountain-body">
       <group>
-        <mesh ref={meshRef} geometry={geometry} name="mountain" castShadow receiveShadow>
+        <mesh ref={assignMeshRef} geometry={geometry} name="mountain" castShadow receiveShadow>
           <meshStandardMaterial
-            map={diffuseMap}
-            normalMap={normalMap}
-            aoMap={aoMap}
-            roughnessMap={roughnessMap}
+            ref={mountainMaterialRef}
+            color={isBakedReveal ? '#8f321c' : undefined}
+            emissive={isBakedReveal ? '#1d0502' : undefined}
+            emissiveIntensity={isBakedReveal ? 0.18 : 0}
+            map={visibleDiffuseMap}
+            normalMap={isBakedReveal ? undefined : normalMap}
+            aoMap={isBakedReveal ? undefined : aoMap}
+            roughnessMap={isBakedReveal ? undefined : roughnessMap}
             side={THREE.DoubleSide}
-            roughness={0.92}
+            roughness={isBakedReveal ? 0.78 : 0.92}
             metalness={0.02}
           />
         </mesh>
-        {walkwayGeometry && pathDiffuse && (
+        {!isBakedReveal && walkwayGeometry && visiblePathDiffuse && (
           <mesh geometry={walkwayGeometry} castShadow receiveShadow renderOrder={1}>
             <meshStandardMaterial
-              map={pathDiffuse}
+              ref={walkwayMaterialRef}
+              map={visiblePathDiffuse}
               normalMap={pathNormal ?? undefined}
               aoMap={pathAO ?? undefined}
               roughnessMap={pathRough ?? undefined}
@@ -889,6 +1054,7 @@ export const Mountain3D = forwardRef<Mesh, Mountain3DProps>(({ quality = 'deskto
       </group>
     </RigidBody>
   );
-});
+  }
+);
 
 Mountain3D.displayName = 'Mountain3D';

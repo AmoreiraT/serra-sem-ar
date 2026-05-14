@@ -1,20 +1,18 @@
 import { cn } from '@/lib/utils';
 import { Volume2, VolumeX } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getPresenceRoomIdsForDay, listenToPresenceRooms } from '../services/firebaseRealtime';
 import { useCovidStore } from '../stores/covidStore';
 import { useOxygenStore } from '../stores/oxygenStore';
-import type { PresenceRoomEntry } from '../types/realtimePresence';
+import { usePerformanceProfileStore } from '../stores/performanceProfileStore';
+import { useRemotePresenceStore, type RemotePresenceAudioEntry } from '../stores/remotePresenceStore';
 import { Button } from './ui/button';
-
-const AUDIO_SOURCES = {
-  thunder: '/pandemic-assets/audios/doente.mp3',
-  crowd: '/pandemic-assets/audios/fora-bozo.mp3',
-} as const;
 
 const CUE_SAMPLE_SOURCES = {
   cough: '/pandemic-assets/audios/doente.mp3',
-  sneeze: '/pandemic-assets/audios/coracao_hospital.mp3',
+} as const;
+
+const PRESENCE_SAMPLE_SOURCES = {
+  breath: '/pandemic-assets/audios/respira.mp3',
 } as const;
 
 type CueKey = keyof typeof CUE_SAMPLE_SOURCES;
@@ -25,7 +23,7 @@ type Runtime = {
   master: GainNode;
   highAltitudeTimer: number;
   presenceBreathTimer: number;
-  breathNoiseBuffer: AudioBuffer;
+  breathBuffer: AudioBuffer;
   cueBuffers: CueBuffers;
   teardown: () => void;
 };
@@ -36,44 +34,20 @@ type WindowWithAudioFallback = Window & {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
-const NEARBY_BREATH_RADIUS = 18;
-const NEARBY_BREATH_FULL_RADIUS = 3.5;
+
+type PresenceAudioConfig = {
+  maxPeers: number;
+  staleMs: number;
+  nearRadius: number;
+  fullRadius: number;
+};
 
 type NearbyPresenceSignal = {
   intensity: number;
   pan: number;
+  distance: number;
+  nearbyCount: number;
   updatedAt: number;
-};
-
-const createLoopingMedia = (
-  context: AudioContext,
-  master: GainNode,
-  url: string,
-  gainValue: number,
-  filterFrequency: number,
-  pan: number
-) => {
-  const element = new Audio(url);
-  element.loop = true;
-  element.setAttribute('playsinline', 'true');
-  element.preload = 'metadata';
-
-  const source = context.createMediaElementSource(element);
-  const filter = context.createBiquadFilter();
-  const panner = context.createStereoPanner();
-  const gain = context.createGain();
-
-  filter.type = 'lowpass';
-  filter.frequency.value = filterFrequency;
-  panner.pan.value = pan;
-  gain.gain.value = gainValue;
-
-  source.connect(filter);
-  filter.connect(panner);
-  panner.connect(gain);
-  gain.connect(master);
-
-  return element;
 };
 
 const loadAudioBuffer = async (context: AudioContext, url: string) => {
@@ -136,7 +110,7 @@ const createBreathNoiseBuffer = (context: AudioContext) => {
 const playPresenceBreath = (
   context: AudioContext,
   destination: AudioNode,
-  noiseBuffer: AudioBuffer,
+  breathBuffer: AudioBuffer,
   signal: NearbyPresenceSignal
 ) => {
   const intensity = clamp(signal.intensity, 0, 1);
@@ -148,21 +122,21 @@ const playPresenceBreath = (
   const body = context.createBiquadFilter();
   const panner = context.createStereoPanner();
   const gain = context.createGain();
-  const duration = lerp(1.05, 1.46, intensity);
+  const duration = Math.min(breathBuffer.duration, lerp(1.05, 2.35, intensity));
 
-  source.buffer = noiseBuffer;
-  source.playbackRate.value = lerp(0.72, 0.9, Math.random());
+  source.buffer = breathBuffer;
+  source.playbackRate.value = lerp(0.78, 1.06, Math.random());
   lowpass.type = 'lowpass';
-  lowpass.frequency.setValueAtTime(lerp(520, 980, intensity), startAt);
+  lowpass.frequency.setValueAtTime(lerp(720, 1850, intensity), startAt);
   lowpass.Q.value = 0.8;
   body.type = 'peaking';
-  body.frequency.value = 220;
+  body.frequency.value = lerp(180, 260, intensity);
   body.Q.value = 0.9;
-  body.gain.value = 4.5;
+  body.gain.value = lerp(3.2, 7.5, intensity);
   panner.pan.value = clamp(signal.pan, -0.9, 0.9);
 
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(lerp(0.018, 0.12, intensity), startAt + 0.18);
+  gain.gain.exponentialRampToValueAtTime(lerp(0.035, 0.28, intensity), startAt + 0.12);
   gain.gain.setTargetAtTime(0.0001, startAt + duration * 0.55, 0.28);
 
   source.connect(lowpass);
@@ -171,44 +145,75 @@ const playPresenceBreath = (
   panner.connect(gain);
   gain.connect(destination);
 
-  source.start(startAt, 0, duration);
+  const maxOffset = Math.max(0, breathBuffer.duration - duration);
+  const offset = maxOffset > 0 ? Math.random() * maxOffset : 0;
+
+  source.start(startAt, offset, duration);
   source.stop(startAt + duration + 0.04);
 };
 
 const computeNearbyPresenceSignal = (
-  entries: PresenceRoomEntry[],
+  entries: RemotePresenceAudioEntry[],
   ownSessionId: string | null,
-  cameraPosition: [number, number, number]
+  cameraPosition: [number, number, number],
+  config: PresenceAudioConfig
 ): NearbyPresenceSignal => {
   let nearestDistance = Infinity;
   let nearestDz = 0;
+  let weightedPan = 0;
+  let falloffSum = 0;
+  let strongestFalloff = 0;
+  let nearbyCount = 0;
   const now = Date.now();
+  const maxPeers = Math.max(0, Math.floor(config.maxPeers));
+  if (!maxPeers) return { intensity: 0, pan: 0, distance: Infinity, nearbyCount: 0, updatedAt: now };
 
-  entries.forEach((entry) => {
-    if (entry.sessionId === ownSessionId || entry.sessionId.startsWith('local_')) return;
-    if (now - entry.lastSeenAt > 60_000) return;
-    const dx = entry.position.x - cameraPosition[0];
-    const dy = (entry.position.y - cameraPosition[1]) * 0.35;
-    const dz = entry.position.z - cameraPosition[2];
-    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  const candidates = entries
+    .filter((entry) => entry.sessionId !== ownSessionId && !entry.sessionId.startsWith('local_'))
+    .filter((entry) => now - entry.lastSeenAt <= config.staleMs)
+    .map((entry) => {
+      const dx = entry.position.x - cameraPosition[0];
+      const dy = (entry.position.y - cameraPosition[1]) * 0.35;
+      const dz = entry.position.z - cameraPosition[2];
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      return { entry, distance, dz };
+    })
+    .filter((candidate) => candidate.distance <= config.nearRadius)
+    .sort((a, b) => {
+      if (a.distance === b.distance) return b.entry.lastSeenAt - a.entry.lastSeenAt;
+      return a.distance - b.distance;
+    })
+    .slice(0, maxPeers);
+
+  candidates.forEach(({ distance, dz }) => {
+    const falloff = clamp(
+      1 - (distance - config.fullRadius) / Math.max(1, config.nearRadius - config.fullRadius),
+      0,
+      1
+    );
+    const shapedFalloff = Math.pow(falloff, 1.18);
+    falloffSum += shapedFalloff;
+    strongestFalloff = Math.max(strongestFalloff, shapedFalloff);
+    weightedPan += clamp(dz / Math.max(distance, 1), -1, 1) * shapedFalloff;
+    nearbyCount += 1;
+
     if (distance < nearestDistance) {
       nearestDistance = distance;
       nearestDz = dz;
     }
   });
 
-  if (!Number.isFinite(nearestDistance) || nearestDistance > NEARBY_BREATH_RADIUS) {
-    return { intensity: 0, pan: 0, updatedAt: now };
+  if (!nearbyCount || !Number.isFinite(nearestDistance)) {
+    return { intensity: 0, pan: 0, distance: Infinity, nearbyCount: 0, updatedAt: now };
   }
 
-  const falloff = clamp(
-    1 - (nearestDistance - NEARBY_BREATH_FULL_RADIUS) / Math.max(1, NEARBY_BREATH_RADIUS - NEARBY_BREATH_FULL_RADIUS),
-    0,
-    1
-  );
+  const crowdBoost = Math.min(1, falloffSum * 0.48);
+  const intensity = clamp(Math.max(strongestFalloff, crowdBoost), 0, 1);
   return {
-    intensity: Math.pow(falloff, 1.35),
-    pan: clamp(nearestDz / Math.max(nearestDistance, 1), -1, 1),
+    intensity,
+    pan: falloffSum > 0 ? clamp(weightedPan / falloffSum, -1, 1) : clamp(nearestDz / Math.max(nearestDistance, 1), -1, 1),
+    distance: nearestDistance,
+    nearbyCount,
     updatedAt: now,
   };
 };
@@ -245,15 +250,34 @@ export const CinematicAudio = () => {
   const cameraYRef = useRef(0);
   const cameraPositionRef = useRef<[number, number, number]>([0, 0, 0]);
   const mountainPointsRef = useRef<Array<{ y: number }>>([]);
-  const presenceEntriesRef = useRef<PresenceRoomEntry[]>([]);
-  const nearbyPresenceRef = useRef<NearbyPresenceSignal>({ intensity: 0, pan: 0, updatedAt: 0 });
+  const presenceEntriesRef = useRef<RemotePresenceAudioEntry[]>([]);
+  const nearbyPresenceRef = useRef<NearbyPresenceSignal>({
+    intensity: 0,
+    pan: 0,
+    distance: Infinity,
+    nearbyCount: 0,
+    updatedAt: 0,
+  });
   const lastPresenceBreathAtRef = useRef(0);
+  const lastPresenceCoughAtRef = useRef(0);
   const lastHighAltitudeCueAtRef = useRef(0);
   const mountainPoints = useCovidStore((state) => state.mountainPoints);
   const cameraPosition = useCovidStore((state) => state.cameraPosition);
   const currentDateIndex = useCovidStore((state) => state.currentDateIndex);
   const sessionId = useOxygenStore((state) => state.sessionId);
-  const roomIds = useMemo(() => getPresenceRoomIdsForDay(currentDateIndex), [currentDateIndex]);
+  const audioMaxPeers = usePerformanceProfileStore((state) => state.profile.audio.maxPeers);
+  const audioStaleMs = usePerformanceProfileStore((state) => state.profile.audio.staleMs);
+  const audioNearRadius = usePerformanceProfileStore((state) => state.profile.audio.nearRadius);
+  const audioFullRadius = usePerformanceProfileStore((state) => state.profile.audio.fullRadius);
+  const audioConfig = useMemo<PresenceAudioConfig>(
+    () => ({
+      maxPeers: audioMaxPeers,
+      staleMs: audioStaleMs,
+      nearRadius: audioNearRadius,
+      fullRadius: audioFullRadius,
+    }),
+    [audioFullRadius, audioMaxPeers, audioNearRadius, audioStaleMs]
+  );
 
   const cueBuffersRef = useRef<CueBuffers>({});
 
@@ -262,21 +286,25 @@ export const CinematicAudio = () => {
     cameraYRef.current = cameraPosition[1];
     cameraPositionRef.current = cameraPosition;
     mountainPointsRef.current = mountainPoints;
-    nearbyPresenceRef.current = computeNearbyPresenceSignal(presenceEntriesRef.current, sessionId, cameraPosition);
-  }, [cameraPosition, currentDateIndex, mountainPoints, sessionId]);
+    nearbyPresenceRef.current = computeNearbyPresenceSignal(
+      presenceEntriesRef.current,
+      sessionId,
+      cameraPosition,
+      audioConfig
+    );
+  }, [audioConfig, cameraPosition, currentDateIndex, mountainPoints, sessionId]);
 
   useEffect(() => {
-    if (!isEnabled || !sessionId) {
-      presenceEntriesRef.current = [];
-      nearbyPresenceRef.current = { intensity: 0, pan: 0, updatedAt: Date.now() };
-      return undefined;
-    }
-
-    return listenToPresenceRooms(roomIds, (entries) => {
+    const updateFromStore = (entries: RemotePresenceAudioEntry[]) => {
       presenceEntriesRef.current = entries;
-      nearbyPresenceRef.current = computeNearbyPresenceSignal(entries, sessionId, cameraPositionRef.current);
+      nearbyPresenceRef.current = computeNearbyPresenceSignal(entries, sessionId, cameraPositionRef.current, audioConfig);
+    };
+
+    updateFromStore(useRemotePresenceStore.getState().entries);
+    return useRemotePresenceStore.subscribe((state) => {
+      updateFromStore(state.entries);
     });
-  }, [isEnabled, roomIds, sessionId]);
+  }, [audioConfig, sessionId]);
 
   const stopAudio = useCallback(() => {
     runtimeRef.current?.teardown();
@@ -296,16 +324,13 @@ export const CinematicAudio = () => {
 
       const context = new AudioContextConstructor();
       const master = context.createGain();
-      const breathNoiseBuffer = createBreathNoiseBuffer(context);
+      const breathBuffer = await loadAudioBuffer(context, PRESENCE_SAMPLE_SOURCES.breath).catch(() =>
+        createBreathNoiseBuffer(context)
+      );
       master.gain.value = 0.56;
       master.connect(context.destination);
 
-      const thunder = createLoopingMedia(context, master, AUDIO_SOURCES.thunder, 0.16, 1700, -0.36);
-      const crowd = createLoopingMedia(context, master, AUDIO_SOURCES.crowd, 0.055, 900, 0.32);
-
       await context.resume();
-      void thunder.play().catch(() => undefined);
-      // void crowd.play().catch(() => undefined);
 
       void Promise.all(
         (Object.keys(CUE_SAMPLE_SOURCES) as CueKey[]).map(async (key) => {
@@ -337,28 +362,15 @@ export const CinematicAudio = () => {
         lastHighAltitudeCueAtRef.current = now;
         const pan = Math.sin(now * 1.73) * 0.72;
         const cueIntensity = 0.58 + intensity * 0.72;
-        const roll = Math.random();
         const coughSample = cueBuffersRef.current.cough;
-        const sneezeSample = cueBuffersRef.current.sneeze;
 
-        if (roll < 0.38) {
-          if (coughSample) {
-            playSpatialCueSample(runtime.context, runtime.master, coughSample, cueIntensity, pan, {
-              rateMin: 0.9,
-              rateMax: 1.05,
-              gain: 0.1,
-              maxDuration: 0.42,
-            });
-          }
-        } else if (roll < 0.68) {
-          if (sneezeSample) {
-            playSpatialCueSample(runtime.context, runtime.master, sneezeSample, cueIntensity, -pan, {
-              rateMin: 1.1,
-              rateMax: 1.25,
-              gain: 0.09,
-              maxDuration: 0.36,
-            });
-          }
+        if (coughSample) {
+          playSpatialCueSample(runtime.context, runtime.master, coughSample, cueIntensity, pan, {
+            rateMin: 0.9,
+            rateMax: 1.08,
+            gain: 0.1,
+            maxDuration: 0.42,
+          });
         }
       }, 950);
 
@@ -366,25 +378,34 @@ export const CinematicAudio = () => {
         const runtime = runtimeRef.current;
         if (!runtime) return;
         const signal = nearbyPresenceRef.current;
-        if (signal.intensity <= 0.02 || Date.now() - signal.updatedAt > 4_500) return;
+        if (signal.intensity <= 0.02 || Date.now() - signal.updatedAt > 7_500) return;
 
         const now = runtime.context.currentTime;
-        const cooldown = lerp(3.2, 1.55, signal.intensity);
-        if (now - lastPresenceBreathAtRef.current < cooldown) return;
+        const breathCooldown = lerp(2.9, 0.82, signal.intensity);
+        if (now - lastPresenceBreathAtRef.current >= breathCooldown) {
+          lastPresenceBreathAtRef.current = now;
+          playPresenceBreath(runtime.context, runtime.master, runtime.breathBuffer, signal);
+        }
 
-        lastPresenceBreathAtRef.current = now;
-        playPresenceBreath(runtime.context, runtime.master, runtime.breathNoiseBuffer, signal);
+        const coughSample = cueBuffersRef.current.cough;
+        if (!coughSample) return;
+
+        const coughCooldown = lerp(8.5, 2.2, signal.intensity);
+        const coughChance = lerp(0.08, 0.42, signal.intensity);
+        if (now - lastPresenceCoughAtRef.current < coughCooldown || Math.random() > coughChance) return;
+
+        lastPresenceCoughAtRef.current = now;
+        playSpatialCueSample(runtime.context, runtime.master, coughSample, signal.intensity, signal.pan, {
+          rateMin: 0.86,
+          rateMax: 1.1,
+          gain: lerp(0.12, 0.32, signal.intensity),
+          maxDuration: lerp(0.36, 0.72, signal.intensity),
+        });
       }, 180);
 
       const teardown = () => {
         window.clearInterval(highAltitudeTimer);
         window.clearInterval(presenceBreathTimer);
-        thunder.pause();
-        crowd.pause();
-        thunder.removeAttribute('src');
-        crowd.removeAttribute('src');
-        thunder.load();
-        crowd.load();
         void context.close();
         cueBuffersRef.current = {};
       };
@@ -394,7 +415,7 @@ export const CinematicAudio = () => {
         master,
         highAltitudeTimer,
         presenceBreathTimer,
-        breathNoiseBuffer,
+        breathBuffer,
         cueBuffers: cueBuffersRef.current,
         teardown,
       };
